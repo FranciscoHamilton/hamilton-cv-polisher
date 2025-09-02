@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: hamilton-cv-polisher
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app -w 1 -k gthread --threads 8 --timeout 120 --bind 0.0.0.0:$PORT
+    autoDeploy: true
+    envVars:
+      - key: APP_SECRET_KEY
+        generateValue: true
+      - key: APP_ADMIN_USER
+        value: admin
+      - key: APP_ADMIN_PASS
+        value: hamilton
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini

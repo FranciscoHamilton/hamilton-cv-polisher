@@ -1,9 +1,9 @@
 # app.py
-import os, json, re, tempfile, traceback, zipfile
+import os, json, re, tempfile, traceback, zipfile, io, csv
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, request, send_file, render_template_string, abort, jsonify, make_response
-from flask import session, redirect, url_for  # <-- ADDED earlier
+from flask import session, redirect, url_for
 
 # Try fast PDF extraction first (PyMuPDF)
 try:
@@ -44,7 +44,7 @@ HOMEPAGE_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>CV Polisher</title>
+  <title>Hamilton Recruitment — CV Polisher</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -69,23 +69,23 @@ HOMEPAGE_HTML = r"""
 <body>
   <div class="wrap">
     <div class="brand-logo"><img src="/logo" alt="Logo" onerror="this.style.display='none'"/></div>
-    <h1>CV Polisher</h1>
-    <p class="sub">Upload a raw CV (PDF / DOCX / TXT) and download a polished, on-brand DOCX in seconds.</p>
+    <h1>Hamilton Recruitment — CV Polisher</h1>
+    <p class="sub">Upload a raw CV (PDF / DOCX / TXT) and download a branded, polished version — fast and consistent.</p>
     <div class="actions">
-      <a class="btn primary" href="/trial">Start free trial</a>
+      <a class="btn primary" href="/login">Start free trial</a>
       <a class="btn secondary" href="/login">Sign in</a>
     </div>
     <div class="links">
       <a href="/pricing">Pricing</a> ·
       <a href="/about">About</a> ·
-      <a href="/login">Contact</a>
+      <a href="/contact">Contact</a>
     </div>
   </div>
 </body>
 </html>
 """
 
-# ------------------------ About (already added earlier) ------------------------
+# ------------------------ About (already installed previously) ------------------------
 ABOUT_HTML = r"""
 <!doctype html>
 <html lang="en">
@@ -94,68 +94,64 @@ ABOUT_HTML = r"""
   <title>About — CV Polisher</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#fff}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:880px;margin:36px auto;padding:0 18px}
+    :root{ --blue:#003366; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --bg:#f9fafb; --card:#fff; }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:900px;margin:36px auto;padding:0 18px}
+    .top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--blue),#0a4d8c)}
+    h1{margin:0;font-size:24px;color:var(--blue)}
     .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
-    h1{margin:0 0 12px;font-size:26px;color:var(--blue)}
-    h2{margin:18px 0 8px;font-size:18px;color:var(--blue)}
+    h2{margin:0 0 12px;font-size:16px;color:var(--blue)}
     p{margin:8px 0}
-    ul{margin:6px 0 12px 18px}
-    a.btn{display:inline-block;margin-top:14px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:700;color:var(--blue)}
-    .toplinks{margin-bottom:12px}
-    .toplinks a{margin-right:10px;text-decoration:none;color:var(--blue);font-weight:700}
+    ul{margin:8px 0 12px 18px}
+    a.btn{display:inline-block;margin-top:12px;padding:10px 14px;border-radius:10px;background:var(--blue);color:#fff;text-decoration:none;font-weight:800}
+    a.link{color:var(--blue);text-decoration:none}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="toplinks">
-      <a href="/">← Home</a>
-      <a href="/pricing">Pricing</a>
-      <a href="/login">Sign in</a>
+    <div class="top">
+      <div class="logo"></div>
+      <h1>About CV Polisher</h1>
+      <div style="margin-left:auto"><a class="link" href="/">← Back</a></div>
     </div>
     <div class="card">
-      <h1>Built by recruiters, for recruiters</h1>
+      <h2>Built by recruiters, for recruiters</h2>
       <p>Formatting CVs is necessary—but it’s not why you got into recruitment. After 10+ years running desks and a recruitment business, I’ve felt the pain first-hand: breaking flow to rework a CV, juggling fonts and spacing, fixing headers, and trying to keep branding consistent across the team.</p>
-      <p><strong>This tool turns that 10–20 minute task into seconds.</strong> Upload a raw CV (PDF, DOCX, or TXT). We extract the content, structure it, and lay it out in your company’s template. You download a polished, on-brand DOCX—ready to send.</p>
-
+      <p><strong>This tool turns that 10–20 minute task into seconds.</strong><br/>Upload a raw CV (PDF, DOCX, or TXT). We extract the content, structure it, and lay it out in your company’s template. You download a polished, on-brand DOCX—ready to send.</p>
       <h2>Why it matters</h2>
       <ul>
-        <li><strong>Time back on the desk:</strong> 15 minutes per CV ≈ 0.25 hours. At £20–£40/hour, that’s £5–£10 per CV. 50 CVs/month ≈ 12.5 hours saved → £250–£500/month in recruiter time.</li>
+        <li><strong>Time back on the desk:</strong> 15 minutes per CV ≈ £5–£10 saved, depending on salary.</li>
         <li><strong>Consistency at scale:</strong> every consultant outputs the same, branded format.</li>
-        <li><strong>Better candidate & client experience:</strong> clean, readable CVs that reflect your brand.</li>
+        <li><strong>Better experience:</strong> cleaner CVs for candidates and clients.</li>
       </ul>
-
       <h2>How it works</h2>
       <ul>
-        <li><strong>Upload</strong> a raw CV (PDF / DOCX / TXT).</li>
-        <li><strong>Extract & structure:</strong> we pull out the real content (experience, education, skills) without inventing facts.</li>
-        <li><strong>Lay out in your template:</strong> headers/footers, fonts, sizes and spacing are applied automatically.</li>
-        <li><strong>Download</strong> a polished DOCX.</li>
+        <li>Upload a raw CV (PDF / DOCX / TXT).</li>
+        <li>Extract &amp; structure: no invented facts.</li>
+        <li>Lay out in your template automatically.</li>
+        <li>Download a polished DOCX.</li>
       </ul>
-
-      <h2>Privacy & control</h2>
+      <h2>Privacy &amp; control</h2>
       <ul>
-        <li>No CV content is stored by default—only basic usage metrics (filename + timestamp) for tracking volume and billing.</li>
-        <li>Your company template and logo are stored securely to ensure output is always on-brand.</li>
+        <li>We don’t store CV content by default—only filename + timestamp for usage counts.</li>
+        <li>Your template and logo are stored securely for consistent output.</li>
       </ul>
-
-      <h2>What’s on the site</h2>
+      <h2>Available now</h2>
       <ul>
-        <li>Multi-company login (soon): per-company routes and templates.</li>
-        <li>Director dashboards (soon): usage counts, CSV export, trends.</li>
-        <li>Credit plans: pay-as-you-go or monthly bundles.</li>
-        <li>Self-serve template builder (soon): upload a DOCX to switch branding instantly.</li>
+        <li>Multi-company login (coming as /c/&lt;company&gt;), per-company templates &amp; logos.</li>
+        <li>Director dashboards with usage counts and CSV export.</li>
+        <li>Credit plans (pay-as-you-go or monthly bundles).</li>
       </ul>
-
-      <a class="btn" href="/trial">Start free trial</a>
+      <a class="btn" href="/login">Start free trial</a>
     </div>
   </div>
 </body>
 </html>
 """
 
-# ------------------------ Pricing (NEW) ------------------------
+# ------------------------ Pricing (already installed previously) ------------------------
 PRICING_HTML = r"""
 <!doctype html>
 <html lang="en">
@@ -164,81 +160,109 @@ PRICING_HTML = r"""
   <title>Pricing — CV Polisher</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#fff}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+    :root{ --blue:#003366; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --bg:#f9fafb; --card:#fff; }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
     .wrap{max-width:980px;margin:36px auto;padding:0 18px}
-    h1{margin:0 0 12px;font-size:26px;color:var(--blue)}
-    p.sub{margin:0 0 16px;color:var(--muted)}
+    .top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--blue),#0a4d8c)}
+    h1{margin:0;font-size:24px;color:var(--blue)}
     .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
-    .name{font-weight:800;color:var(--blue);margin-bottom:6px}
-    .price{font-size:22px;font-weight:900;margin:4px 0}
-    .small{color:var(--muted);font-size:12px}
-    .btn{display:inline-block;margin-top:10px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:700;color:var(--blue)}
-    @media(max-width:1000px){ .grid{grid-template-columns:1fr 1fr} }
-    @media(max-width:620px){ .grid{grid-template-columns:1fr} }
+    .name{font-weight:800}
+    .price{font-size:24px;margin:4px 0}
+    .sub{color:var(--muted);font-size:12px}
+    .btn{display:inline-block;margin-top:8px;padding:8px 12px;border-radius:10px;background:var(--blue);color:#fff;text-decoration:none;font-weight:800}
+    .foot{margin-top:18px;color:var(--muted);font-size:12px}
+    @media(max-width:900px){ .grid{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <a href="/">← Home</a>
-    <h1>Pricing</h1>
-    <p class="sub">Start with a free trial (5 CVs). Upgrade any time.</p>
-
-    <div class="card" style="margin-bottom:14px">
-      <div class="name">Pay-as-you-go</div>
-      <div class="price">£1.70 <span class="small">per CV</span></div>
-      <div class="small">Top up any time • No commitment</div>
-      <a class="btn" href="/trial">Start free trial</a>
+    <div class="top">
+      <div class="logo"></div>
+      <h1>Pricing</h1>
+      <div style="margin-left:auto"><a href="/" style="text-decoration:none;color:#003366">← Back</a></div>
     </div>
 
     <div class="grid">
       <div class="card">
+        <div class="name">Pay-as-you-go</div>
+        <div class="price">£1.70</div>
+        <div class="sub">per CV</div>
+        <a class="btn" href="/login">Start free trial</a>
+      </div>
+      <div class="card">
         <div class="name">Starter</div>
-        <div class="price">£140<span class="small">/mo</span></div>
-        <div class="small">Includes 100 CVs (effective £1.40/CV)</div>
-        <div class="small">Overage: £1.50/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <div class="price">£140</div>
+        <div class="sub">100 CVs/mo · £1.40/CV</div>
+        <a class="btn" href="/login">Choose Starter</a>
       </div>
       <div class="card">
         <div class="name">Team</div>
-        <div class="price">£405<span class="small">/mo</span></div>
-        <div class="small">Includes 300 CVs (effective £1.35/CV)</div>
-        <div class="small">Overage: £1.45/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <div class="price">£405</div>
+        <div class="sub">300 CVs/mo · £1.35/CV</div>
+        <a class="btn" href="/login">Choose Team</a>
       </div>
       <div class="card">
         <div class="name">Scale</div>
-        <div class="price">£975<span class="small">/mo</span></div>
-        <div class="small">Includes 750 CVs (effective £1.30/CV)</div>
-        <div class="small">Overage: £1.40/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <div class="price">£975</div>
+        <div class="sub">750 CVs/mo · £1.30/CV</div>
+        <a class="btn" href="/login">Choose Scale</a>
       </div>
       <div class="card">
         <div class="name">Growth</div>
-        <div class="price">£1,800<span class="small">/mo</span></div>
-        <div class="small">Includes 1,500 CVs (effective £1.20/CV)</div>
-        <div class="small">Overage: £1.30/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
-      </div>
-      <div class="card">
-        <div class="name">Enterprise</div>
-        <div class="price">Let’s talk</div>
-        <div class="small">3,000+ CVs • Target ~£1.15/CV (≈5p below Growth)</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <div class="price">£1200</div>
+        <div class="sub">1000 CVs/mo · £1.20/CV</div>
+        <a class="btn" href="/login">Choose Growth</a>
       </div>
     </div>
 
-    <div class="card" style="margin-top:14px">
-      <div class="name">Template setup</div>
-      <div class="small">£50 one-off per company — fully credited back as usage (your first £50 of CVs are free once you start paying).</div>
+    <div class="foot">
+      Template setup £50 (deducted from first month if you pick a plan). Free trial includes 5 CVs.
     </div>
   </div>
 </body>
 </html>
 """
 
-# ------------------------ Branded App UI (unchanged except banner hook) ------------------------
+# ------------------------ Contact (simple placeholder) ------------------------
+CONTACT_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Contact — CV Polisher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{ --blue:#003366; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --bg:#f9fafb; --card:#fff; }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:900px;margin:36px auto;padding:0 18px}
+    .top{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+    .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--blue),#0a4d8c)}
+    h1{margin:0;font-size:24px;color:var(--blue)}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+    a{color:#003366;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo"></div>
+      <h1>Contact</h1>
+      <div style="margin-left:auto"><a href="/" style="text-decoration:none;color:#003366">← Back</a></div>
+    </div>
+    <div class="card">
+      <p>Email: <a href="mailto:hello@example.com">hello@example.com</a></p>
+      <p>We’ll reply within one business day.</p>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+# ------------------------ Branded App UI ------------------------
 HTML = r"""
 <!doctype html>
 <html lang="en">
@@ -342,19 +366,6 @@ HTML = r"""
         const r = await fetch('/stats', {cache:'no-store'});
         if(!r.ok) return;
         const s = await r.json();
-
-        // NEW: show free-trial banner if credits exist
-        const tb = document.getElementById('trialBanner');
-        if(tb){
-          const left = s.trial_credits_left || 0;
-          if(left > 0){
-            tb.style.display = 'block';
-            tb.querySelector('.left').textContent = left;
-          }else{
-            tb.style.display = 'none';
-          }
-        }
-
         document.getElementById('downloadsMonth').textContent = s.downloads_this_month ?? s.downloads;
         document.getElementById('lastCandidate').textContent = s.last_candidate || '—';
         document.getElementById('lastTime').textContent = s.last_time || '—';
@@ -379,7 +390,7 @@ HTML = r"""
       const form = document.getElementById('upload-form');
       const fileInput = document.getElementById('cv');
 
-      // fetch + Blob download
+      // NEW: fetch + Blob download (fixes second-upload issue)
       form.addEventListener('submit', async (e)=>{
         e.preventDefault();
         startProgress();
@@ -421,15 +432,10 @@ HTML = r"""
         <p class="brand-title">Hamilton Recruitment — CV Polisher</p>
         <p class="brand-sub">Executive Search &amp; Selection</p>
       </div>
-      <div style="margin-left:auto">
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <a href="/director" style="display:inline-block;background:#fff;color:var(--blue);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:700;text-decoration:none">Director</a>
         <a href="/logout" style="display:inline-block;background:#fff;color:var(--blue);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:700;text-decoration:none">Log out</a>
       </div>
-    </div>
-
-    <!-- NEW: free-trial banner -->
-    <div id="trialBanner" class="card" style="display:none; margin-bottom:12px">
-      <strong>Free trial:</strong> <span class="left">5</span> CVs left.
-      <span class="ts">Need more? <a href="/pricing">See plans</a></span>
     </div>
 
     <div class="grid">
@@ -472,7 +478,7 @@ HTML = r"""
 </html>
 """
 
-# ------------------------ Login page HTML (unchanged) ------------------------
+# ------------------------ Login page HTML ------------------------
 LOGIN_HTML = r"""
 <!doctype html>
 <html lang="en">
@@ -530,52 +536,137 @@ LOGIN_HTML = r"""
 </html>
 """
 
+# ------------------------ Director dashboard HTML ------------------------
+DIRECTOR_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Director Dashboard — Hamilton</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{ --blue:#003366; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --bg:#f2f6fb; --card:#fff; --shadow:0 8px 24px rgba(0,0,0,.06); }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:1060px;margin:28px auto;padding:0 18px}
+    .nav{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .brand{font-weight:900;color:var(--blue)}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+    .k{font-size:12px;color:var(--muted)}
+    .v{font-size:22px;font-weight:900;color:var(--blue)}
+    table{width:100%;border-collapse:collapse;margin-top:12px;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+    th,td{font-size:12px;padding:8px;border-bottom:1px solid var(--line);text-align:left}
+    th{background:#f8fafc}
+    tr:last-child td{border-bottom:none}
+    a.btn{display:inline-block;background:#fff;color:var(--blue);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:800;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <div class="brand">Hamilton — Director Dashboard</div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <a class="btn" href="/app">← Back to app</a>
+        <a class="btn" href="/director/export.csv">Export CSV</a>
+        <a class="btn" href="/logout">Log out</a>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card"><div class="k">This month</div><div class="v">{{ m1 }}</div></div>
+      <div class="card"><div class="k">Last 3 months</div><div class="v">{{ m3 }}</div></div>
+      <div class="card"><div class="k">Last 6 months</div><div class="v">{{ m6 }}</div></div>
+      <div class="card"><div class="k">Last 12 months</div><div class="v">{{ m12 }}</div></div>
+    </div>
+
+    <table>
+      <thead><tr><th>When</th><th>User</th><th>File</th></tr></thead>
+      <tbody>
+        {% for row in rows %}
+          <tr><td>{{ row.ts }}</td><td>{{ row.user }}</td><td>{{ row.filename }}</td></tr>
+        {% endfor %}
+        {% if rows|length == 0 %}
+          <tr><td colspan="3" style="color:#6b7280">No activity yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
+"""
+
+# ------------------------ Owner dashboard HTML ------------------------
+OWNER_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Owner Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{ --blue:#003366; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --bg:#f2f6fb; --card:#fff; --shadow:0 8px 24px rgba(0,0,0,.06); }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:1060px;margin:28px auto;padding:0 18px}
+    .nav{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .brand{font-weight:900;color:var(--blue)}
+    table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+    th,td{font-size:12px;padding:8px;border-bottom:1px solid var(--line);text-align:left}
+    th{background:#f8fafc}
+    tr:last-child td{border-bottom:none}
+    a.btn{display:inline-block;background:#fff;color:var(--blue);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:800;text-decoration:none}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <div class="brand">Owner Dashboard — All Companies</div>
+      <div style="margin-left:auto;display:flex;gap:8px">
+        <a class="btn" href="/app">← Back to app</a>
+        <a class="btn" href="/logout">Log out</a>
+      </div>
+    </div>
+
+    <table>
+      <thead><tr><th>Company</th><th>This month</th><th>Last 3m</th><th>Last 6m</th><th>Last 12m</th><th>Total (all time)</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+          <tr><td>{{ r.tenant }}</td><td>{{ r.m1 }}</td><td>{{ r.m3 }}</td><td>{{ r.m6 }}</td><td>{{ r.m12 }}</td><td>{{ r.total }}</td></tr>
+        {% endfor %}
+        {% if rows|length == 0 %}
+          <tr><td colspan="6" style="color:#6b7280">No activity yet.</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
+"""
+
 app = Flask(__name__)
 
-# ------------------------ session secret + default creds (unchanged) ------------------------
+# ------------------------ session secret + default creds ------------------------
 app.secret_key = os.getenv("APP_SECRET_KEY", "dev-secret-change-me")
 APP_ADMIN_USER = os.getenv("APP_ADMIN_USER", "admin")
 APP_ADMIN_PASS = os.getenv("APP_ADMIN_PASS", "hamilton")
 
-# ------------------------ Gate protected routes (/app, /polish, /stats) ------------------------
+TENANT = os.getenv("TENANT", "hamilton")  # single-tenant for now
+
+# ------------------------ route protection ------------------------
 @app.before_request
 def gate_protected_routes():
-    protected_prefixes = ["/app", "/polish", "/stats"]
+    protected_prefixes = ["/app", "/polish", "/stats", "/director", "/owner"]
     p = request.path or "/"
     if any(p.startswith(x) for x in protected_prefixes):
         if not session.get("authed"):
             return redirect(url_for("login"))
 
-# ------------------------ Public routes ------------------------
-@app.get("/")
-def home():
-    resp = make_response(render_template_string(HOMEPAGE_HTML))
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
-
-@app.get("/about")
-def about():
-    resp = make_response(render_template_string(ABOUT_HTML))
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
-
-@app.get("/pricing")
-def pricing():
-    resp = make_response(render_template_string(PRICING_HTML))
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
-
-@app.get("/trial")
-def start_trial():
-    # Give 5 free CV credits; user still needs to sign in
-    session["trial_credits"] = 5
-    return redirect(url_for("login"))
-
-# ------------------------ Auth routes (unchanged) ------------------------
+# ------------------------ auth ------------------------
 @app.get("/login")
 def login():
     if session.get("authed"):
-        return redirect(url_for("app_page"))  # goes to /app
+        return redirect(url_for("app_page"))
     resp = make_response(render_template_string(LOGIN_HTML))
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -586,6 +677,8 @@ def do_login():
     pw = (request.form.get("password") or "").strip()
     if user == APP_ADMIN_USER and pw == APP_ADMIN_PASS:
         session["authed"] = True
+        session["user"] = user
+        session["role"] = "director"  # for now: your admin acts as director
         return redirect(url_for("app_page"))
     html = LOGIN_HTML.replace("<!--ERROR-->", "<div class='err'>Invalid credentials</div>")
     resp = make_response(render_template_string(html))
@@ -597,7 +690,24 @@ def logout():
     session.clear()
     return redirect(url_for("login"))
 
-# ---------- serve the logo ----------
+# ---------- static pages ----------
+@app.get("/")
+def home():
+    return render_template_string(HOMEPAGE_HTML)
+
+@app.get("/about")
+def about():
+    return render_template_string(ABOUT_HTML)
+
+@app.get("/pricing")
+def pricing():
+    return render_template_string(PRICING_HTML)
+
+@app.get("/contact")
+def contact():
+    return render_template_string(CONTACT_HTML)
+
+# ---------- serve logo ----------
 @app.get("/logo")
 def logo():
     for name in ["Imagem1.png", "hamilton_logo.png", "logo.png"]:
@@ -608,7 +718,7 @@ def logo():
             return resp
     return ("", 204)
 
-# ---------- helper: Word field ----------
+# ---------- helper: page/numpages fields (Word) ----------
 def _add_field(paragraph, instr_text: str):
     fld = OxmlElement('w:fldSimple')
     fld.set(qn('w:instr'), instr_text)
@@ -750,12 +860,14 @@ SKILL_CANON = [
     "Underwriting","NatCat","Catastrophe Modelling"
 ]
 def extract_top_skills(text: str):
+    """Return ONLY canonical keywords present in the CV text, no sentences."""
     tokens = re.findall(r"[A-Za-z0-9\-\&\./+]+", text)
     txt_up = " ".join(tokens).upper()
     found = []
     for s in SKILL_CANON:
         if s.upper() in txt_up:
             found.append(s)
+    # de-dup preserving order
     out, seen = [], set()
     for it in found:
         key = it.lower()
@@ -793,6 +905,7 @@ def _add_section_heading(doc: Docx, text: str):
     return p
 
 def _remove_all_body_content(doc: Docx):
+    """Clear ONLY the document body; keep headers/footers intact."""
     for t in list(doc.tables):
         t._element.getparent().remove(t._element)
     for p in list(doc.paragraphs):
@@ -843,7 +956,7 @@ def _ensure_primary_header_spacer(doc: Docx):
     except Exception:
         pass
 
-# ---------- Compose CV ----------
+# ---------- Compose CV (preserve template header/footer) ----------
 def build_cv_document(cv: dict) -> Path:
     template_path = None
     for pth in [PROJECT_DIR / "hamilton_template.docx",
@@ -982,7 +1095,27 @@ def _downloads_this_month():
     except Exception:
         return STATS.get("downloads", 0)
 
-# ---------- App + API ----------
+def _within(dt: datetime, months: int) -> bool:
+    now = datetime.now()
+    cutoff = now - timedelta(days=30*months)
+    return dt >= cutoff
+
+def _counts_for(history, tenant=None, months=1):
+    c = 0
+    now = datetime.now()
+    cutoff = now - timedelta(days=30*months)
+    for h in history:
+        if tenant and h.get("tenant") != tenant:
+            continue
+        try:
+            d = datetime.strptime(h.get("ts",""), "%Y-%m-%d %H:%M:%S")
+        except Exception:
+            continue
+        if d >= cutoff:
+            c += 1
+    return c
+
+# ---------- Routes ----------
 @app.get("/app")
 def app_page():
     resp = make_response(render_template_string(HTML))
@@ -993,15 +1126,12 @@ def app_page():
 def stats():
     data = dict(STATS)
     data["downloads_this_month"] = _downloads_this_month()
-    # NEW: include trial credits left for the banner
-    data["trial_credits_left"] = int(session.get("trial_credits", 0))
     resp = jsonify(data)
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
 @app.post("/polish")
 def polish():
-    # Always reprocess (no caching)
     f = request.files.get("cv")
     if not f:
         abort(400, "No file uploaded")
@@ -1014,31 +1144,77 @@ def polish():
             abort(400, "Couldn't read enough text. If it's a scanned PDF, please use a DOCX or an OCRed PDF.")
         data = ai_or_heuristic_structuring(text)
 
-        # Skills = keywords only
+        # SKILLS = KEYWORDS ONLY
         data["skills"] = extract_top_skills(text)
 
         out = build_cv_document(data)
 
-        # update stats
         candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         STATS["downloads"] += 1
         STATS["last_candidate"] = candidate_name
         STATS["last_time"] = now
-        STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
+        STATS["history"].append({
+            "tenant": TENANT,
+            "user": session.get("user","unknown"),
+            "candidate": candidate_name,
+            "filename": f.filename,
+            "ts": now
+        })
         _save_stats()
-
-        # NEW: decrement trial credits if present
-        try:
-            left = int(session.get("trial_credits", 0))
-            if left > 0:
-                session["trial_credits"] = max(0, left - 1)
-        except Exception:
-            pass
 
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
+@app.get("/director")
+def director():
+    # Filter by this tenant
+    hist = [h for h in STATS.get("history", []) if h.get("tenant") == TENANT]
+    m1  = _counts_for(hist, tenant=None, months=1)
+    m3  = _counts_for(hist, tenant=None, months=3)
+    m6  = _counts_for(hist, tenant=None, months=6)
+    m12 = _counts_for(hist, tenant=None, months=12)
+    rows = sorted(hist[-200:], key=lambda x: x.get("ts",""))[::-1]
+    rows = [{"ts": r.get("ts",""), "user": r.get("user",""), "filename": r.get("filename","")} for r in rows]
+    return render_template_string(DIRECTOR_HTML, m1=m1, m3=m3, m6=m6, m12=m12, rows=rows)
+
+@app.get("/director/export.csv")
+def director_export():
+    hist = [h for h in STATS.get("history", []) if h.get("tenant") == TENANT]
+    output = io.StringIO()
+    w = csv.writer(output)
+    w.writerow(["tenant","user","filename","candidate","timestamp"])
+    for h in hist:
+        w.writerow([h.get("tenant",""), h.get("user",""), h.get("filename",""), h.get("candidate",""), h.get("ts","")])
+    data = output.getvalue().encode("utf-8")
+    resp = make_response(data)
+    resp.headers["Content-Type"] = "text/csv; charset=utf-8"
+    resp.headers["Content-Disposition"] = "attachment; filename=usage_hamilton.csv"
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+@app.get("/owner")
+def owner():
+    # Group by tenant across all history
+    hist = STATS.get("history", [])
+    tenants = {}
+    for h in hist:
+        t = h.get("tenant","unknown")
+        tenants.setdefault(t, []).append(h)
+    rows = []
+    for t, items in tenants.items():
+        rows.append({
+            "tenant": t,
+            "m1":  _counts_for(items, months=1),
+            "m3":  _counts_for(items, months=3),
+            "m6":  _counts_for(items, months=6),
+            "m12": _counts_for(items, months=12),
+            "total": len(items)
+        })
+    # stable order
+    rows.sort(key=lambda r: r["tenant"])
+    return render_template_string(OWNER_HTML, rows=rows)
 
 @app.get("/health")
 def health():
@@ -1046,6 +1222,8 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
+
 
 
 

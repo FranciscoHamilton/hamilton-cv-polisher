@@ -192,14 +192,17 @@ PRICING_HTML = r"""
     .wrap{max-width:980px;margin:36px auto;padding:0 18px}
     h1{margin:0 0 12px;font-size:26px;color:var(--blue)}
     p.sub{margin:0 0 16px;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+    .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
     .name{font-weight:800;color:var(--blue);margin-bottom:6px}
     .price{font-size:22px;font-weight:900;margin:4px 0}
     .small{color:var(--muted);font-size:12px}
     .btn{display:inline-block;margin-top:10px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:700;color:var(--blue)}
-    @media(max-width:1000px){ .grid{grid-template-columns:1fr 1fr} }
-    @media(max-width:620px){ .grid{grid-template-columns:1fr} }
+    .section{margin-top:18px;margin-bottom:10px;font-weight:900;color:var(--blue)}
+    .note{margin:8px 0 14px;color:var(--muted);font-size:12px}
+    @media(max-width:1000px){ .grid5{grid-template-columns:1fr 1fr} .grid3{grid-template-columns:1fr 1fr} }
+    @media(max-width:620px){ .grid5,.grid3{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
@@ -208,47 +211,61 @@ PRICING_HTML = r"""
     <h1>Pricing</h1>
     <p class="sub">Start with a free trial (5 CVs). Upgrade any time.</p>
 
-    <div class="card" style="margin-bottom:14px">
-      <div class="name">Pay-as-you-go</div>
-      <div class="price">£1.70 <span class="small">per CV</span></div>
-      <div class="small">Top up any time • No commitment</div>
-      <a class="btn" href="/trial">Start free trial</a>
-    </div>
-
-    <div class="grid">
+    <div class="section">Pay-as-you-go packs</div>
+    <p class="note">For occasional use. No commitment. <em>True one-off:</em> £1.70 per single CV.</p>
+    <div class="grid3" style="margin-bottom:14px">
       <div class="card">
-        <div class="name">Starter</div>
-        <div class="price">£140<span class="small">/mo</span></div>
-        <div class="small">Includes 100 CVs (effective £1.40/CV)</div>
-        <div class="small">Overage: £1.50/CV</div>
+        <div class="name">Mini</div>
+        <div class="price">35 credits · £52.50</div>
+        <div class="small">£1.50 per CV</div>
         <a class="btn" href="/trial">Start free trial</a>
       </div>
       <div class="card">
-        <div class="name">Team</div>
-        <div class="price">£405<span class="small">/mo</span></div>
-        <div class="small">Includes 300 CVs (effective £1.35/CV)</div>
-        <div class="small">Overage: £1.45/CV</div>
+        <div class="name">Standard</div>
+        <div class="price">100 credits · £140</div>
+        <div class="small">£1.40 per CV</div>
+        <a class="btn" href="/trial">Start free trial</a>
+      </div>
+      <div class="card">
+        <div class="name">Bulk</div>
+        <div class="price">300 credits · £390</div>
+        <div class="small">£1.30 per CV</div>
+        <a class="btn" href="/trial">Start free trial</a>
+      </div>
+    </div>
+
+    <div class="section">Monthly plans</div>
+    <p class="note">Credits reset monthly. Overage at £1.50/CV or buy a PAYG pack. Up to 20% rollover for 2 months.</p>
+    <div class="grid5">
+      <div class="card">
+        <div class="name">Starter</div>
+        <div class="price">£50<span class="small">/mo</span></div>
+        <div class="small">40 credits · £1.25/CV</div>
+        <a class="btn" href="/trial">Start free trial</a>
+      </div>
+      <div class="card">
+        <div class="name">Pro</div>
+        <div class="price">£360<span class="small">/mo</span></div>
+        <div class="small">300 credits · £1.20/CV</div>
         <a class="btn" href="/trial">Start free trial</a>
       </div>
       <div class="card">
         <div class="name">Scale</div>
-        <div class="price">£975<span class="small">/mo</span></div>
-        <div class="small">Includes 750 CVs (effective £1.30/CV)</div>
-        <div class="small">Overage: £1.40/CV</div>
+        <div class="price">£660<span class="small">/mo</span></div>
+        <div class="small">600 credits · £1.10/CV</div>
         <a class="btn" href="/trial">Start free trial</a>
       </div>
       <div class="card">
-        <div class="name">Growth</div>
-        <div class="price">£1,800<span class="small">/mo</span></div>
-        <div class="small">Includes 1,500 CVs (effective £1.20/CV)</div>
-        <div class="small">Overage: £1.30/CV</div>
+        <div class="name">High Volume</div>
+        <div class="price">£1,000<span class="small">/mo</span></div>
+        <div class="small">1,000 credits · £1.00/CV</div>
         <a class="btn" href="/trial">Start free trial</a>
       </div>
       <div class="card">
-        <div class="name">Enterprise</div>
+        <div class="name">Custom (3,000+)</div>
         <div class="price">Let’s talk</div>
-        <div class="small">3,000+ CVs • Target ~£1.15/CV (≈5p below Growth)</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <div class="small">Target ~£0.70/CV</div>
+        <a class="btn" href="/contact">Contact us</a>
       </div>
     </div>
 
@@ -1461,6 +1478,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

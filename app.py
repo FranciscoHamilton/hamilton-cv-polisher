@@ -38,13 +38,13 @@ def _save_stats():
         STATS["history"] = STATS["history"][-1000:]
     STATS_FILE.write_text(json.dumps(STATS, indent=2), encoding="utf-8")
 
-# ------------------------ Public Home (NEW) ------------------------
+# ------------------------ Public Home (Landing) ------------------------
 HOMEPAGE_HTML = r"""
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Recruiter First — CV Polisher</title>
+  <title>Hamilton Recruitment — CV Polisher</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -69,7 +69,7 @@ HOMEPAGE_HTML = r"""
 <body>
   <div class="wrap">
     <div class="brand-logo"><img src="/logo" alt="Hamilton Logo" onerror="this.style.display='none'"/></div>
-    <h1>Recruiter First — CV Polisher</h1>
+    <h1>Hamilton Recruitment — CV Polisher</h1>
     <p class="sub">Upload a raw CV (PDF / DOCX / TXT) and download a branded, polished version — fast and consistent.</p>
     <div class="actions">
       <a class="btn primary" href="/login">Start free trial</a>
@@ -77,8 +77,100 @@ HOMEPAGE_HTML = r"""
     </div>
     <div class="links">
       <a href="/login">Pricing</a> ·
-      <a href="/login">About</a> ·
+      <a href="/about">About</a> ·
       <a href="/login">Contact</a>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+# ------------------------ About Page (NEW) ------------------------
+ABOUT_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>About — CV Polisher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --blue:#003366; --blue-2:#0a4d8c; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --bg:#f2f6fb; --card:#ffffff;
+      --shadow: 0 8px 24px rgba(0,0,0,.06);
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:820px;margin:40px auto;padding:0 18px}
+    .topnav{display:flex;gap:10px;align-items:center;margin-bottom:14px}
+    .topnav a{font-size:13px;text-decoration:none;color:var(--blue);padding:6px 10px;border:1px solid var(--line);border-radius:10px;background:#fff}
+    .hero{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+    .logo{width:40px;height:40px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-2));}
+    h1{font-size:26px;color:var(--blue);margin:0}
+    p{line-height:1.6}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow);margin:14px 0}
+    h2{font-size:18px;margin:0 0 8px;color:var(--blue)}
+    ul{margin:8px 0 0 18px}
+    .cta{margin-top:18px;display:flex;gap:10px;flex-wrap:wrap}
+    a.btn{display:inline-block;padding:10px 14px;border-radius:10px;font-weight:800;text-decoration:none;box-shadow:var(--shadow)}
+    a.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff}
+    a.secondary{background:#fff;color:var(--blue);border:1px solid var(--line)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topnav">
+      <a href="/">← Home</a>
+      <a href="/login">Sign in</a>
+    </div>
+
+    <div class="hero">
+      <div class="logo"></div>
+      <h1>About this CV Polisher</h1>
+    </div>
+
+    <div class="card">
+      <h2>Built by recruiters, for recruiters</h2>
+      <p>Formatting CVs is necessary—but it’s not why you got into recruitment. After 10+ years running desks and a recruitment business, we’ve felt the pain first-hand: breaking flow to rework a CV, juggling fonts and spacing, fixing headers, and trying to keep branding consistent across the team.</p>
+      <p><strong>This tool turns that 10–20 minute task into seconds.</strong> Upload a raw CV (PDF, DOCX, or TXT). We extract the content, structure it, and lay it out in your company’s template. You download a polished, on-brand DOCX—ready to send.</p>
+    </div>
+
+    <div class="card">
+      <h2>Why it matters</h2>
+      <ul>
+        <li><strong>Time back on the desk:</strong> 15 minutes per CV = 0.25 hours. At £20–£40/hour, that’s <strong>£5–£10 per CV</strong>. 50 CVs/month ≈ <strong>12.5 hours saved</strong> → <strong>£250–£500/month</strong> in recruiter time.</li>
+        <li><strong>Consistency at scale:</strong> every consultant outputs the same, branded format.</li>
+        <li><strong>Better candidate & client experience:</strong> clean, readable CVs that reflect your brand.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>How it works</h2>
+      <ul>
+        <li><strong>Upload</strong> a raw CV (PDF / DOCX / TXT).</li>
+        <li><strong>Extract &amp; structure</strong> the real content—no invented facts.</li>
+        <li><strong>Apply your template</strong> (header/footer, fonts, sizes, spacing).</li>
+        <li><strong>Download</strong> a polished DOCX.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Privacy &amp; control</h2>
+      <p>We don’t store CV content by default—only basic usage metrics (filename + timestamp) so you can track volume and billing. Your template and logo live securely so output stays on-brand.</p>
+    </div>
+
+    <div class="card">
+      <h2>What you get</h2>
+      <ul>
+        <li><strong>Multi-company access:</strong> per-company logins and branded routes (e.g. <code>/c/&lt;company&gt;/app</code>).</li>
+        <li><strong>Director dashboards:</strong> this month’s usage, 3/6/12-month trends, and CSV export.</li>
+        <li><strong>Durable usage logging:</strong> every polish recorded (tenant, user, filename, timestamp) for accurate billing.</li>
+        <li><strong>Credit options:</strong> pay-as-you-go or monthly credit bundles.</li>
+        <li><strong>Self-serve template setup:</strong> upload your DOCX template and logo to switch on branding instantly.</li>
+      </ul>
+      <div class="cta">
+        <a class="btn primary" href="/login">Start free trial</a>
+        <a class="btn secondary" href="/login">Sign in</a>
+      </div>
     </div>
   </div>
 </body>
@@ -361,7 +453,7 @@ LOGIN_HTML = r"""
 
 app = Flask(__name__)
 
-# ------------------------ ADDED: session secret + default creds ------------------------
+# ------------------------ session secret + default creds ------------------------
 app.secret_key = os.getenv("APP_SECRET_KEY", "dev-secret-change-me")
 APP_ADMIN_USER = os.getenv("APP_ADMIN_USER", "admin")
 APP_ADMIN_PASS = os.getenv("APP_ADMIN_PASS", "hamilton")
@@ -378,7 +470,7 @@ def gate_protected_routes():
 @app.get("/login")
 def login():
     if session.get("authed"):
-        return redirect(url_for("app_page"))  # <-- now goes to /app
+        return redirect(url_for("app_page"))  # <-- goes to /app
     resp = make_response(render_template_string(LOGIN_HTML))
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -389,7 +481,7 @@ def do_login():
     pw = (request.form.get("password") or "").strip()
     if user == APP_ADMIN_USER and pw == APP_ADMIN_PASS:
         session["authed"] = True
-        return redirect(url_for("app_page"))  # <-- now goes to /app
+        return redirect(url_for("app_page"))  # <-- goes to /app
     html = LOGIN_HTML.replace("<!--ERROR-->", "<div class='err'>Invalid credentials</div>")
     resp = make_response(render_template_string(html))
     resp.headers["Cache-Control"] = "no-store"
@@ -593,8 +685,7 @@ def _add_section_heading(doc: Docx, text: str):
     p.paragraph_format.space_before = Pt(12)
     p.paragraph_format.space_after = Pt(6)
     r = p.add_run(text.upper().strip())
-    r.font.name = "Calibri"
-    r.font.size = Pt(14)  # SIZE 14 FOR ALL MAJOR HEADINGS
+    r.font.name = "Calibri"; r.font.size = Pt(14)  # SIZE 14 FOR ALL MAJOR HEADINGS
     r.bold = True
     r.font.color.rgb = SOFT_BLACK
     return p
@@ -608,12 +699,6 @@ def _remove_all_body_content(doc: Docx):
 
 # ---------- Post-save zip scrub of header XML ----------
 def _zip_scrub_header_labels(docx_path: Path):
-    """
-    Open the saved DOCX (zip) and remove any header <w:p> that contains
-    'PROFESSIONAL' + 'EXPERIENCE' + 'CONTINUED' (case-insensitive).
-    Also removes a two-paragraph split and inserts a single blank paragraph
-    to keep page-2+ spacing stable.
-    """
     pat_one = re.compile(
         r'<w:p\b[^>]*>.*?(?:professional).*?(?:experience).*?(?:continued).*?</w:p>',
         re.I | re.S
@@ -641,13 +726,9 @@ def _zip_scrub_header_labels(docx_path: Path):
 
 # ---------- Ensure a spacer paragraph in primary headers (pages 2+) ----------
 def _ensure_primary_header_spacer(doc: Docx):
-    """
-    Adds a trailing blank paragraph to each section's *primary* header,
-    so body text doesn't start flush against the header on page 2+.
-    """
     try:
         for sec in doc.sections:
-            hdr = sec.header  # primary header (used on pages 2+ if first-page header differs)
+            hdr = sec.header
             needs = True
             try:
                 if hdr.paragraphs:
@@ -657,7 +738,7 @@ def _ensure_primary_header_spacer(doc: Docx):
                 pass
             if needs:
                 p = hdr.add_paragraph()
-                r = p.add_run(" ")  # one space to ensure it affects layout height
+                r = p.add_run(" ")
     except Exception:
         pass
 
@@ -671,24 +752,20 @@ def build_cv_document(cv: dict) -> Path:
             template_path = pth; break
 
     if template_path:
-        doc = Docx(str(template_path))   # preserve header/footer exactly
+        doc = Docx(str(template_path))
     else:
-        doc = Docx()  # fallback: simple blank doc
+        doc = Docx()
 
-    # Clear body and build fresh content
     _remove_all_body_content(doc)
 
-    # Subtle spacer before name (matches reference)
     spacer = doc.add_paragraph(); spacer.paragraph_format.space_after = Pt(6)
 
-    # NAME (centered) — SIZE 18
     pi = (cv or {}).get("personal_info") or {}
     full_name = (pi.get("full_name") or "Candidate").strip()
     name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER; name_p.paragraph_format.space_after = Pt(2)
     name_r = name_p.add_run(full_name)
     name_r.font.name="Calibri"; name_r.font.size=Pt(18); name_r.bold=True; name_r.font.color.rgb=SOFT_BLACK
 
-    # CONTACT: Tel + Email on ONE line with a vertical bar; Location on its own line
     tel = (pi.get("phone") or "").strip()
     email = (pi.get("email") or "").strip()
     location = (pi.get("location") or "").strip()
@@ -702,12 +779,10 @@ def build_cv_document(cv: dict) -> Path:
     links = [s for s in (pi.get("links") or []) if s]
     if links: _add_center_line(doc, " | ".join(links), size=11, bold=False, space_after=6)
 
-    # EXECUTIVE SUMMARY (heading size 14)
     if cv.get("summary"):
         _add_section_heading(doc, "EXECUTIVE SUMMARY")
         p = doc.add_paragraph(cv["summary"]); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
 
-    # PROFESSIONAL QUALIFICATIONS (heading size 14)
     quals = []
     if cv.get("certifications"): quals += [q for q in cv["certifications"] if q]
     edu = cv.get("education") or []
@@ -724,14 +799,12 @@ def build_cv_document(cv: dict) -> Path:
             p.paragraph_format.space_before = Pt(0); p.paragraph_format.space_after = Pt(0)
             _tone_runs(p, size=11, bold=False)
 
-    # PROFESSIONAL SKILLS (heading size 14)
     skills = cv.get("skills") or []
     if skills:
         _add_section_heading(doc, "PROFESSIONAL SKILLS")
         line = " | ".join(skills)
         p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
 
-    # PROFESSIONAL EXPERIENCE (heading size 14)
     exp = cv.get("experience") or []
     if exp:
         _add_section_heading(doc, "PROFESSIONAL EXPERIENCE")
@@ -763,7 +836,6 @@ def build_cv_document(cv: dict) -> Path:
             elif role.get("raw_text"):
                 rp = doc.add_paragraph(role["raw_text"]); rp.paragraph_format.space_after = Pt(0); _tone_runs(rp, size=11, bold=False)
 
-    # EDUCATION (heading size 14)
     if edu:
         _add_section_heading(doc, "EDUCATION")
         for ed in edu:
@@ -786,12 +858,11 @@ def build_cv_document(cv: dict) -> Path:
                     bp.paragraph_format.space_before = Pt(0); bp.paragraph_format.space_after = Pt(0)
                     _tone_runs(bp, size=11, bold=False)
 
-    # Ensure spacer in primary header (pages 2+), then save & scrub
     _ensure_primary_header_spacer(doc)
 
     out = PROJECT_DIR / "polished_cv.docx"
     doc.save(str(out))
-    _zip_scrub_header_labels(out)  # keep header-cleaning safety net
+    _zip_scrub_header_labels(out)
     return out
 
 # ---------- helpers ----------
@@ -813,20 +884,28 @@ def _downloads_this_month():
 # ---------- Routes ----------
 @app.get("/")
 def index():
-    # Public homepage (no login required)
     resp = make_response(render_template_string(HOMEPAGE_HTML))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+@app.get("/about")
+def about():
+    resp = make_response(render_template_string(ABOUT_HTML))
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
 @app.get("/app")
 def app_page():
-    # The actual tool UI (login required; protected by before_request gate)
+    if not session.get("authed"):
+        return redirect(url_for("login"))
     resp = make_response(render_template_string(HTML))
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
 @app.get("/stats")
 def stats():
+    if not session.get("authed"):
+        return redirect(url_for("login"))
     data = dict(STATS)
     data["downloads_this_month"] = _downloads_this_month()
     resp = jsonify(data)
@@ -835,7 +914,8 @@ def stats():
 
 @app.post("/polish")
 def polish():
-    # Always reprocess (no caching) so changes in the source CV are reflected
+    if not session.get("authed"):
+        return redirect(url_for("login"))
     f = request.files.get("cv")
     if not f:
         abort(400, "No file uploaded")
@@ -848,7 +928,6 @@ def polish():
             abort(400, "Couldn't read enough text. If it's a scanned PDF, please use a DOCX or an OCRed PDF.")
         data = ai_or_heuristic_structuring(text)
 
-        # (1) SKILLS = KEYWORDS ONLY (ignore long sentences from AI)
         data["skills"] = extract_top_skills(text)
 
         out = build_cv_document(data)
@@ -871,6 +950,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

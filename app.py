@@ -12,12 +12,7 @@ except Exception:
     fitz = None
 
 # Text extraction / DOCX tooling
-# CHANGE #1: pdfminer import is optional so the app can't crash if the module path differs
-try:
-    from pdfminer.high_level import extract_text as pdf_extract_text
-except Exception:
-    pdf_extract_text = None
-
+from pdfminer.high_level import extract_text as pdf_extract_text
 from docx import Document as Docx
 from docx.shared import Pt, Inches, RGBColor
 from docx.oxml import OxmlElement
@@ -43,7 +38,54 @@ def _save_stats():
         STATS["history"] = STATS["history"][-1000:]
     STATS_FILE.write_text(json.dumps(STATS, indent=2), encoding="utf-8")
 
-# ------------------------ Branded UI ------------------------
+# ------------------------ Public Home (NEW) ------------------------
+HOMEPAGE_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Hamilton Recruitment — CV Polisher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --blue:#003366; --blue-2:#0a4d8c; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --bg:#f2f6fb; --card:#ffffff;
+      --shadow: 0 8px 24px rgba(0,0,0,.06);
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:820px;margin:56px auto;padding:0 18px;text-align:center}
+    .brand-logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--blue-2));display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+    .brand-logo img{width:100%;height:100%;object-fit:contain}
+    h1{margin:0 0 8px;font-size:28px;color:var(--blue);letter-spacing:-0.01em}
+    p.sub{margin:0 auto 24px;color:var(--muted);font-size:14px;max-width:600px}
+    .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+    a.btn{display:inline-block;padding:12px 16px;border-radius:10px;font-weight:800;text-decoration:none;box-shadow:var(--shadow)}
+    a.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff}
+    a.secondary{background:#fff;color:var(--blue);border:1px solid var(--line)}
+    .links{margin-top:16px;font-size:13px}
+    .links a{color:var(--blue);text-decoration:none;margin:0 8px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="brand-logo"><img src="/logo" alt="Hamilton Logo" onerror="this.style.display='none'"/></div>
+    <h1>Hamilton Recruitment — CV Polisher</h1>
+    <p class="sub">Upload a raw CV (PDF / DOCX / TXT) and download a branded, polished version — fast and consistent.</p>
+    <div class="actions">
+      <a class="btn primary" href="/login">Start free trial</a>
+      <a class="btn secondary" href="/login">Sign in</a>
+    </div>
+    <div class="links">
+      <a href="/login">Pricing</a> ·
+      <a href="/login">About</a> ·
+      <a href="/login">Contact</a>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+# ------------------------ Branded App UI ------------------------
 HTML = r"""
 <!doctype html>
 <html lang="en">
@@ -207,7 +249,7 @@ HTML = r"""
 </head>
 <body>
   <div class="wrap">
-        <div class="nav">
+    <div class="nav">
       <div class="brand-logo"><img src="/logo" alt="Hamilton Logo" onerror="this.style.display='none'"/></div>
       <div class="brand-head">
         <p class="brand-title">Hamilton Recruitment — CV Polisher</p>
@@ -324,16 +366,19 @@ app.secret_key = os.getenv("APP_SECRET_KEY", "dev-secret-change-me")
 APP_ADMIN_USER = os.getenv("APP_ADMIN_USER", "admin")
 APP_ADMIN_PASS = os.getenv("APP_ADMIN_PASS", "hamilton")
 
-# ------------------------ ADDED: gate only "/" and auth routes ------------------------
+# ------------------------ UPDATED: gate protected routes (now /app, /polish, /stats) ------------------------
 @app.before_request
-def gate_main_page_only():
-    if request.path == "/" and not session.get("authed"):
-        return redirect(url_for("login"))
+def gate_protected_routes():
+    protected_prefixes = ["/app", "/polish", "/stats"]
+    p = request.path or "/"
+    if any(p.startswith(x) for x in protected_prefixes):
+        if not session.get("authed"):
+            return redirect(url_for("login"))
 
 @app.get("/login")
 def login():
     if session.get("authed"):
-        return redirect(url_for("index"))
+        return redirect(url_for("app_page"))  # <-- now goes to /app
     resp = make_response(render_template_string(LOGIN_HTML))
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -344,7 +389,7 @@ def do_login():
     pw = (request.form.get("password") or "").strip()
     if user == APP_ADMIN_USER and pw == APP_ADMIN_PASS:
         session["authed"] = True
-        return redirect(url_for("index"))
+        return redirect(url_for("app_page"))  # <-- now goes to /app
     html = LOGIN_HTML.replace("<!--ERROR-->", "<div class='err'>Invalid credentials</div>")
     resp = make_response(render_template_string(html))
     resp.headers["Cache-Control"] = "no-store"
@@ -388,10 +433,7 @@ def extract_text_any(path: Path) -> str:
                 return "\n".join(parts) or ""
             except Exception:
                 pass
-        # CHANGE #2: only call pdfminer if it actually imported successfully
-        if pdf_extract_text is not None:
-            return pdf_extract_text(str(path)) or ""
-        return ""
+        return pdf_extract_text(str(path)) or ""
     elif ext == ".docx":
         d = Docx(str(path))
         parts = []
@@ -551,7 +593,8 @@ def _add_section_heading(doc: Docx, text: str):
     p.paragraph_format.space_before = Pt(12)
     p.paragraph_format.space_after = Pt(6)
     r = p.add_run(text.upper().strip())
-    r.font.name = "Calibri"; r.font.size = Pt(14)  # SIZE 14 FOR ALL MAJOR HEADINGS
+    r.font.name = "Calibri"
+    r.font.size = Pt(14)  # SIZE 14 FOR ALL MAJOR HEADINGS
     r.bold = True
     r.font.color.rgb = SOFT_BLACK
     return p
@@ -571,12 +614,10 @@ def _zip_scrub_header_labels(docx_path: Path):
     Also removes a two-paragraph split and inserts a single blank paragraph
     to keep page-2+ spacing stable.
     """
-    # One-paragraph match
     pat_one = re.compile(
         r'<w:p\b[^>]*>.*?(?:professional).*?(?:experience).*?(?:continued).*?</w:p>',
         re.I | re.S
     )
-    # Two adjacent paragraphs (e.g., "... EXPERIENCE /" then "Continued")
     pat_two = re.compile(
         r'(<w:p\b[^>]*>.*?(?:professional).*?(?:experience).*?</w:p>)\s*(<w:p\b[^>]*>.*?(?:continued).*?</w:p>)',
         re.I | re.S
@@ -591,8 +632,8 @@ def _zip_scrub_header_labels(docx_path: Path):
             data = zin.read(item.filename)
             if item.filename.startswith('word/header') and item.filename.endswith('.xml'):
                 xml = data.decode('utf-8', errors='ignore')
-                xml = pat_two.sub(blank_p, xml)  # remove split first
-                xml = pat_one.sub(blank_p, xml)  # then one-paragraph
+                xml = pat_two.sub(blank_p, xml)
+                xml = pat_one.sub(blank_p, xml)
                 data = xml.encode('utf-8')
             zout.writestr(item, data)
 
@@ -607,7 +648,6 @@ def _ensure_primary_header_spacer(doc: Docx):
     try:
         for sec in doc.sections:
             hdr = sec.header  # primary header (used on pages 2+ if first-page header differs)
-            # If there are no paragraphs or the last one isn't blank, add a blank one
             needs = True
             try:
                 if hdr.paragraphs:
@@ -773,6 +813,14 @@ def _downloads_this_month():
 # ---------- Routes ----------
 @app.get("/")
 def index():
+    # Public homepage (no login required)
+    resp = make_response(render_template_string(HOMEPAGE_HTML))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+@app.get("/app")
+def app_page():
+    # The actual tool UI (login required; protected by before_request gate)
     resp = make_response(render_template_string(HTML))
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -823,4 +871,5 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 

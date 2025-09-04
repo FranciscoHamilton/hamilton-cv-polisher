@@ -107,11 +107,160 @@ HOMEPAGE_HTML = r"""
 """
 
 # ------------------------ About (already added earlier) ------------------------
-ABOUT_HTML = r"""..."""  # (unchanged content from your script above)
+ABOUT_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>About — CV Polisher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#fff}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:880px;margin:36px auto;padding:0 18px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+    h1{margin:0 0 12px;font-size:26px;color:var(--blue)}
+    h2{margin:18px 0 8px;font-size:18px;color:var(--blue)}
+    p{margin:8px 0}
+    ul{margin:6px 0 12px 18px}
+    a.btn{display:inline-block;margin-top:14px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:700;color:var(--blue)}
+    .toplinks{margin-bottom:12px}
+    .toplinks a{margin-right:10px;text-decoration:none;color:var(--blue);font-weight:700}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="toplinks">
+      <a href="/">← Home</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/login">Sign in</a>
+    </div>
+    <div class="card">
+      <h1>Built by recruiters, for recruiters</h1>
+      <p>Formatting CVs is necessary—but it’s not why you got into recruitment. After 10+ years running desks and a recruitment business, I’ve felt the pain first-hand: breaking flow to rework a CV, juggling fonts and spacing, fixing headers, and trying to keep branding consistent across the team.</p>
+      <p><strong>This tool turns that 10–20 minute task into seconds.</strong> Upload a raw CV (PDF, DOCX, or TXT). We extract the content, structure it, and lay it out in your company’s template. You download a polished, on-brand DOCX—ready to send.</p>
+
+      <h2>Why it matters</h2>
+      <ul>
+        <li><strong>Time back on the desk:</strong> 15 minutes per CV ≈ 0.25 hours. At £20–£40/hour, that’s £5–£10 per CV. 50 CVs/month ≈ 12.5 hours saved → £250–£500/month in recruiter time.</li>
+        <li><strong>Consistency at scale:</strong> every consultant outputs the same, branded format.</li>
+        <li><strong>Better candidate & client experience:</strong> clean, readable CVs that reflect your brand.</li>
+      </ul>
+
+      <h2>How it works</h2>
+      <ul>
+        <li><strong>Upload</strong> a raw CV (PDF / DOCX / TXT).</li>
+        <li><strong>Extract & structure:</strong> we pull out the real content (experience, education, skills) without inventing facts.</li>
+        <li><strong>Lay out in your template:</strong> headers/footers, fonts, sizes and spacing are applied automatically.</li>
+        <li><strong>Download</strong> a polished DOCX.</li>
+      </ul>
+
+      <h2>Privacy & control</h2>
+      <ul>
+        <li>No CV content is stored by default—only basic usage metrics (filename + timestamp) for tracking volume and billing.</li>
+        <li>Your company template and logo are stored securely to ensure output is always on-brand.</li>
+      </ul>
+
+      <h2>What’s on the site</h2>
+      <ul>
+        <li>Multi-company login (soon): per-company routes and templates.</li>
+        <li>Director dashboards (soon): usage counts, CSV export, trends.</li>
+        <li>Credit plans: pay-as-you-go or monthly bundles.</li>
+        <li>Self-serve template builder (soon): upload a DOCX to switch branding instantly.</li>
+      </ul>
+
+      <a class="btn" href="/trial">Start free trial</a>
+    </div>
+  </div>
+</body>
+</html>
+"""
+  # (unchanged content from your script above)
 # For brevity here, keep the exact ABOUT_HTML, PRICING_HTML, HTML, LOGIN_HTML strings from your script.
 
 # ------------------------ Pricing (NEW) ------------------------
-PRICING_HTML = r"""..."""  # (unchanged content from your script above)
+PRICING_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Pricing — CV Polisher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#fff}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:980px;margin:36px auto;padding:0 18px}
+    h1{margin:0 0 12px;font-size:26px;color:var(--blue)}
+    p.sub{margin:0 0 16px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .name{font-weight:800;color:var(--blue);margin-bottom:6px}
+    .price{font-size:22px;font-weight:900;margin:4px 0}
+    .small{color:var(--muted);font-size:12px}
+    .btn{display:inline-block;margin-top:10px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:700;color:var(--blue)}
+    @media(max-width:1000px){ .grid{grid-template-columns:1fr 1fr} }
+    @media(max-width:620px){ .grid{grid-template-columns:1fr} }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="/">← Home</a>
+    <h1>Pricing</h1>
+    <p class="sub">Start with a free trial (5 CVs). Upgrade any time.</p>
+
+    <div class="card" style="margin-bottom:14px">
+      <div class="name">Pay-as-you-go</div>
+      <div class="price">£1.70 <span class="small">per CV</span></div>
+      <div class="small">Top up any time • No commitment</div>
+      <a class="btn" href="/trial">Start free trial</a>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="name">Starter</div>
+        <div class="price">£140<span class="small">/mo</span></div>
+        <div class="small">Includes 100 CVs (effective £1.40/CV)</div>
+        <div class="small">Overage: £1.50/CV</div>
+        <a class="btn" href="/trial">Start free trial</a>
+      </div>
+      <div class="card">
+        <div class="name">Team</div>
+        <div class="price">£405<span class="small">/mo</span></div>
+        <div class="small">Includes 300 CVs (effective £1.35/CV)</div>
+        <div class="small">Overage: £1.45/CV</div>
+        <a class="btn" href="/trial">Start free trial</a>
+      </div>
+      <div class="card">
+        <div class="name">Scale</div>
+        <div class="price">£975<span class="small">/mo</span></div>
+        <div class="small">Includes 750 CVs (effective £1.30/CV)</div>
+        <div class="small">Overage: £1.40/CV</div>
+        <a class="btn" href="/trial">Start free trial</a>
+      </div>
+      <div class="card">
+        <div class="name">Growth</div>
+        <div class="price">£1,800<span class="small">/mo</span></div>
+        <div class="small">Includes 1,500 CVs (effective £1.20/CV)</div>
+        <div class="small">Overage: £1.30/CV</div>
+        <a class="btn" href="/trial">Start free trial</a>
+      </div>
+      <div class="card">
+        <div class="name">Enterprise</div>
+        <div class="price">Let’s talk</div>
+        <div class="small">3,000+ CVs • Target ~£1.15/CV (≈5p below Growth)</div>
+        <a class="btn" href="/trial">Start free trial</a>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="name">Template setup</div>
+      <div class="small">£50 one-off per company — fully credited back as usage (your first £50 of CVs are free once you start paying).</div>
+    </div>
+  </div>
+</body>
+</html>
+"""
+  # (unchanged content from your script above)
 
 # ------------------------ Branded App UI (unchanged except banner hook + Director button) ------------------------
 HTML = r"""
@@ -1312,6 +1461,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -1067,7 +1067,7 @@ def build_cv_document(cv: dict) -> Path:
                 meta_p = doc.add_paragraph(meta); meta_p.paragraph_format.space_after = Pt(2); _tone_runs(meta_p, size=11, bold=False)
 
             if ed.get("bullets"):
-                for b in ed["bullets"]:
+                for b in ed.get("bullets", []):
                     bp = doc.add_paragraph(b, style="List Bullet")
                     bp.paragraph_format.space_before = Pt(0); bp.paragraph_format.space_after = Pt(0)
                     _tone_runs(bp, size=11, bold=False)
@@ -1222,6 +1222,8 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
+
 
 
 

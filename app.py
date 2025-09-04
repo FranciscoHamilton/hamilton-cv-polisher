@@ -12,7 +12,7 @@ except Exception:
     fitz = None
 
 # Text extraction / DOCX tooling
-from pdfminer.high_level import extract_text as pdf_extract_text
+from pdfminer_high_level import extract_text as pdf_extract_text
 from docx import Document as Docx
 from docx.shared import Pt, Inches, RGBColor
 from docx.oxml import OxmlElement
@@ -202,7 +202,7 @@ HTML = r"""
 </head>
 <body>
   <div class="wrap">
-        <div class="nav">
+    <div class="nav">
       <div class="brand-logo"><img src="/logo" alt="Hamilton Logo" onerror="this.style.display='none'"/></div>
       <div class="brand-head">
         <p class="brand-title">Hamilton Recruitment — CV Polisher</p>
@@ -247,6 +247,60 @@ HTML = r"""
         </div>
         <div class="ts" style="margin:8px 0 6px 2px;">Full History</div>
         <div id="history" class="history"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
+# ------------------------ Public landing page (/) ------------------------
+LANDING_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Hamilton CV Polisher — Fast, consistent CV formatting</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{--blue:#003366;--blue-2:#0a4d8c;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#fff;--shadow:0 8px 24px rgba(0,0,0,.06)}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:980px;margin:40px auto;padding:0 18px}
+    .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{width:42px;height:42px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-2))}
+    .name{font-weight:900;color:var(--blue);letter-spacing:-.01em}
+    nav a{margin-left:16px;color:var(--blue);text-decoration:none;font-weight:600}
+    .hero{background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:16px;padding:28px}
+    h1{margin:0 0 10px;font-size:28px;letter-spacing:-.01em}
+    p.sub{margin:0 0 18px;color:var(--muted)}
+    .btns{display:flex;gap:12px;flex-wrap:wrap}
+    .btn{display:inline-block;padding:10px 16px;border-radius:10px;font-weight:800;text-decoration:none}
+    .primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff}
+    .ghost{border:1px solid var(--line);background:#fff;color:var(--blue)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <div class="logo"></div>
+        <div class="name">Hamilton CV Polisher</div>
+      </div>
+      <nav>
+        <a href="#pricing">Pricing</a>
+        <a href="#about">About</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+
+    <div class="hero">
+      <h1>Polish CVs in seconds — perfectly consistent, every time</h1>
+      <p class="sub">Upload a raw CV (PDF/DOCX/TXT) and download a clean, on-brand Word document in one click.</p>
+      <div class="btns">
+        <a class="btn primary" href="/login">Start free trial</a>
+        <a class="btn ghost" href="/login">Sign in</a>
       </div>
     </div>
   </div>
@@ -319,16 +373,18 @@ app.secret_key = os.getenv("APP_SECRET_KEY", "dev-secret-change-me")
 APP_ADMIN_USER = os.getenv("APP_ADMIN_USER", "admin")
 APP_ADMIN_PASS = os.getenv("APP_ADMIN_PASS", "hamilton")
 
-# ------------------------ ADDED: gate only "/" and auth routes ------------------------
+# ------------------------ PROTECT ONLY THE APP PAGES (CHANGED) ------------------------
+PROTECTED_PATHS = {"/app", "/polish", "/stats"}
+
 @app.before_request
-def gate_main_page_only():
-    if request.path == "/" and not session.get("authed"):
+def gate_app_pages():
+    if request.path in PROTECTED_PATHS and not session.get("authed"):
         return redirect(url_for("login"))
 
 @app.get("/login")
 def login():
     if session.get("authed"):
-        return redirect(url_for("index"))
+        return redirect(url_for("app_home"))  # CHANGED
     resp = make_response(render_template_string(LOGIN_HTML))
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -339,7 +395,7 @@ def do_login():
     pw = (request.form.get("password") or "").strip()
     if user == APP_ADMIN_USER and pw == APP_ADMIN_PASS:
         session["authed"] = True
-        return redirect(url_for("index"))
+        return redirect(url_for("app_home"))  # CHANGED
     html = LOGIN_HTML.replace("<!--ERROR-->", "<div class='err'>Invalid credentials</div>")
     resp = make_response(render_template_string(html))
     resp.headers["Cache-Control"] = "no-store"
@@ -764,8 +820,14 @@ def _downloads_this_month():
 
 # ---------- Routes ----------
 @app.get("/")
-def index():
-    resp = make_response(render_template_string(HTML))
+def landing():
+    resp = make_response(render_template_string(LANDING_HTML))  # CHANGED: public homepage
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+@app.get("/app")
+def app_home():
+    resp = make_response(render_template_string(HTML))  # CHANGED: app lives at /app
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
@@ -815,4 +877,3 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
-

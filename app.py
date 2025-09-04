@@ -44,7 +44,7 @@ HOMEPAGE_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Hamilton Recruitment — CV Polisher</title>
+  <title>Recruiter First — CV Polisher</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -69,7 +69,7 @@ HOMEPAGE_HTML = r"""
 <body>
   <div class="wrap">
     <div class="brand-logo"><img src="/logo" alt="Hamilton Logo" onerror="this.style.display='none'"/></div>
-    <h1>Hamilton Recruitment — CV Polisher</h1>
+    <h1>Recruiter First — CV Polisher</h1>
     <p class="sub">Upload a raw CV (PDF / DOCX / TXT) and download a branded, polished version — fast and consistent.</p>
     <div class="actions">
       <a class="btn primary" href="/login">Start free trial</a>
@@ -871,5 +871,6 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 

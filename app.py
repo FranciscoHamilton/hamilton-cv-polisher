@@ -202,11 +202,15 @@ HTML = r"""
 </head>
 <body>
   <div class="wrap">
-    <div class="nav">
+        <div class="nav">
       <div class="brand-logo"><img src="/logo" alt="Hamilton Logo" onerror="this.style.display='none'"/></div>
       <div class="brand-head">
         <p class="brand-title">Hamilton Recruitment — CV Polisher</p>
         <p class="brand-sub">Executive Search &amp; Selection</p>
+      </div>
+
+      <div style="margin-left:auto">
+        <a href="/logout" style="display:inline-block;background:#fff;color:var(--blue);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-weight:700;text-decoration:none">Log out</a>
       </div>
     </div>
 
@@ -811,3 +815,4 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+

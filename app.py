@@ -1,5 +1,5 @@
 # app.py
-import os, json, re, tempfile, traceback, zipfile
+import os, json, re, tempfile, traceback, zipfile, io
 from pathlib import Path
 from datetime import datetime
 from flask import Flask, request, send_file, render_template_string, abort, jsonify, make_response
@@ -537,6 +537,26 @@ app.secret_key = os.getenv("APP_SECRET_KEY", "dev-secret-change-me")
 APP_ADMIN_USER = os.getenv("APP_ADMIN_USER", "admin")
 APP_ADMIN_PASS = os.getenv("APP_ADMIN_PASS", "hamilton")
 
+# ------------------------ security & config (NEW) ------------------------
+app.config.update(
+    MAX_CONTENT_LENGTH=int(os.getenv("MAX_UPLOAD_MB", "15")) * 1024 * 1024,  # 15 MB default
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=os.getenv("SESSION_COOKIE_SECURE", "0") == "1",
+)
+
+TENANT = os.getenv("TENANT", "hamilton")
+ALLOWED_EXTS = {".pdf", ".docx", ".txt"}
+CREDITS_ENFORCE = os.getenv("CREDITS_ENFORCE", "1") != "0"
+PAYG_ENABLED = os.getenv("PAYG_ENABLED", "0") == "1"
+
+def _has_credit():
+    """Return True if credits logic allows a polish to proceed."""
+    if not CREDITS_ENFORCE:
+        return True
+    left = int(session.get("trial_credits", 0))
+    return left > 0 or PAYG_ENABLED
+
 # ------------------------ Gate protected routes (/app, /polish, /stats) ------------------------
 @app.before_request
 def gate_protected_routes():
@@ -675,7 +695,7 @@ def ai_or_heuristic_structuring(cv_text: str) -> dict:
         try:
             from openai import OpenAI
             client = OpenAI(api_key=api_key)
-            resp = client.chatCompletions.create(
+            resp = client.chat.completions.create(
                 model=MODEL,
                 messages=[{"role":"system","content":SCHEMA_PROMPT},
                           {"role":"user","content":cv_text}],
@@ -689,27 +709,9 @@ def ai_or_heuristic_structuring(cv_text: str) -> dict:
             import json as _json
             return _json.loads(out)
         except Exception:
-            try:
-                from openai import OpenAI
-                client = OpenAI()
-                resp = client.chat.completions.create(
-                    model=MODEL,
-                    messages=[{"role":"system","content":SCHEMA_PROMPT},
-                              {"role":"user","content":cv_text}],
-                    temperature=0
-                )
-                out = resp.choices[0].message.content.strip()
-                if out.startswith("```"):
-                    out = out.strip("`")
-                    if out.lower().startswith("json"):
-                        out = out[4:].strip()
-                import json as _json
-                return _json.loads(out)
-            except Exception as e:
-                print("OpenAI failed, falling back to heuristics:", e)
-                print(traceback.format_exc())
-
-    # Fallback heuristic
+            # IMPORTANT: Fail fast if AI is configured but unavailable.
+            abort(503, "AI is temporarily unavailable. Please try again in a few minutes.")
+    # Fallback heuristic only when no API key is set
     blocks = {"summary":[],"experience":[],"education":[],"skills":[],"certifications":[],"languages":[],"awards":[]}
     current = "summary"
     for ln in cv_text.splitlines():
@@ -844,7 +846,7 @@ def _ensure_primary_header_spacer(doc: Docx):
         pass
 
 # ---------- Compose CV ----------
-def build_cv_document(cv: dict) -> Path:
+def build_cv_document(cv: dict, dest_dir=None) -> Path:
     template_path = None
     for pth in [PROJECT_DIR / "hamilton_template.docx",
                 PROJECT_DIR / "HAMILTON TEMPLATE.docx",
@@ -961,7 +963,10 @@ def build_cv_document(cv: dict) -> Path:
 
     _ensure_primary_header_spacer(doc)
 
-    out = PROJECT_DIR / "polished_cv.docx"
+    # Write into provided temp directory (safe for concurrent users)
+    if dest_dir is None:
+        dest_dir = PROJECT_DIR
+    out = Path(dest_dir) / "polished_cv.docx"
     doc.save(str(out))
     _zip_scrub_header_labels(out)
     return out
@@ -1005,6 +1010,16 @@ def polish():
     f = request.files.get("cv")
     if not f:
         abort(400, "No file uploaded")
+
+    # Credits enforcement: block when at 0 (unless PAYG enabled)
+    if not _has_credit():
+        abort(402, "No credits remaining on your trial. Please visit /pricing to continue.")
+
+    # Basic extension check before we touch the filesystem
+    ext = os.path.splitext(f.filename or "")[1].lower()
+    if ext not in ALLOWED_EXTS:
+        abort(400, f"Unsupported file type: {ext}. Allowed: .pdf, .docx, .txt")
+
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / f.filename
         f.save(str(p))
@@ -1017,7 +1032,8 @@ def polish():
         # Skills = keywords only
         data["skills"] = extract_top_skills(text)
 
-        out = build_cv_document(data)
+        # Compose into the same temp dir to avoid cross-request collisions
+        out = build_cv_document(data, dest_dir=Path(td))
 
         # update stats
         candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
@@ -1025,7 +1041,7 @@ def polish():
         STATS["downloads"] += 1
         STATS["last_candidate"] = candidate_name
         STATS["last_time"] = now
-        STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
+        STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now, "tenant": TENANT})
         _save_stats()
 
         # NEW: decrement trial credits if present
@@ -1036,7 +1052,14 @@ def polish():
         except Exception:
             pass
 
-        resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
+        # Stream from memory so temp file deletion doesn't matter
+        data_bytes = Path(out).read_bytes()
+        resp = make_response(send_file(
+            io.BytesIO(data_bytes),
+            as_attachment=True,
+            download_name="polished_cv.docx",
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ))
         resp.headers["Cache-Control"] = "no-store"
         return resp
 

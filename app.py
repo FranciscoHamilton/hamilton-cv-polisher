@@ -911,9 +911,8 @@ def pricing():
 
 @app.get("/trial")
 def start_trial():
-    # Give 5 free CV credits; user still needs to sign in
-    session["trial_credits"] = 5
-    return redirect(url_for("login"))
+    # Keep buttons working: send them to the new Start Free Trial form
+    return redirect(url_for("start_get"))
 
 # --- Start Free Trial: new routes ---
 @app.get("/start")
@@ -1602,6 +1601,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

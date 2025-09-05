@@ -806,46 +806,53 @@ button[disabled]{opacity:.6;cursor:not-allowed}
       if(nameEl){ nameEl.textContent = "—"; }
     }
     async function refreshStats(){
-      try{
-        const r = await fetch('/stats', {cache:'no-store'});
-        if(!r.ok) return;
-        const s = await r.json();
+  try{
+    const r = await fetch('/stats', {cache:'no-store'});
+    if(!r.ok) return;
+    const s = await r.json();
 
-        // NEW: show free-trial banner if credits exist
-        const tb = document.getElementById('trialBanner');
-        if(tb){
-          const left = s.trial_credits_left || 0;
-          if(left > 0){
-            tb.style.display = 'block';
-            tb.querySelector('.left').textContent = left;
-          }else{
-            tb.style.display = 'none';
-          }
-        }
-
-        document.getElementById('downloadsMonth').textContent = s.downloads_this_month ?? s.downloads;
-document.getElementById('lastCandidate').textContent = s.last_candidate || '—';
-document.getElementById('lastTime').textContent = s.last_time || '—';
-
-// NEW: show credits left (paid + trial)
-const creditsLeft = (((s.credits || {}).balance) || 0) + (s.trial_credits_left || 0);
-const cl = document.getElementById('creditsLeft'); if (cl) cl.textContent = creditsLeft;
-
-const list = document.getElementById('history');
-if (list) {
-  list.innerHTML = '';
-  (s.history || []).slice().reverse().forEach(item => {
-    const row = document.createElement('div'); row.className = 'row';
-    const left = document.createElement('div');
-    left.innerHTML = '<div class="candidate">' + (item.candidate || item.filename || '—') + '</div><div class="ts">' + (item.filename || '') + '</div>';
-    const right = document.createElement('div'); right.className = 'ts';
-    right.textContent = item.ts || '';
-    row.appendChild(left); row.appendChild(right); list.appendChild(row);
-  });
-}
-        }
-      }catch(e){}
+    // Trial banner
+    const tb = document.getElementById('trialBanner');
+    if (tb) {
+      const left = s.trial_credits_left || 0;
+      if (left > 0) {
+        tb.style.display = 'block';
+        tb.querySelector('.left').textContent = left;
+      } else {
+        tb.style.display = 'none';
+      }
     }
+
+    // Top stats
+    const dm = document.getElementById('downloadsMonth');
+    if (dm) dm.textContent = (s.downloads_this_month ?? s.downloads);
+    const lc = document.getElementById('lastCandidate');
+    if (lc) lc.textContent = s.last_candidate || '—';
+    const lt = document.getElementById('lastTime');
+    if (lt) lt.textContent = s.last_time || '—';
+
+    // Credits (paid + trial)
+    const clEl = document.getElementById('creditsLeft');
+    if (clEl) {
+      const creditsLeft = (((s.credits || {}).balance) || 0) + (s.trial_credits_left || 0);
+      clEl.textContent = creditsLeft;
+    }
+
+    // History list
+    const list = document.getElementById('history');
+    if (list) {
+      list.innerHTML = '';
+      (s.history || []).slice().reverse().forEach(item => {
+        const row = document.createElement('div'); row.className = 'row';
+        const left = document.createElement('div');
+        left.innerHTML = '<div class="candidate">' + (item.candidate || item.filename || '—') + '</div><div class="ts">' + (item.filename || '') + '</div>';
+        const right = document.createElement('div'); right.className = 'ts';
+        right.textContent = item.ts || '';
+        row.appendChild(left); row.appendChild(right); list.appendChild(row);
+      });
+    }
+  }catch(e){}
+}
     document.addEventListener('DOMContentLoaded',()=>{
       refreshStats();
       setInterval(refreshStats, 5000);
@@ -1954,6 +1961,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

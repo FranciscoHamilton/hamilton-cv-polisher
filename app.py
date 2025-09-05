@@ -112,110 +112,90 @@ HOMEPAGE_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      /* CVStudio palette (neutral, not Hamilton’s) */
-      --ink:#0f172a;            /* text */
-      --muted:#64748b;
-      --bg:#f6f8fc;             /* page */
-      --card:#ffffff;
-      --line:#e6e8ef;
-      --brand:#1d4ed8;          /* indigo */
-      --brand-2:#3b82f6;        /* lighter indigo */
-      --shadow: 0 10px 30px rgba(2,6,23,.08);
+      --blue:#0d3b66; --blue-2:#2f6fde;
+      --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+      --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
     }
     *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    a{color:var(--brand);text-decoration:none}
-    .wrap{max-width:1200px;margin:34px auto;padding:0 22px}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+
+    .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
+
     /* top nav */
-    .top{display:flex;align-items:center;gap:18px;margin-bottom:10px}
-    .wordmark{font-weight:900;letter-spacing:-.02em;font-size:20px}
-    .spacer{flex:1}
-    .nav a{margin-left:20px;font-weight:700;color:var(--ink)}
-    .nav a:hover{color:var(--brand)}
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+
     /* hero */
-    .hero{display:grid;grid-template-columns:1fr;gap:24px}
-    .panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:28px;box-shadow:var(--shadow)}
-    h1{font-size:52px;line-height:1.05;margin:0 0 10px;letter-spacing:-.02em}
-    .nowrap{white-space:nowrap}
-    .sub{font-size:18px;color:var(--muted);max-width:56ch;margin:8px 0 18px}
-    .cta-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
-    .btn{display:inline-block;padding:14px 18px;border-radius:12px;font-weight:900}
-    .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff}
-    .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
-    .tiny{margin-top:10px;font-size:12px;color:var(--muted)}
-    /* right demo card (simpler, not “table”) */
-    .demo{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:0;overflow:hidden}
-    .demo .bar{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;font-weight:900;padding:14px 18px}
-    .demo .content{display:grid;grid-template-columns:1fr 1fr;gap:0}
-    .demo .pane{min-height:240px;background:#f9fbff}
-    .demo .pane + .pane{background:#ffffff;border-left:1px solid var(--line)}
-    .demo .foot{display:flex;justify-content:flex-end;padding:16px}
-    .chip{display:inline-block;border:1px dashed var(--line);padding:6px 10px;border-radius:999px;font-weight:700;font-size:13px}
-    /* features row */
-    .feat{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}
-    .box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
-    .box h3{margin:0 0 6px;font-size:16px;color:var(--brand);letter-spacing:.2px}
-    .box p{margin:0;color:var(--ink);font-size:14px}
-    @media(max-width:980px){
-      .hero{grid-template-columns:1fr}
-      h1{font-size:42px}
+    .hero{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:var(--shadow)}
+    .kicker{font-size:12px;letter-spacing:.14em;font-weight:900;color:var(--blue);margin-bottom:10px}
+    h1{font-size:48px;line-height:1.05;letter-spacing:-.01em;margin:0 0 10px}
+    .lead{font-size:17px;color:var(--muted);max-width:720px;margin:6px 0 16px}
+    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+    .btn{display:inline-block;padding:12px 16px;border-radius:12px;font-weight:800;text-decoration:none}
+    .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff}
+    .btn.secondary{background:#fff;border:1px solid var(--line);color:var(--blue)}
+    .meta{color:var(--muted);font-size:13px;margin-top:8px}
+
+    /* features */
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+    .card h3{margin:0 0 6px;font-size:18px;color:var(--blue)}
+    .card p{margin:0;color:var(--muted);font-size:14px}
+
+    /* stepper */
+    .stepper{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:18px}
+    .step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px}
+    .b{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;border:1px solid var(--line);font-weight:900;color:var(--blue)}
+
+    @media (max-width:900px){
+      h1{font-size:36px}
+      .lead{font-size:16px}
+      .grid3,.stepper{grid-template-columns:1fr}
     }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="top">
-      <div class="wordmark">CVStudio</div>
-      <div class="spacer"></div>
-      <div class="nav">
+    <div class="nav">
+      <a class="brand" href="/">CVStudio</a>
+      <div>
         <a href="/pricing">Pricing</a>
-        <a href="/about">About</a>
-        <a href="/login">Sign in</a>
+        <a href="/about" style="margin-left:18px">About</a>
+        <a href="/login" style="margin-left:18px">Sign in</a>
       </div>
     </div>
 
     <div class="hero">
-  <div class="panel">
-    <div style="font-weight:900;color:var(--brand);letter-spacing:.15em;font-size:12px;margin-bottom:10px">
-      FOR RECRUITERS, BY RECRUITERS
-    </div>
-
-    <h1>
-      Client-ready CVs.<br/>
-      On your brand.<br/>
-      <span class="nowrap">In seconds.</span>
-    </h1>
-
-    <p class="sub">
-      Upload a raw CV (PDF / DOCX / TXT). We extract what’s there, structure it,
-      and format into your company template—no fuss.
-    </p>
-
-    <div class="cta-row">
-      <a class="btn primary" href="/start">Start free trial</a>
-      <a class="btn ghost" href="/login">Sign in</a>
-    </div>
-
-    <div class="tiny">No card needed • Keep your headers/footers • Works with PDFs</div>
-  </div>
-</div>
-
+      <div class="kicker">BUILT BY RECRUITERS, FOR RECRUITERS</div>
+      <h1>Client-ready CVs.<br/>On your brand.<br/>In seconds.</h1>
+      <p class="lead">Upload a raw CV (PDF / DOCX / TXT). We extract what’s there, structure it, and format into your company template—no fuss.</p>
+      <div class="actions">
+        <a class="btn primary" href="/start">Start free trial</a>
+        <a class="btn secondary" href="/login">Sign in</a>
       </div>
+      <div class="meta">No card needed · Keep your headers/footers · Works with PDFs</div>
     </div>
 
-    <div class="feat">
-      <div class="box">
+    <div class="grid3">
+      <div class="card">
         <h3>On-brand output</h3>
         <p>Your logo, fonts and spacing. Clean and consistent across the team.</p>
       </div>
-      <div class="box">
+      <div class="card">
         <h3>No learning curve</h3>
-        <p>Upload → Download. ~15 minutes saved per CV, every time.</p>
+        <p>Upload → Download. 15 minutes saved per CV, every time.</p>
       </div>
-      <div class="box">
+      <div class="card">
         <h3>Built for recruiters</h3>
         <p>No invented facts. We only structure what’s in the candidate’s CV.</p>
       </div>
+    </div>
+
+    <div class="stepper">
+      <div class="step"><span class="b">1</span>Upload a CV</div>
+      <div class="step"><span class="b">2</span>We extract &amp; structure</div>
+      <div class="step"><span class="b">3</span>Download polished DOCX</div>
     </div>
   </div>
 </body>
@@ -1928,6 +1908,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

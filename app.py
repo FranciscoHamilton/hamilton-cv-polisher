@@ -928,56 +928,55 @@ LOGIN_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>CVStudio — Sign in</title>
+  <title>Sign in — CVStudio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    /* use the same palette as the homepage */
     :root{
-      --blue:#003366; --blue-2:#0a4d8c; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --bg:#f2f6fb; --card:#ffffff;
-      --ok:#16a34a; --shadow: 0 8px 24px rgba(0,0,0,.06);
+      --blue:#0d3b66; --blue-2:#2f6fde;
+      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+      --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
     }
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:420px;margin:48px auto;padding:0 18px}
-    .nav{display:flex;align-items:center;gap:14px;margin-bottom:18px;justify-content:center}
-    .brand-logo{width:42px;height:42px;border-radius:8px;background:linear-gradient(135deg,var(--blue),var(--blue-2));display:flex;align-items:center;justify-content:center;overflow:hidden}
-    .brand-logo img{width:100%;height:100%;object-fit:contain}
-    .brand-head{line-height:1.1;text-align:center}
-    .brand-title{font-size:22px;margin:0;color:var(--blue);font-weight:900;letter-spacing:-0.01em}
-    .brand-sub{margin:0;color:var(--muted);font-size:12px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;box-shadow:var(--shadow)}
-    .card h3{margin:0 0 12px;font-size:15px;letter-spacing:.2px;color:var(--blue)}
-    label{font-weight:600;font-size:13px}
-    input[type=text],input[type=password]{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
-    button{width:100%;margin-top:12px;background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;box-shadow:var(--shadow)}
+    .wrap{max-width:520px;margin:72px auto;padding:0 18px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow)}
+    h1{margin:0 0 8px;font-size:28px;letter-spacing:-.01em;color:var(--ink)}
+    .sub{margin:-2px 0 16px;color:var(--muted);font-size:13px}
+    label{font-weight:700;font-size:13px}
+    input[type=text],input[type=password]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;margin-top:6px;font-size:16px}
+    button{width:100%;margin-top:14px;background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
+    button:disabled{opacity:.6;cursor:not-allowed}
     .err{margin-top:8px;color:#b91c1c;font-weight:700;font-size:12px}
-    .muted{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
+    .meta{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
+    .meta a{color:var(--blue);text-decoration:none;font-weight:800}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="nav">
-      <div class="brand-logo"><img src="/logo" alt="CVStudio Logo" onerror="this.style.display='none'"/></div>
-      <div class="brand-head">
-        <p class="brand-title">CVStudio — Sign in</p>
-        <p class="brand-sub">For recruiters, by recruiters</p>
-      </div>
-    </div>
     <div class="card">
-      <h3>Sign in</h3>
+      <h1>Sign in</h1>
+      <div class="sub">For recruiters, by recruiters.</div>
+
       <!--ERROR-->
+
       <form method="post" action="/login" autocomplete="off">
         <label for="username">Username</label>
-        <input id="username" type="text" name="username" autofocus required />
+        <input id="username" type="text" name="username" required autofocus />
         <div style="height:8px"></div>
         <label for="password">Password</label>
         <input id="password" type="password" name="password" required />
         <button type="submit">Continue</button>
       </form>
-      <div class="muted">
-  Default demo: admin / hamilton • <a href="/forgot">Forgot password?</a> • <a href="/">Home</a>
-</div>
+
+      <div class="meta">
+        Default demo: <strong>admin</strong> / <strong>hamilton</strong> ·
+        <a href="/forgot">Forgot password?</a> ·
+        <a href="/">Home</a>
+      </div>
     </div>
   </div>
+  <script>try{document.getElementById('username').focus();}catch(e){}</script>
 </body>
 </html>
 """
@@ -1923,6 +1922,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

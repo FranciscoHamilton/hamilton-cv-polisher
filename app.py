@@ -12,7 +12,7 @@ except Exception:
     fitz = None
 
 # Text extraction / DOCX tooling
-from pdfminer_high_level import extract_text as pdf_extract_text
+from pdfminer.high_level import extract_text as pdf_extract_text
 from docx import Document as Docx
 from docx.shared import Pt, Inches, RGBColor
 from docx.oxml import OxmlElement
@@ -1602,6 +1602,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -12,7 +12,7 @@ except Exception:
     fitz = None
 
 # Text extraction / DOCX tooling
-from pdfminer.high_level import extract_text as pdf_extract_text
+from pdfminer_high_level import extract_text as pdf_extract_text
 from docx import Document as Docx
 from docx.shared import Pt, Inches, RGBColor
 from docx.oxml import OxmlElement
@@ -58,38 +58,20 @@ def _get_user(u):
         if (x.get("username") or "").lower() == (u or "").lower():
             return x
     return None
-# --- tiny free-trial requests logger ---
+
+# --- tiny trial sign-up logger (local JSON file) ---
 TRIALS_FILE = PROJECT_DIR / "trials.json"
 if TRIALS_FILE.exists():
     try:
         TRIALS = json.loads(TRIALS_FILE.read_text(encoding="utf-8"))
     except Exception:
-        TRIALS = {"requests": []}
+        TRIALS = []
 else:
-    TRIALS = {"requests": []}
+    TRIALS = []
 
-def _save_trials():
+def _log_trial(entry: dict):
+    TRIALS.append(entry)
     TRIALS_FILE.write_text(json.dumps(TRIALS, indent=2), encoding="utf-8")
-
-def _log_trial_request(data: dict):
-    """
-    Append a trial signup to trials.json (keeps last 500).
-    data keys: company, email, name, team_size, notes
-    """
-    try:
-        TRIALS.setdefault("requests", []).append({
-            "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            "company": data.get("company",""),
-            "email": data.get("email",""),
-            "name": data.get("name",""),
-            "team_size": data.get("team_size",""),
-            "notes": data.get("notes","")
-        })
-        TRIALS["requests"] = TRIALS["requests"][-500:]
-        _save_trials()
-    except Exception:
-        # never break the app if logging fails
-        pass
 
 # ------------------------ Public Home ------------------------
 HOMEPAGE_HTML = r"""
@@ -308,7 +290,9 @@ PRICING_HTML = r"""
   </div>
 </body>
 </html>
-# ------------------------ Start Free Trial (new page) ------------------------
+"""
+
+# ------------------------ Start Free Trial (new) ------------------------
 START_HTML = r"""
 <!doctype html>
 <html lang="en">
@@ -317,66 +301,69 @@ START_HTML = r"""
   <title>Start free trial — CV Polisher</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#ffffff}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#fff}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
     .wrap{max-width:620px;margin:36px auto;padding:0 18px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
-    h1{margin:0 0 12px;font-size:24px;color:var(--blue)}
-    label{display:block;font-weight:600;font-size:13px;margin-top:10px}
-    input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:6px;font-family:inherit}
-    button{width:100%;margin-top:14px;background:linear-gradient(90deg,#003366,#0a4d8c);color:#fff;border:none;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer}
-    .muted{color:var(--muted);font-size:12px;margin-top:10px}
-    .toplinks a{color:var(--blue);text-decoration:none;font-weight:700;margin-right:10px}
-    .agree{display:flex;gap:8px;align-items:center;margin-top:10px}
-    .hint{font-size:12px;color:var(--muted)}
-    .hp{position:absolute;left:-9999px;top:-9999px}
+    h1{margin:0 0 12px;font-size:26px;color:var(--blue)}
+    label{font-weight:600;font-size:13px}
+    input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
+    button{width:100%;margin-top:12px;background:linear-gradient(90deg,#003366,#0a4d8c);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
+    .muted{color:var(--muted);font-size:12px;margin-top:8px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:640px){ .row{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="toplinks"><a href="/">← Home</a><a href="/pricing">Pricing</a><a href="/login">Sign in</a></div>
+    <a href="/">← Home</a>
     <div class="card">
       <h1>Start your free trial</h1>
-      <p class="hint">You’ll get <strong>5 free CVs</strong>. No credit card. Branded output.</p>
-      <form method="post" action="/start" autocomplete="off" novalidate>
-        <label for="company">Company<span class="hint"> (required)</span></label>
-        <input id="company" name="company" required />
-
-        <label for="email">Work email<span class="hint"> (required)</span></label>
-        <input id="email" name="email" type="email" required />
-
-        <label for="name">Your name<span class="hint"> (required)</span></label>
-        <input id="name" name="name" required />
-
-        <label for="team">Team size</label>
-        <select id="team" name="team">
-          <option value="">Select…</option>
-          <option>1</option><option>2–5</option><option>6–15</option><option>16–50</option><option>50+</option>
-        </select>
-
-        <label for="notes">Notes (optional)</label>
-        <textarea id="notes" name="notes" rows="3" placeholder="Anything we should know?"></textarea>
-
-        <div class="agree">
-          <input id="agree" type="checkbox" name="agree" required />
-          <label for="agree" style="margin:0">I agree to the <a href="/about">terms / data use</a>.</label>
+      <p class="muted">5 free CVs, no card required. On submit you’ll be taken to Sign in. Your banner in the app will show trial credits left.</p>
+      <form method="post" action="/start" autocomplete="off">
+        <label>Company</label>
+        <input name="company" required />
+        <div class="row">
+          <div>
+            <label>Work email</label>
+            <input name="email" type="email" required />
+          </div>
+          <div>
+            <label>Your name</label>
+            <input name="name" required />
+          </div>
         </div>
-
-        <!-- Honeypot (bots will fill this; humans won’t) -->
-        <div class="hp">
-          <label>Website</label>
-          <input name="website" />
+        <div class="row">
+          <div>
+            <label>Team size</label>
+            <select name="team_size">
+              <option value="">Choose…</option>
+              <option>Just me</option>
+              <option>2–5</option>
+              <option>6–15</option>
+              <option>16–50</option>
+              <option>50+</option>
+            </select>
+          </div>
+          <div style="display:none">
+            <!-- Honeypot (bots will fill this) -->
+            <label>Website</label>
+            <input name="website" />
+          </div>
         </div>
-
-        <button type="submit">Create my trial</button>
-        <div class="muted">After submit: we’ll add 5 trial credits and send you to Sign in.</div>
+        <label>Notes (optional)</label>
+        <textarea name="notes" rows="4" placeholder="Anything we should know?"></textarea>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:10px">
+          <input type="checkbox" name="agree" required style="width:auto"/> I agree to fair use of the free trial.
+        </label>
+        <button type="submit">Create free trial</button>
+        <p class="muted" style="text-align:center">Already have an account? <a href="/login">Sign in</a></p>
       </form>
     </div>
   </div>
 </body>
 </html>
 """
-  # (unchanged content from your script above)
 
 # ------------------------ Branded App UI (unchanged except banner hook + Director button) ------------------------
 HTML = r"""
@@ -927,36 +914,42 @@ def start_trial():
     # Give 5 free CV credits; user still needs to sign in
     session["trial_credits"] = 5
     return redirect(url_for("login"))
-# --- Start Free Trial page (public) ---
+
+# --- Start Free Trial: new routes ---
 @app.get("/start")
-def start_get():
+def start_free_trial_form():
     resp = make_response(render_template_string(START_HTML))
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
 @app.post("/start")
-def start_post():
-    # Honeypot anti-spam: if bot fills hidden field, just bounce to login
-    hp = (request.form.get("website") or "").strip()
-    if hp:
+def start_free_trial_submit():
+    # Honeypot: if filled, treat as spam but still proceed
+    if (request.form.get("website") or "").strip():
+        session["trial_credits"] = 5
         return redirect(url_for("login"))
 
-    # Capture form fields
-    data = {
-        "company": (request.form.get("company") or "").strip(),
-        "email":   (request.form.get("email") or "").strip(),
-        "name":    (request.form.get("name") or "").strip(),
-        "team_size": (request.form.get("team_size") or "").strip(),
-        "notes":   (request.form.get("notes") or "").strip(),
-    }
+    company = (request.form.get("company") or "").strip()
+    email   = (request.form.get("email") or "").strip()
+    name    = (request.form.get("name") or "").strip()
+    team    = (request.form.get("team_size") or "").strip()
+    notes   = (request.form.get("notes") or "").strip()
+    agree   = (request.form.get("agree") == "on")
 
-    # Log the request (does not break the flow if it fails)
-    try:
-        _log_trial_request(data)
-    except Exception:
-        pass
+    if not (company and email and name and agree):
+        return "Missing required fields", 400
 
-    # Give 5 trial credits and send them to Sign in
+    _log_trial({
+        "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "company": company,
+        "email": email,
+        "name": name,
+        "team_size": team,
+        "notes": notes,
+        "ip": request.headers.get("X-Forwarded-For", request.remote_addr)
+    })
+
+    # grant trial credits and send to Sign in
     session["trial_credits"] = 5
     return redirect(url_for("login"))
 

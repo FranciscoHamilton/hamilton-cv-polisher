@@ -403,89 +403,97 @@ PRICING_HTML = r"""
   </div>
 
   <script>
-    function fmt(n){ return new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(n); }
-    function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
+  function fmt(n){ return new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(n); }
+  function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
-    // Updated PAYG packs to: 150 (£195), 60 (£84), 35 (£52.50)
-    function bestPayg(volume){
-      const packs = [
-        {name:'Bulk (150 CVs)', size:150, cost:195},
-        {name:'Standard (60 CVs)', size:60, cost:84},
-        {name:'Mini (35 CVs)', size:35, cost:52.5},
-      ];
-      let best = {name:'PAYG packs', cost:Infinity, percv:Infinity, credits:0, breakdown:''};
+  // PAYG packs (unchanged visuals): Mini 35/£52.50 (£1.50), Standard 60/£84 (£1.40), Bulk 150/£195 (£1.30)
+  function bestPayg(volume){
+    const packs = [
+      {name:'Bulk (150 CVs)', size:150, cost:195},
+      {name:'Standard (60 CVs)', size:60, cost:84},
+      {name:'Mini (35 CVs)', size:35, cost:52.5},
+    ];
+    let best = {name:'PAYG packs', cost:Infinity, percv:Infinity, credits:0, breakdown:''};
 
-      for(let b=0; b<=Math.ceil(volume/150)+1; b++){
-        for(let s=0; s<=Math.ceil(Math.max(0,volume-150*b)/60)+1; s++){
-          const used = 150*b + 60*s;
-          const rem = Math.max(0, volume - used);
-          const m = Math.ceil(rem/35);
-          const credits = used + 35*m;
-          const cost = 195*b + 84*s + 52.5*m;
-          if(cost < best.cost){
-            const detail = [
-              b ? `${b}×Bulk` : null,
-              s ? `${s}×Standard` : null,
-              m ? `${m}×Mini` : null
-            ].filter(Boolean).join(' + ');
-            best = {name:'PAYG packs', cost, percv:(volume? cost/volume:0), credits, breakdown:detail};
-          }
+    for(let b=0; b<=Math.ceil(volume/150)+1; b++){
+      for(let s=0; s<=Math.ceil(Math.max(0,volume-150*b)/60)+1; s++){
+        const used = 150*b + 60*s;
+        const rem = Math.max(0, volume - used);
+        const m = Math.ceil(rem/35);
+        const credits = used + 35*m;
+        const cost = 195*b + 84*s + 52.5*m;
+        if(cost < best.cost){
+          const detail = [
+            b ? `${b}×Bulk` : null,
+            s ? `${s}×Standard` : null,
+            m ? `${m}×Mini` : null
+          ].filter(Boolean).join(' + ');
+          best = {name:'PAYG packs', cost, percv:(volume? cost/volume:0), credits, breakdown:detail};
         }
       }
-      return best;
     }
+    return best;
+  }
 
-    // Updated Monthly plans + overage £1.40/CV
-    function planOptions(volume){
-      return [
-        {name:'Starter (38 CVs/mo)', credits:38, cost:50},
-        {name:'Team (120 CVs/mo)', credits:120, cost:150},
-        {name:'Pro (300 CVs/mo)', credits:300, cost:360},
-        {name:'Scale (600 CVs/mo)', credits:600, cost:660},
-        {name:'High Volume (1000 CVs/mo)', credits:1000, cost:1000},
-      ].map(p=>{
-        const over = Math.max(0, volume - p.credits);
-        const overCost = over * 1.40;   // overage for subscribers
-        const total = p.cost + overCost;
-        return {name:p.name, cost:total, percv:(volume? total/volume:0), credits:p.credits, over};
-      });
-    }
+  // Monthly plans used by the picker (Starter removed, overage @ £1.40)
+  function planOptions(volume){
+    return [
+      {name:'Team (120 CVs/mo)',  credits:120,  cost:150},
+      {name:'Pro (300 CVs/mo)',   credits:300,  cost:360},
+      {name:'Scale (600 CVs/mo)', credits:600,  cost:660},
+      // High Volume is volume-priced; we don't hard-price it in the picker.
+    ].map(p=>{
+      const over = Math.max(0, volume - p.credits);
+      const overCost = over * 1.40;
+      const total = p.cost + overCost;
+      return {name:p.name, cost:total, percv:(volume? total/volume:0), credits:p.credits, over};
+    });
+  }
 
-    function calc(){
-      const cvs = parseFloat(document.getElementById('cvs').value) || 0;
-      const mManual = parseFloat(document.getElementById('minManual').value) || 0;
-      const rate = parseFloat(document.getElementById('hourRate').value) || 0;
+  function calc(){
+    const cvs = parseFloat(document.getElementById('cvs').value) || 0;
+    const mManual = parseFloat(document.getElementById('minManual').value) || 0;
+    const rate = parseFloat(document.getElementById('hourRate').value) || 0;
 
-      const timeSavedMin = Math.max(0, mManual) * cvs; // (we don’t show minutes)
-      const timeSavedHours = timeSavedMin / 60;
-      const moneySaved = timeSavedHours * rate;
+    // Savings (we only show hours + money, as requested)
+    const timeSavedMin = Math.max(0, mManual) * cvs;
+    const timeSavedHours = timeSavedMin / 60;
+    const moneySaved = timeSavedHours * rate;
 
-      document.getElementById('outHours').textContent = (Math.round(timeSavedHours*10)/10).toFixed(1);
-      document.getElementById('outMoney').textContent = fmt(Math.round(moneySaved));
+    document.getElementById('outHours').textContent = (Math.round(timeSavedHours*10)/10).toFixed(1);
+    document.getElementById('outMoney').textContent = fmt(Math.round(moneySaved));
 
-      // Best plan suggestion
-      const pickEl = document.getElementById('planPick');
-      if(!cvs){ pickEl.textContent = ''; return; }
+    // Best plan recommendation
+    const pickEl = document.getElementById('planPick');
+    if(!cvs){ pickEl.textContent = ''; return; }
 
-      const payg = bestPayg(cvs);
-      const monthly = planOptions(cvs);
-      const all = [
-        {kind:'PAYG', name:payg.name, cost:payg.cost, percv:payg.percv, meta:payg},
-        ...monthly.map(x=>({kind:'Monthly', name:x.name, cost:x.cost, percv:x.percv, meta:x}))
-      ].sort((a,b)=>a.cost - b.cost);
+    const payg = bestPayg(cvs);
+    const monthly = planOptions(cvs);
+    const all = [
+      {kind:'PAYG', name:payg.name, cost:payg.cost, percv:payg.percv, meta:payg},
+      ...monthly.map(x=>({kind:'Monthly', name:x.name, cost:x.cost, percv:x.percv, meta:x}))
+    ].sort((a,b)=>a.cost - b.cost);
 
-      const best = all[0];
-      const percv = best.percv ? ` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)` : '';
-      let extra = '';
-      if(best.kind==='PAYG' && best.meta.breakdown){ extra = ` · ${best.meta.breakdown}`; }
-      if(best.kind==='Monthly' && best.meta.over>0){ extra = ` · includes ${best.meta.over} overage @ £1.40`; }
+    const best = all[0];
+    const percv = best.percv ? ` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)` : '';
+    let extra = '';
+    if(best.kind==='PAYG' && best.meta.breakdown){ extra = ` · ${best.meta.breakdown}`; }
+    if(best.kind==='Monthly' && best.meta.over>0){ extra = ` · includes ${best.meta.over} overage @ £1.40`; }
 
-      pickEl.innerHTML = `Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>/mo${percv}${extra}`;
-    }
+    // Nice suffix for cost
+    const suffix = best.kind==='Monthly' ? '/mo' : ' total';
 
-    document.addEventListener('input', calc);
-    document.addEventListener('DOMContentLoaded', calc);
-  </script>
+    // Hint about High Volume when relevant
+    const hvHint = cvs >= 900
+      ? `<br><span class="small">Around 1,000+ CVs/mo? High Volume may be cheaper (min 1,000 CVs/mo, £1.00–£0.60/CV). Let’s talk.</span>`
+      : '';
+
+    pickEl.innerHTML = `Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>${suffix}${percv}${extra}${hvHint}`;
+  }
+
+  document.addEventListener('input', calc);
+  document.addEventListener('DOMContentLoaded', calc);
+</script>
 </body>
 </html>
 """
@@ -1932,6 +1940,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

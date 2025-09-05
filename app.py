@@ -108,42 +108,142 @@ HOMEPAGE_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>CVStudio</title>
+  <title>CVStudio — For recruiters, by recruiters</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --blue:#003366; --blue-2:#0a4d8c; --ink:#111827; --muted:#6b7280; --line:#e5e7eb; --bg:#f2f6fb; --card:#ffffff;
-      --shadow: 0 8px 24px rgba(0,0,0,.06);
+      --blue:#0a3a78; --blue-2:#0f5aa7; --ink:#0e1726; --muted:#6b7280; --line:#e5e7eb; --bg:#f6f9ff; --card:#ffffff;
+      --shadow: 0 20px 40px rgba(2,15,29,.07);
     }
     *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:820px;margin:56px auto;padding:0 18px;text-align:center}
-    .brand-logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--blue),var(--blue-2));display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
-    .brand-logo img{width:100%;height:100%;object-fit:contain}
-    h1{margin:0 0 8px;font-size:28px;color:var(--blue);letter-spacing:-0.01em}
-    p.sub{margin:0 auto 24px;color:var(--muted);font-size:14px;max-width:600px}
-    .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
-    a.btn{display:inline-block;padding:12px 16px;border-radius:10px;font-weight:800;text-decoration:none;box-shadow:var(--shadow)}
-    a.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff}
-    a.secondary{background:#fff;color:var(--blue);border:1px solid var(--line)}
-    .links{margin-top:16px;font-size:13px}
-    .links a{color:var(--blue);text-decoration:none;margin:0 8px}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; color:var(--ink);
+      background:
+        radial-gradient(1200px 500px at 70% -100px, #e6f0ff 0%, transparent 60%),
+        radial-gradient(1000px 400px at -10% 0, #eaf2ff 0%, transparent 70%),
+        var(--bg);
+    }
+
+    .wrap{max-width:1000px;margin:0 auto;padding:32px 18px}
+
+    /* Top mini-nav */
+    .top{display:flex;align-items:center;gap:14px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .brand .logo{width:38px;height:38px;border-radius:10px;
+      background:linear-gradient(140deg,var(--blue),var(--blue-2));
+      display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:var(--shadow)}
+    .brand .logo img{width:100%;height:100%;object-fit:contain}
+    .brand .name{font-weight:900;letter-spacing:-0.01em;color:var(--blue)}
+    .spacer{flex:1}
+    .top a{color:var(--blue);text-decoration:none;font-weight:700;padding:8px 10px;border-radius:10px}
+    .top a:hover{background:#fff;border:1px solid var(--line)}
+
+    /* Hero */
+    .hero{margin:48px 0 24px;display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:center}
+    .hero-left{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;box-shadow:var(--shadow)}
+    .kicker{color:var(--blue);font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase}
+    h1{margin:8px 0 8px;font-size:40px;line-height:1.1;letter-spacing:-.02em}
+    .tag{color:var(--muted);margin:0 0 18px;font-size:15px}
+    .cta{display:flex;gap:12px;flex-wrap:wrap}
+    .btn{display:inline-block;padding:12px 16px;border-radius:12px;font-weight:900;text-decoration:none}
+    .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;box-shadow:var(--shadow)}
+    .btn.secondary{background:#fff;color:var(--blue);border:1px solid var(--line)}
+    .mini{font-size:12px;color:var(--muted);margin-top:8px}
+
+    .hero-right{
+      background:linear-gradient(140deg,#ffffff, #f2f7ff);
+      border:1px solid var(--line); border-radius:18px; padding:16px; box-shadow:var(--shadow)
+    }
+    .mock{
+      height:260px;border-radius:12px;background:
+        linear-gradient(90deg,#f5f7fb 0 60%, #ffffff 60%),
+        repeating-linear-gradient(#eef2f7 0,#eef2f7 20px, #ffffff 21px, #ffffff 42px);
+      position:relative; overflow:hidden; border:1px solid var(--line)
+    }
+    .mock .bar{position:absolute;top:0;left:0;right:0;height:54px;
+      background:linear-gradient(90deg,var(--blue),var(--blue-2)); color:#fff; display:flex;align-items:center;justify-content:center;
+      font-weight:900;letter-spacing:.02em}
+    .mock .chip{position:absolute;bottom:14px;right:14px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:800;color:var(--blue)}
+
+    /* Features */
+    .features{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:26px 0}
+    .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+    .card .title{font-weight:800;color:var(--blue);margin-bottom:4px}
+    .card .txt{font-size:13px;color:var(--muted)}
+
+    /* How-it-works strip */
+    .strip{margin:10px 0 18px;background:#fff;border:1px dashed var(--line);border-radius:14px;padding:12px;display:flex;gap:14px;justify-content:space-between}
+    .step{display:flex;align-items:center;gap:8px;font-size:13px}
+    .dot{width:20px;height:20px;border-radius:999px;background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900}
+
+    /* Footer */
+    .foot{margin:26px 0 6px;text-align:center;color:var(--muted);font-size:12px}
+    .foot a{color:var(--blue);text-decoration:none;font-weight:800}
+
+    @media(max-width:960px){ .hero{grid-template-columns:1fr} .hero-right{order:-1} }
+    @media(max-width:640px){ h1{font-size:32px} .features{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="brand-logo"><img src="/logo" alt="Logo" onerror="this.style.display='none'"/></div>
-    <h1>CVStudio</h1>
-    <p class="sub">Upload a raw CV (PDF / DOCX / TXT) and download a polished, on-brand DOCX in seconds.</p>
-    <div class="actions">
-      <a class="btn primary" href="/trial">Start free trial</a>
-      <a class="btn secondary" href="/login">Sign in</a>
-    </div>
-    <div class="links">
-      <a href="/pricing">Pricing</a> ·
-      <a href="/about">About</a> ·
+
+    <div class="top">
+      <div class="brand">
+        <div class="logo"><img src="/logo" alt="CVStudio logo" onerror="this.style.display='none'" /></div>
+        <div class="name">CVStudio</div>
+      </div>
+      <div class="spacer"></div>
+      <a href="/pricing">Pricing</a>
+      <a href="/about">About</a>
       <a href="/login">Contact</a>
     </div>
+
+    <div class="hero">
+      <div class="hero-left">
+        <div class="kicker">For recruiters, by recruiters</div>
+        <h1>Client-ready CVs. <br/>On your brand. In seconds.</h1>
+        <p class="tag">Upload a raw CV (PDF / DOCX / TXT). We extract what’s there, structure it, and format into your company template—no fuss.</p>
+        <div class="cta">
+          <a class="btn primary" href="/trial">Start free trial</a>
+          <a class="btn secondary" href="/login">Sign in</a>
+        </div>
+        <div class="mini">No card needed · Keep your headers/footers · Works with PDFs</div>
+      </div>
+
+      <div class="hero-right">
+        <div class="mock">
+          <div class="bar">Your brand header</div>
+          <div class="chip">DOCX export</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="features">
+      <div class="card">
+        <div class="title">On-brand output</div>
+        <div class="txt">Your logo, fonts and spacing. Clean and consistent across the team.</div>
+      </div>
+      <div class="card">
+        <div class="title">No learning curve</div>
+        <div class="txt">Upload → Download. 15 minutes saved per CV, every time.</div>
+      </div>
+      <div class="card">
+        <div class="title">Built for recruiters</div>
+        <div class="txt">No invented facts. We only structure what’s in the candidate’s CV.</div>
+      </div>
+    </div>
+
+    <div class="strip">
+      <div class="step"><div class="dot">1</div>Upload a CV</div>
+      <div class="step"><div class="dot">2</div>We extract & structure</div>
+      <div class="step"><div class="dot">3</div>Download polished DOCX</div>
+    </div>
+
+    <div class="foot">
+      Need more credits? See <a href="/pricing">plans</a>. Want details? Read <a href="/about">About</a>.
+    </div>
+
   </div>
 </body>
 </html>
@@ -701,7 +801,7 @@ LOGIN_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Hamilton Recruitment — Sign in</title>
+  <title>CVStudio — Sign in</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -729,10 +829,10 @@ LOGIN_HTML = r"""
 <body>
   <div class="wrap">
     <div class="nav">
-      <div class="brand-logo"><img src="/logo" alt="Hamilton Logo" onerror="this.style.display='none'"/></div>
+      <div class="brand-logo"><img src="/logo" alt="CVStudio Logo" onerror="this.style.display='none'"/></div>
       <div class="brand-head">
-        <p class="brand-title">Hamilton Recruitment — Sign in</p>
-        <p class="brand-sub">Executive Search &amp; Selection</p>
+        <p class="brand-title">CVStudio — Sign in</p>
+        <p class="brand-sub">For recruiters, by recruiters</p>
       </div>
     </div>
     <div class="card">
@@ -1694,6 +1794,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -155,7 +155,7 @@ ABOUT_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>About — CV Polisher</title>
+  <title>About — CVStudio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#fff}
@@ -227,7 +227,7 @@ PRICING_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Pricing — CV Polisher</title>
+  <title>Pricing — CVStudio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#fff}
@@ -639,7 +639,7 @@ HTML = r"""
     <div class="nav">
       <div class="brand-logo"><img src="/logo" alt="Hamilton Logo" onerror="this.style.display='none'"/></div>
       <div class="brand-head">
-        <p class="brand-title">Hamilton Recruitment — CV Polisher</p>
+        <p class="brand-title">Hamilton Recruitment — CVStudio</p>
         <p class="brand-sub">Executive Search &amp; Selection</p>
       </div>
       <div style="margin-left:auto; display:flex; gap:8px;">
@@ -1694,6 +1694,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

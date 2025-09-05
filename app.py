@@ -599,7 +599,7 @@ HTML = r"""
     .pct{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;color:#fff;font-weight:700}
     .success{display:none;margin-top:10px;color:var(--ok);font-weight:700}
 
-    .statsgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+    .statsgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
     .stat{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card)}
     .stat .k{font-size:11px;color:var(--muted);font-weight:600}
     .stat .v{font-size:14px;font-weight:800;margin-top:2px;color:var(--blue)}
@@ -677,19 +677,25 @@ HTML = r"""
         }
 
         document.getElementById('downloadsMonth').textContent = s.downloads_this_month ?? s.downloads;
-        document.getElementById('lastCandidate').textContent = s.last_candidate || '—';
-        document.getElementById('lastTime').textContent = s.last_time || '—';
-        const list = document.getElementById('history');
-        if(list){
-          list.innerHTML = '';
-          (s.history || []).slice().reverse().forEach(item=>{
-            const row = document.createElement('div'); row.className='row';
-            const left = document.createElement('div');
-            left.innerHTML = '<div class="candidate">'+ (item.candidate || item.filename || '—') + '</div><div class="ts">'+ (item.filename || '') +'</div>';
-            const right = document.createElement('div'); right.className='ts';
-            right.textContent = item.ts || '';
-            row.appendChild(left); row.appendChild(right); list.appendChild(row);
-          });
+document.getElementById('lastCandidate').textContent = s.last_candidate || '—';
+document.getElementById('lastTime').textContent = s.last_time || '—';
+
+// NEW: show credits left (paid + trial)
+const creditsLeft = (((s.credits || {}).balance) || 0) + (s.trial_credits_left || 0);
+const cl = document.getElementById('creditsLeft'); if (cl) cl.textContent = creditsLeft;
+
+const list = document.getElementById('history');
+if (list) {
+  list.innerHTML = '';
+  (s.history || []).slice().reverse().forEach(item => {
+    const row = document.createElement('div'); row.className = 'row';
+    const left = document.createElement('div');
+    left.innerHTML = '<div class="candidate">' + (item.candidate || item.filename || '—') + '</div><div class="ts">' + (item.filename || '') + '</div>';
+    const right = document.createElement('div'); right.className = 'ts';
+    right.textContent = item.ts || '';
+    row.appendChild(left); row.appendChild(right); list.appendChild(row);
+  });
+}
         }
       }catch(e){}
     }
@@ -739,7 +745,7 @@ HTML = r"""
     <div class="nav">
       <div class="brand-logo"><img src="/logo" alt="Hamilton Logo" onerror="this.style.display='none'"/></div>
       <div class="brand-head">
-        <p class="brand-title">Hamilton Recruitment — CVStudio</p>
+        <p class="brand-title">Hamilton Recruitment</p>
         <p class="brand-sub">Executive Search &amp; Selection</p>
       </div>
       <div style="margin-left:auto; display:flex; gap:8px;">
@@ -782,10 +788,13 @@ HTML = r"""
       <div class="card">
         <h3>Session Stats</h3>
         <div class="statsgrid">
-          <div class="stat"><div class="k">Downloads this month</div><div class="v" id="downloadsMonth">0</div></div>
-          <div class="stat"><div class="k">Last Candidate</div><div class="v" id="lastCandidate">—</div></div>
-          <div class="stat"><div class="k">Last Polished</div><div class="v" id="lastTime">—</div></div>
-        </div>
+  <div class="stat"><div class="k">Downloads this month</div><div class="v" id="downloadsMonth">0</div></div>
+  <div class="stat"><div class="k">Last Candidate</div><div class="v" id="lastCandidate">—</div></div>
+  <div class="stat"><div class="k">Last Polished</div><div class="v" id="lastTime">—</div></div>
+  <div class="stat"><div class="k">Credits left</div><div class="v" id="creditsLeft">0</div></div>
+</div>
+<div class="ts" style="margin:6px 0 10px 2px;">Low on credits? <a href="/pricing">Buy more</a></div>
+
         <div class="ts" style="margin:8px 0 6px 2px;">Full History</div>
         <div id="history" class="history"></div>
       </div>
@@ -846,7 +855,9 @@ LOGIN_HTML = r"""
         <input id="password" type="password" name="password" required />
         <button type="submit">Continue</button>
       </form>
-      <div class="muted">Default demo: admin / hamilton • <a href="/forgot">Forgot password?</a></div>
+      <div class="muted">
+  Default demo: admin / hamilton • <a href="/forgot">Forgot password?</a> • <a href="/">Home</a>
+</div>
     </div>
   </div>
 </body>
@@ -1794,6 +1805,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

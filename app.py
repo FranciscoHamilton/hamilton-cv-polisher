@@ -931,7 +931,6 @@ LOGIN_HTML = r"""
   <title>Sign in — CVStudio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    /* use the same palette as the homepage */
     :root{
       --blue:#0d3b66; --blue-2:#2f6fde;
       --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
@@ -939,24 +938,31 @@ LOGIN_HTML = r"""
     }
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:520px;margin:72px auto;padding:0 18px}
+
+    /* top brand like homepage */
+    .topbar{max-width:980px;margin:18px auto 0;padding:0 18px;display:flex;align-items:center}
+    .brand{color:var(--blue);text-decoration:none;font-weight:900;letter-spacing:.2px;font-size:18px}
+
+    .wrap{max-width:520px;margin:40px auto 72px;padding:0 18px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow)}
-    h1{margin:0 0 8px;font-size:28px;letter-spacing:-.01em;color:var(--ink)}
-    .sub{margin:-2px 0 16px;color:var(--muted);font-size:13px}
+    h1{margin:0 0 12px;font-size:28px;letter-spacing:-.01em;color:var(--ink);text-align:center}
     label{font-weight:700;font-size:13px}
     input[type=text],input[type=password]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;margin-top:6px;font-size:16px}
     button{width:100%;margin-top:14px;background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
     button:disabled{opacity:.6;cursor:not-allowed}
-    .err{margin-top:8px;color:#b91c1c;font-weight:700;font-size:12px}
+    .err{margin-top:8px;color:#b91c1c;font-weight:700;font-size:12px;text-align:center}
     .meta{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
     .meta a{color:var(--blue);text-decoration:none;font-weight:800}
   </style>
 </head>
 <body>
+  <div class="topbar">
+    <a class="brand" href="/">CVStudio</a>
+  </div>
+
   <div class="wrap">
     <div class="card">
       <h1>Sign in</h1>
-      <div class="sub">For recruiters, by recruiters.</div>
 
       <!--ERROR-->
 
@@ -1922,6 +1928,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

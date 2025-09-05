@@ -227,14 +227,15 @@ PRICING_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Pricing — CVStudio</title>
+  <title>Pricing — CV Polisher</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#fff}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
     .wrap{max-width:980px;margin:36px auto;padding:0 18px}
     h1{margin:0 0 12px;font-size:26px;color:var(--blue)}
-    p.sub{margin:0 0 16px;color:var(--muted)}
+    p.sub{margin:0 0 8px;color:var(--muted)}
+    .note{margin:4px 0 16px;color:var(--muted);font-size:12px}
     .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
     .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
@@ -243,7 +244,6 @@ PRICING_HTML = r"""
     .small{color:var(--muted);font-size:12px}
     .btn{display:inline-block;margin-top:10px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:700;color:var(--blue)}
     .section{margin-top:18px;margin-bottom:10px;font-weight:900;color:var(--blue)}
-    .note{margin:8px 0 14px;color:var(--muted);font-size:12px}
     @media(max-width:1000px){ .grid5{grid-template-columns:1fr 1fr} .grid3{grid-template-columns:1fr 1fr} }
     @media(max-width:620px){ .grid5,.grid3{grid-template-columns:1fr} }
   </style>
@@ -252,28 +252,28 @@ PRICING_HTML = r"""
   <div class="wrap">
     <a href="/">← Home</a>
     <h1>Pricing</h1>
-    <p class="sub">Start with a free trial (5 CVs). Upgrade any time.</p>
+    <p class="sub">Choose a plan or buy a pack.</p>
+    <p class="note">Optional: try 5 free CVs using our demo template. Branded template setup is £50 and is fully credited back once you start paying.</p>
 
     <div class="section">Pay-as-you-go packs</div>
-    <p class="note">For occasional use. No commitment. <em>True one-off:</em> £1.70 per single CV.</p>
     <div class="grid3" style="margin-bottom:14px">
       <div class="card">
         <div class="name">Mini</div>
         <div class="price">35 credits · £52.50</div>
         <div class="small">£1.50 per CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <a class="btn" href="/login">Buy pack</a>
       </div>
       <div class="card">
         <div class="name">Standard</div>
         <div class="price">100 credits · £140</div>
         <div class="small">£1.40 per CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <a class="btn" href="/login">Buy pack</a>
       </div>
       <div class="card">
         <div class="name">Bulk</div>
         <div class="price">300 credits · £390</div>
         <div class="small">£1.30 per CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <a class="btn" href="/login">Buy pack</a>
       </div>
     </div>
 
@@ -284,25 +284,25 @@ PRICING_HTML = r"""
         <div class="name">Starter</div>
         <div class="price">£50<span class="small">/mo</span></div>
         <div class="small">40 credits · £1.25/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <a class="btn" href="/login">Choose plan</a>
       </div>
       <div class="card">
         <div class="name">Pro</div>
         <div class="price">£360<span class="small">/mo</span></div>
         <div class="small">300 credits · £1.20/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <a class="btn" href="/login">Choose plan</a>
       </div>
       <div class="card">
         <div class="name">Scale</div>
         <div class="price">£660<span class="small">/mo</span></div>
         <div class="small">600 credits · £1.10/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <a class="btn" href="/login">Choose plan</a>
       </div>
       <div class="card">
         <div class="name">High Volume</div>
         <div class="price">£1,000<span class="small">/mo</span></div>
         <div class="small">1,000 credits · £1.00/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <a class="btn" href="/login">Choose plan</a>
       </div>
       <div class="card">
         <div class="name">Custom (3,000+)</div>
@@ -1694,6 +1694,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

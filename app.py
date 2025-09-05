@@ -133,7 +133,7 @@ HOMEPAGE_HTML = r"""
     .nav a{margin-left:20px;font-weight:700;color:var(--ink)}
     .nav a:hover{color:var(--brand)}
     /* hero */
-    .hero{display:grid;grid-template-columns:1.1fr .9fr;gap:28px;margin-top:18px}
+    .hero{display:grid;grid-template-columns:1fr;gap:28px;margin-top:18px}
     .panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:28px;box-shadow:var(--shadow)}
     h1{font-size:52px;line-height:1.05;margin:0 0 10px;letter-spacing:-.02em}
     .nowrap{white-space:nowrap}
@@ -175,22 +175,30 @@ HOMEPAGE_HTML = r"""
     </div>
 
     <div class="hero">
-      <div class="panel">
-        <div style="font-weight:900;color:var(--brand);letter-spacing:.15em;font-size:12px;margin-bottom:10px">FOR RECRUITERS, BY RECRUITERS</div>
-        <h1>
-          Client-ready CVs.<br/>
-          On your brand.<br/>
-          <span class="nowrap">In seconds.</span>
-        </h1>
-        <p class="sub">
-          Upload a raw CV (PDF / DOCX / TXT). We extract what’s there, structure it, and format into your company template—no fuss.
-        </p>
-        <div class="cta-row">
-          <a class="btn primary" href="/start">Start free trial</a>
-          <a class="btn ghost" href="/login">Sign in</a>
-        </div>
-        <div class="tiny">No card needed • Keep your headers/footers • Works with PDFs</div>
-      </div>
+  <div class="panel">
+    <div style="font-weight:900;color:var(--brand);letter-spacing:.15em;font-size:12px;margin-bottom:10px">
+      FOR RECRUITERS, BY RECRUITERS
+    </div>
+
+    <h1>
+      Client-ready CVs.<br/>
+      On your brand.<br/>
+      <span class="nowrap">In seconds.</span>
+    </h1>
+
+    <p class="sub">
+      Upload a raw CV (PDF / DOCX / TXT). We extract what’s there, structure it,
+      and format into your company template—no fuss.
+    </p>
+
+    <div class="cta-row">
+      <a class="btn primary" href="/start">Start free trial</a>
+      <a class="btn ghost" href="/login">Sign in</a>
+    </div>
+
+    <div class="tiny">No card needed • Keep your headers/footers • Works with PDFs</div>
+  </div>
+</div>
 
       <div class="demo">
         <div class="bar">Your brand header</div>
@@ -1777,6 +1785,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

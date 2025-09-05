@@ -341,45 +341,44 @@ PRICING_HTML = r"""
     </div>
 
     <div class="section">Monthly plans</div>
-    <p class="note">CVs reset monthly. Overage at £1.40/CV or buy a PAYG pack. Up to 20% rollover for 2 months.</p>
-    <div class="grid5">
-      <div class="card">
-        <div class="name">Starter</div>
-        <div class="price">£50<span class="small">/mo</span></div>
-        <div class="small">38 CVs · ≈£1.32/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
-      </div>
-      <div class="card">
-        <div class="name">Team</div>
-        <div class="price">£150<span class="small">/mo</span></div>
-        <div class="small">120 CVs · £1.25/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
-      </div>
-      <div class="card">
-        <div class="name">Pro</div>
-        <div class="price">£360<span class="small">/mo</span></div>
-        <div class="small">300 CVs · £1.20/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
-      </div>
-      <div class="card">
-        <div class="name">Scale</div>
-        <div class="price">£660<span class="small">/mo</span></div>
-        <div class="small">600 CVs · £1.10/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
-      </div>
-      <div class="card">
-        <div class="name">High Volume</div>
-        <div class="price">£1,000<span class="small">/mo</span></div>
-        <div class="small">1,000 CVs · £1.00/CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
-      </div>
-      <div class="card">
-        <div class="name">Enterprise (3,000+)</div>
-        <div class="price">Let’s talk</div>
-        <div class="small">Target ~£0.70–£0.60/CV</div>
-        <a class="btn" href="/contact">Contact us</a>
-      </div>
-    </div>
+<p class="note">CVs reset monthly. Overage at £1.40/CV or buy a PAYG pack. Up to 20% rollover for 2 months.</p>
+
+<div class="grid5">
+  <div class="card">
+    <div class="name">Team</div>
+    <div class="price">£150<span class="small">/mo</span></div>
+    <div class="small">120 CVs · £1.25/CV</div>
+    <a class="btn" href="/trial">Start free trial</a>
+  </div>
+
+  <div class="card">
+    <div class="name">Pro</div>
+    <div class="price">£360<span class="small">/mo</span></div>
+    <div class="small">300 CVs · £1.20/CV</div>
+    <a class="btn" href="/trial">Start free trial</a>
+  </div>
+
+  <div class="card">
+    <div class="name">Scale</div>
+    <div class="price">£660<span class="small">/mo</span></div>
+    <div class="small">600 CVs · £1.10/CV</div>
+    <a class="btn" href="/trial">Start free trial</a>
+  </div>
+
+  <div class="card">
+    <div class="name">High Volume</div>
+    <div class="price">Minimum 1,000 CVs<span class="small">/mo</span></div>
+    <div class="small">£1.00–£0.60 per CV (volume-based)</div>
+    <a class="btn" href="/contact">Let’s talk</a>
+  </div>
+
+  <div class="card">
+    <div class="name">Enterprise (3,000+)</div>
+    <div class="price">Let’s talk</div>
+    <div class="small">Custom terms · procurement friendly</div>
+    <a class="btn" href="/contact">Contact us</a>
+  </div>
+</div>
 
     <div class="card" style="margin-top:14px">
       <div class="name">Template setup</div>
@@ -1933,6 +1932,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

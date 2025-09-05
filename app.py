@@ -58,6 +58,38 @@ def _get_user(u):
         if (x.get("username") or "").lower() == (u or "").lower():
             return x
     return None
+# --- tiny free-trial requests logger ---
+TRIALS_FILE = PROJECT_DIR / "trials.json"
+if TRIALS_FILE.exists():
+    try:
+        TRIALS = json.loads(TRIALS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        TRIALS = {"requests": []}
+else:
+    TRIALS = {"requests": []}
+
+def _save_trials():
+    TRIALS_FILE.write_text(json.dumps(TRIALS, indent=2), encoding="utf-8")
+
+def _log_trial_request(data: dict):
+    """
+    Append a trial signup to trials.json (keeps last 500).
+    data keys: company, email, name, team_size, notes
+    """
+    try:
+        TRIALS.setdefault("requests", []).append({
+            "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "company": data.get("company",""),
+            "email": data.get("email",""),
+            "name": data.get("name",""),
+            "team_size": data.get("team_size",""),
+            "notes": data.get("notes","")
+        })
+        TRIALS["requests"] = TRIALS["requests"][-500:]
+        _save_trials()
+    except Exception:
+        # never break the app if logging fails
+        pass
 
 # ------------------------ Public Home ------------------------
 HOMEPAGE_HTML = r"""
@@ -272,6 +304,73 @@ PRICING_HTML = r"""
     <div class="card" style="margin-top:14px">
       <div class="name">Template setup</div>
       <div class="small">£50 one-off per company — fully credited back as usage (your first £50 of CVs are free once you start paying).</div>
+    </div>
+  </div>
+</body>
+</html>
+# ------------------------ Start Free Trial (new page) ------------------------
+START_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Start free trial — CV Polisher</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#ffffff}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:620px;margin:36px auto;padding:0 18px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+    h1{margin:0 0 12px;font-size:24px;color:var(--blue)}
+    label{display:block;font-weight:600;font-size:13px;margin-top:10px}
+    input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:6px;font-family:inherit}
+    button{width:100%;margin-top:14px;background:linear-gradient(90deg,#003366,#0a4d8c);color:#fff;border:none;border-radius:10px;padding:12px 16px;font-weight:700;cursor:pointer}
+    .muted{color:var(--muted);font-size:12px;margin-top:10px}
+    .toplinks a{color:var(--blue);text-decoration:none;font-weight:700;margin-right:10px}
+    .agree{display:flex;gap:8px;align-items:center;margin-top:10px}
+    .hint{font-size:12px;color:var(--muted)}
+    .hp{position:absolute;left:-9999px;top:-9999px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="toplinks"><a href="/">← Home</a><a href="/pricing">Pricing</a><a href="/login">Sign in</a></div>
+    <div class="card">
+      <h1>Start your free trial</h1>
+      <p class="hint">You’ll get <strong>5 free CVs</strong>. No credit card. Branded output.</p>
+      <form method="post" action="/start" autocomplete="off" novalidate>
+        <label for="company">Company<span class="hint"> (required)</span></label>
+        <input id="company" name="company" required />
+
+        <label for="email">Work email<span class="hint"> (required)</span></label>
+        <input id="email" name="email" type="email" required />
+
+        <label for="name">Your name<span class="hint"> (required)</span></label>
+        <input id="name" name="name" required />
+
+        <label for="team">Team size</label>
+        <select id="team" name="team">
+          <option value="">Select…</option>
+          <option>1</option><option>2–5</option><option>6–15</option><option>16–50</option><option>50+</option>
+        </select>
+
+        <label for="notes">Notes (optional)</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="Anything we should know?"></textarea>
+
+        <div class="agree">
+          <input id="agree" type="checkbox" name="agree" required />
+          <label for="agree" style="margin:0">I agree to the <a href="/about">terms / data use</a>.</label>
+        </div>
+
+        <!-- Honeypot (bots will fill this; humans won’t) -->
+        <div class="hp">
+          <label>Website</label>
+          <input name="website" />
+        </div>
+
+        <button type="submit">Create my trial</button>
+        <div class="muted">After submit: we’ll add 5 trial credits and send you to Sign in.</div>
+      </form>
     </div>
   </div>
 </body>
@@ -826,6 +925,38 @@ def pricing():
 @app.get("/trial")
 def start_trial():
     # Give 5 free CV credits; user still needs to sign in
+    session["trial_credits"] = 5
+    return redirect(url_for("login"))
+# --- Start Free Trial page (public) ---
+@app.get("/start")
+def start_get():
+    resp = make_response(render_template_string(START_HTML))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+@app.post("/start")
+def start_post():
+    # Honeypot anti-spam: if bot fills hidden field, just bounce to login
+    hp = (request.form.get("website") or "").strip()
+    if hp:
+        return redirect(url_for("login"))
+
+    # Capture form fields
+    data = {
+        "company": (request.form.get("company") or "").strip(),
+        "email":   (request.form.get("email") or "").strip(),
+        "name":    (request.form.get("name") or "").strip(),
+        "team_size": (request.form.get("team_size") or "").strip(),
+        "notes":   (request.form.get("notes") or "").strip(),
+    }
+
+    # Log the request (does not break the flow if it fails)
+    try:
+        _log_trial_request(data)
+    except Exception:
+        pass
+
+    # Give 5 trial credits and send them to Sign in
     session["trial_credits"] = 5
     return redirect(url_for("login"))
 
@@ -1478,6 +1609,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

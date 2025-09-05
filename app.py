@@ -200,11 +200,6 @@ HOMEPAGE_HTML = r"""
   </div>
 </div>
 
-      <div class="demo">
-        <div class="bar">Your brand header</div>
-        <div class="content">
-          <div class="pane"></div>
-          <div class="pane"></div>
         </div>
         <div class="foot"><span class="chip">DOCX export</span></div>
       </div>
@@ -1785,6 +1780,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

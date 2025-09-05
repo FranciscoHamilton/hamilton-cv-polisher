@@ -133,7 +133,7 @@ HOMEPAGE_HTML = r"""
     .nav a{margin-left:20px;font-weight:700;color:var(--ink)}
     .nav a:hover{color:var(--brand)}
     /* hero */
-    .hero{display:grid;grid-template-columns:1fr;gap:28px;margin-top:18px}
+    .hero{display:grid;grid-template-columns:1fr;gap:24px}
     .panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:28px;box-shadow:var(--shadow)}
     h1{font-size:52px;line-height:1.05;margin:0 0 10px;letter-spacing:-.02em}
     .nowrap{white-space:nowrap}
@@ -200,8 +200,6 @@ HOMEPAGE_HTML = r"""
   </div>
 </div>
 
-        </div>
-        <div class="foot"><span class="chip">DOCX export</span></div>
       </div>
     </div>
 
@@ -387,7 +385,7 @@ PRICING_HTML = r"""
       <div class="card">
         <div class="name">Starter</div>
         <div class="price">£50<span class="small">/mo</span></div>
-        <div class="small">40 credits · £1.25/CV</div>
+        <div class="small">38 credits · £1.30/CV</div>
         <a class="btn" href="/trial">Start free trial</a>
       </div>
       <div class="card">
@@ -424,18 +422,14 @@ PRICING_HTML = r"""
         <label>CVs per month
           <input id="cvs" type="number" min="0" value="50" />
         </label>
-        <label>Minutes per CV (manual)
+        <label>Minutes per CV (manual polish) (avg)
           <input id="minManual" type="number" min="0" value="15" />
         </label>
-        <label>Minutes per CV with CVStudio
-          <input id="minTool" type="number" min="0" value="1" />
-        </label>
-        <label>Recruiter hourly cost (£)
+        <label>Recruiter hourly cost (avg)
           <input id="hourRate" type="number" min="0" value="30" />
         </label>
       </div>
       <div class="calc-out">
-        <div><strong id="outMinutes">0</strong> minutes saved / month</div>
         <div><strong id="outHours">0.0</strong> hours saved / month</div>
         <div><strong id="outMoney">£0</strong> payroll saved / month</div>
       </div>
@@ -453,10 +447,15 @@ PRICING_HTML = r"""
   function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
   function bestPayg(volume){
-    // Packs: Mini 35/£52.50 (£1.50), Standard 100/£140 (£1.40), Bulk 300/£390 (£1.30)
+    // PAYG packs: Mini 35/£52.50 (£1.50), Standard 100/£140 (£1.40), Bulk 300/£390 (£1.30)
+    const packs = [
+      {name:'Bulk (300)', size:300, cost:390},
+      {name:'Standard (100)', size:100, cost:140},
+      {name:'Mini (35)', size:35, cost:52.5},
+    ];
     let best = {name:'PAYG packs', cost:Infinity, percv:Infinity, credits:0, breakdown:''};
 
-    // Try combinations of packs (quick for typical volumes)
+    // Try simple combinations to cover typical volumes cheaply
     for(let b=0; b<=Math.ceil(volume/300)+1; b++){
       for(let s=0; s<=Math.ceil(Math.max(0,volume-300*b)/100)+1; s++){
         const used = 300*b + 100*s;
@@ -478,8 +477,9 @@ PRICING_HTML = r"""
   }
 
   function planOptions(volume){
+    // UPDATED Starter to 38 credits
     return [
-      {name:'Starter (40/mo)', credits:40,   cost:50},
+      {name:'Starter (38/mo)', credits:38,   cost:50},
       {name:'Pro (300/mo)',    credits:300,  cost:360},
       {name:'Scale (600/mo)',  credits:600,  cost:660},
       {name:'High Volume (1000/mo)', credits:1000, cost:1000},
@@ -494,14 +494,14 @@ PRICING_HTML = r"""
   function calc(){
     const cvs = parseFloat(document.getElementById('cvs').value) || 0;
     const mManual = parseFloat(document.getElementById('minManual').value) || 0;
-    const mTool = parseFloat(document.getElementById('minTool').value) || 0;
     const rate = parseFloat(document.getElementById('hourRate').value) || 0;
 
-    const timeSavedMin = Math.max(0, mManual - mTool) * cvs;
+    // No "with CVStudio" time — assume 0 minutes
+    const timeSavedMin = mManual * cvs;
     const timeSavedHours = timeSavedMin / 60;
     const moneySaved = timeSavedHours * rate;
 
-    document.getElementById('outMinutes').textContent = fmt(timeSavedMin);
+    // Show only hours + money
     document.getElementById('outHours').textContent = (Math.round(timeSavedHours*10)/10).toFixed(1);
     document.getElementById('outMoney').textContent = fmtGBP(moneySaved);
 
@@ -1923,6 +1923,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

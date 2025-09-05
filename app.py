@@ -309,6 +309,16 @@ PRICING_HTML = r"""
     .note{margin:8px 0 14px;color:var(--muted);font-size:12px}
     @media(max-width:1000px){ .grid5{grid-template-columns:1fr 1fr} .grid3{grid-template-columns:1fr 1fr} }
     @media(max-width:620px){ .grid5,.grid3{grid-template-columns:1fr} }
+    /* Savings calculator tidy-up */
+.calc{ margin-top:12px; }
+.calc-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+.calc label{ display:block; font-weight:800; margin-bottom:6px; }
+.calc .hint{ display:block; color:var(--muted); font-size:12px; margin-top:6px; }
+.calc input[type=number]{ width:100%; padding:10px; border:1px solid var(--line); border-radius:10px; }
+@media(max-width:900px){ .calc-grid{ grid-template-columns:1fr; } }
+
+.calc-out{ display:flex; flex-wrap:wrap; gap:24px; align-items:center; margin-top:14px; }
+.calc-out .n{ font-weight:900; color:var(--blue); font-size:22px; }
   </style>
 </head>
 <body>
@@ -388,17 +398,35 @@ PRICING_HTML = r"""
     <!-- Calculator (kept as-is visually; numbers updated to match plans) -->
     <div class="card" style="margin-top:14px">
       <div class="name">Savings calculator</div>
-      <div class="small">Estimate monthly time and payroll savings with CVStudio.</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px">
-        <label>CVs per month<br/><input id="cvs" type="number" min="0" value="50" style="width:100%"></label>
-        <label>Minutes per CV (manual polish) <span class="small">(avg)</span><br/><input id="minManual" type="number" min="0" value="15" style="width:100%"></label>
-        <label>Recruiter hourly cost <span class="small">(avg)</span><br/><input id="hourRate" type="number" min="0" value="30" style="width:100%"></label>
+        <div class="small">Estimate monthly time and payroll savings with CVStudio.</div>
+
+  <div class="calc">
+    <div class="calc-grid">
+      <div>
+        <label for="cvs">CVs per month</label>
+        <input id="cvs" type="number" min="0" step="1" value="50" />
       </div>
-      <div class="calc-out" style="display:flex;gap:18px;margin-top:10px">
-        <div><strong><span id="outHours">12.5</span></strong> hours saved / month</div>
-        <div><strong>£<span id="outMoney">375</span></strong> payroll saved / month</div>
+
+      <div>
+        <label for="minManual">Minutes per CV (manual polish)</label>
+        <input id="minManual" type="number" min="0" step="1" value="15" />
+        <span class="hint">(avg)</span>
       </div>
-      <div class="small" id="planPick" style="margin-top:8px"></div>
+
+      <div>
+        <label for="hourRate">Recruiter hourly cost</label>
+        <input id="hourRate" type="number" min="0" step="1" value="30" />
+        <span class="hint">(avg)</span>
+      </div>
+    </div>
+
+    <div class="calc-out">
+      <div><span class="n" id="outHours">12.5</span> hours saved / month</div>
+      <div><span class="n" id="outMoney">£375</span> payroll saved / month</div>
+    </div>
+
+    <div class="small" id="planPick" style="margin-top:8px"></div>
+  </div>
     </div>
   </div>
 
@@ -1940,6 +1968,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

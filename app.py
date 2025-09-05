@@ -908,61 +908,58 @@ LOGIN_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Sign in — CVStudio</title>
+  <title>CVStudio — Sign in</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
       --blue:#0d3b66; --blue-2:#2f6fde;
-      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+      --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
       --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
     }
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
 
-    /* top brand like homepage */
-    .topbar{max-width:980px;margin:18px auto 0;padding:0 18px;display:flex;align-items:center}
-    .brand{color:var(--blue);text-decoration:none;font-weight:900;letter-spacing:.2px;font-size:18px}
-
-    .wrap{max-width:520px;margin:40px auto 72px;padding:0 18px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow)}
-    h1{margin:0 0 12px;font-size:28px;letter-spacing:-.01em;color:var(--ink);text-align:center}
-    label{font-weight:700;font-size:13px}
-    input[type=text],input[type=password]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;margin-top:6px;font-size:16px}
+    .auth{max-width:520px;margin:28px auto 0;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow)}
+    h1{margin:0 0 12px;font-size:28px;color:var(--blue)}
+    label{font-weight:600;font-size:13px}
+    input[type=text],input[type=password]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;margin-top:6px}
     button{width:100%;margin-top:14px;background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
-    button:disabled{opacity:.6;cursor:not-allowed}
-    .err{margin-top:8px;color:#b91c1c;font-weight:700;font-size:12px;text-align:center}
-    .meta{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
-    .meta a{color:var(--blue);text-decoration:none;font-weight:800}
+    .muted{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
+    .err{margin-top:8px;color:#b91c1c;font-weight:800;font-size:12px}
+    a{color:var(--blue);text-decoration:none}
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <a class="brand" href="/">CVStudio</a>
-  </div>
-
   <div class="wrap">
-    <div class="card">
+    <div class="nav">
+      <a class="brand" href="/">CVStudio</a>
+      <div>
+        <a href="/pricing">Pricing</a>
+        <a href="/about" style="margin-left:18px">About</a>
+        <a href="/" style="margin-left:18px">Home</a>
+      </div>
+    </div>
+
+    <div class="auth">
       <h1>Sign in</h1>
-
       <!--ERROR-->
-
       <form method="post" action="/login" autocomplete="off">
         <label for="username">Username</label>
-        <input id="username" type="text" name="username" required autofocus />
-        <div style="height:8px"></div>
+        <input id="username" type="text" name="username" autofocus required />
+        <div style="height:10px"></div>
         <label for="password">Password</label>
         <input id="password" type="password" name="password" required />
         <button type="submit">Continue</button>
       </form>
-
-      <div class="meta">
-        Default demo: <strong>admin</strong> / <strong>hamilton</strong> ·
-        <a href="/forgot">Forgot password?</a> ·
-        <a href="/">Home</a>
+      <div class="muted">
+        Default demo: admin / hamilton • <a href="/forgot">Forgot password?</a> • <a href="/">Home</a>
       </div>
     </div>
   </div>
-  <script>try{document.getElementById('username').focus();}catch(e){}</script>
 </body>
 </html>
 """
@@ -1908,6 +1905,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

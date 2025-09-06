@@ -218,15 +218,18 @@ ABOUT_HTML = r"""
     }
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:980px;margin:24px auto 64px;padding:0 20px}
+
+    /* same shell as Home/Pricing */
+    .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
     .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
     .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
     .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow)}
-    h1{margin:0 0 10px;font-size:32px;color:var(--blue)}
-    h2{margin:18px 0 8px;font-size:20px;color:var(--blue)}
-    p{margin:8px 0;color:var(--ink);font-size:16px}
-    ul{margin:6px 0 12px 20px;color:var(--ink);font-size:16px}
+
+    .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow)}
+    h1{margin:0 0 10px;font-size:28px;color:var(--blue);letter-spacing:-.01em}
+    h2{margin:18px 0 8px;font-size:18px;color:var(--blue)}
+    p{margin:8px 0;font-size:16px;line-height:1.5;color:var(--ink)}
+    ul{margin:6px 0 12px 20px;color:var(--ink);font-size:16px;line-height:1.5}
     .btn{display:inline-block;margin-top:14px;padding:12px 16px;border-radius:12px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--blue)}
   </style>
 </head>
@@ -1976,6 +1979,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

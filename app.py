@@ -293,235 +293,243 @@ PRICING_HTML = r"""
   <title>Pricing — CVStudio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#fff}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:980px;margin:36px auto;padding:0 18px}
-    h1{margin:0 0 12px;font-size:26px;color:var(--blue)}
+    :root{
+      --blue:#0d3b66; --blue-2:#2f6fde;
+      --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+      --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
+
+    /* top nav to match homepage */
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+
+    h1{margin:10px 0 10px;font-size:28px;color:var(--blue)}
     p.sub{margin:0 0 16px;color:var(--muted)}
-    .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+    .section{margin:18px 0 10px;font-weight:900;color:var(--blue)}
+
     .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
-    .name{font-weight:800;color:var(--blue);margin-bottom:6px}
-    .price{font-size:22px;font-weight:900;margin:4px 0}
-    .small{color:var(--muted);font-size:12px}
-    .btn{display:inline-block;margin-top:10px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:700;color:var(--blue)}
-    .section{margin-top:18px;margin-bottom:10px;font-weight:900;color:var(--blue)}
-    .note{margin:8px 0 14px;color:var(--muted);font-size:12px}
+    .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
     @media(max-width:1000px){ .grid5{grid-template-columns:1fr 1fr} .grid3{grid-template-columns:1fr 1fr} }
     @media(max-width:620px){ .grid5,.grid3{grid-template-columns:1fr} }
-    /* Savings calculator tidy-up */
-.calc{ margin-top:12px; }
-.calc-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
-.calc label{ display:block; font-weight:800; margin-bottom:6px; }
-.calc .hint{ display:block; color:var(--muted); font-size:12px; margin-top:6px; }
-.calc input[type=number]{ width:100%; padding:10px; border:1px solid var(--line); border-radius:10px; }
-@media(max-width:900px){ .calc-grid{ grid-template-columns:1fr; } }
 
-.calc-out{ display:flex; flex-wrap:wrap; gap:24px; align-items:center; margin-top:14px; }
-.calc-out .n{ font-weight:900; color:var(--blue); font-size:22px; }
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
+    .name{font-weight:900;color:var(--blue);margin-bottom:6px}
+    .price{font-size:22px;font-weight:900;margin:4px 0}
+    .small{color:var(--muted);font-size:12px}
+    .btn{display:inline-block;margin-top:10px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--blue)}
+    .note{margin:8px 0 14px;color:var(--muted);font-size:12px}
+
+    /* Calculator tidy */
+    .calc{ margin-top:12px; }
+    .calc-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    .calc label{ display:block; font-weight:800; margin-bottom:6px; }
+    .calc .hint{ display:block; color:var(--muted); font-size:12px; margin-top:6px; }
+    .calc input[type=number]{ width:100%; padding:10px; border:1px solid var(--line); border-radius:10px; }
+    @media(max-width:900px){ .calc-grid{ grid-template-columns:1fr; } }
+    .calc-out{ display:flex; flex-wrap:wrap; gap:24px; align-items:center; margin-top:14px; }
+    .calc-out .n{ font-weight:900; color:var(--blue); font-size:22px; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <a href="/">← Home</a>
+    <!-- top nav -->
+    <div class="nav">
+      <a class="brand" href="/">CVStudio</a>
+      <div>
+        <a href="/pricing">Pricing</a>
+        <a href="/about" style="margin-left:18px">About</a>
+        <a href="/login" style="margin-left:18px">Sign in</a>
+      </div>
+    </div>
+
     <h1>Pricing</h1>
     <p class="sub">Start with a free trial (5 CVs). Upgrade any time.</p>
 
+    <!-- PAYG -->
     <div class="section">Pay-as-you-go packs</div>
     <p class="note">For occasional use. No commitment.</p>
     <div class="grid3" style="margin-bottom:14px">
       <div class="card">
         <div class="name">Mini</div>
-        <div class="price">35 CVs · £52.50</div>
+        <div class="price">50 CVs · £75</div>
         <div class="small">£1.50 per CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <a class="btn" href="/trial">Buy pack</a>
       </div>
       <div class="card">
         <div class="name">Standard</div>
-        <div class="price">60 CVs · £84</div>
+        <div class="price">100 CVs · £140</div>
         <div class="small">£1.40 per CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <a class="btn" href="/trial">Buy pack</a>
       </div>
       <div class="card">
         <div class="name">Bulk</div>
-        <div class="price">150 CVs · £195</div>
+        <div class="price">200 CVs · £260</div>
         <div class="small">£1.30 per CV</div>
-        <a class="btn" href="/trial">Start free trial</a>
+        <a class="btn" href="/trial">Buy pack</a>
       </div>
     </div>
 
+    <!-- Monthly -->
     <div class="section">Monthly plans</div>
-<p class="note">CVs reset monthly. Overage at £1.40/CV or buy a PAYG pack. Up to 20% rollover for 2 months.</p>
+    <p class="note">
+      CVs reset monthly. Overage varies by plan:
+      Team £1.15/CV · Pro £1.05/CV · Scale £0.95/CV · High&nbsp;Volume £0.85/CV · Enterprise £0.60/CV.
+      You can also buy a PAYG pack at any time.
+    </p>
+    <div class="grid5">
+      <div class="card">
+        <div class="name">Team</div>
+        <div class="price">£300<span class="small">/mo</span></div>
+        <div class="small">250 CVs · £1.20/CV</div>
+        <a class="btn" href="/trial">Join plan</a>
+      </div>
+      <div class="card">
+        <div class="name">Pro</div>
+        <div class="price">£550<span class="small">/mo</span></div>
+        <div class="small">500 CVs · £1.10/CV</div>
+        <a class="btn" href="/trial">Join plan</a>
+      </div>
+      <div class="card">
+        <div class="name">Scale</div>
+        <div class="price">£750<span class="small">/mo</span></div>
+        <div class="small">750 CVs · £1.00/CV</div>
+        <a class="btn" href="/trial">Join plan</a>
+      </div>
+      <div class="card">
+        <div class="name">High Volume</div>
+        <div class="price">1,000 CVs<span class="small">/mo</span></div>
+        <div class="small">£0.90/CV · Overage £0.85/CV</div>
+        <a class="btn" href="/contact">Contact us</a>
+      </div>
+      <div class="card">
+        <div class="name">Enterprise (2,000+)</div>
+        <div class="price">2,000+ CVs<span class="small">/mo</span></div>
+        <div class="small">£0.75/CV · Overage £0.60/CV</div>
+        <a class="btn" href="/contact">Contact us</a>
+      </div>
+    </div>
 
-<div class="grid5">
-  <div class="card">
-    <div class="name">Team</div>
-    <div class="price">£150<span class="small">/mo</span></div>
-    <div class="small">120 CVs · £1.25/CV</div>
-    <a class="btn" href="/trial">Start free trial</a>
-  </div>
+    <!-- Calculator -->
+    <div class="card calc" style="margin-top:14px">
+      <div class="name">Savings calculator</div>
+      <div class="small">Estimate monthly time and payroll savings with CVStudio.</div>
 
-  <div class="card">
-    <div class="name">Pro</div>
-    <div class="price">£360<span class="small">/mo</span></div>
-    <div class="small">300 CVs · £1.20/CV</div>
-    <a class="btn" href="/trial">Start free trial</a>
-  </div>
+      <div class="calc-grid" style="margin-top:10px">
+        <div>
+          <label>CVs per month</label>
+          <input id="cvs" type="number" min="0" value="50" />
+        </div>
+        <div>
+          <label>Minutes per CV (manual polish) <span class="small">(avg)</span></label>
+          <input id="minManual" type="number" min="0" value="15" />
+        </div>
+        <div>
+          <label>Recruiter hourly cost <span class="small">(avg)</span></label>
+          <input id="hourRate" type="number" min="0" value="30" />
+        </div>
+      </div>
 
-  <div class="card">
-    <div class="name">Scale</div>
-    <div class="price">£660<span class="small">/mo</span></div>
-    <div class="small">600 CVs · £1.10/CV</div>
-    <a class="btn" href="/trial">Start free trial</a>
-  </div>
+      <div class="calc-out">
+        <div><span class="n" id="outHours">12.5</span> hours saved / month</div>
+        <div><span class="n">£<span id="outMoney">375</span></span> payroll saved / month</div>
+      </div>
 
-  <div class="card">
-    <div class="name">High Volume</div>
-    <div class="price">Minimum 1,000 CVs<span class="small">/mo</span></div>
-    <div class="small">£1.00–£0.60 per CV (volume-based)</div>
-    <a class="btn" href="/contact">Let’s talk</a>
-  </div>
+      <div class="small" id="planPick" style="margin-top:6px"></div>
+    </div>
 
-  <div class="card">
-    <div class="name">Enterprise (3,000+)</div>
-    <div class="price">Let’s talk</div>
-    <div class="small">Custom terms · procurement friendly</div>
-    <a class="btn" href="/contact">Contact us</a>
-  </div>
-</div>
-
+    <!-- Template setup LAST -->
     <div class="card" style="margin-top:14px">
       <div class="name">Template setup</div>
       <div class="small">£50 one-off per company — fully credited back as usage (your first £50 of CVs are free once you start paying).</div>
     </div>
-
-    <!-- Calculator (kept as-is visually; numbers updated to match plans) -->
-    <div class="card" style="margin-top:14px">
-      <div class="name">Savings calculator</div>
-        <div class="small">Estimate monthly time and payroll savings with CVStudio.</div>
-
-  <div class="calc">
-    <div class="calc-grid">
-      <div>
-        <label for="cvs">CVs per month</label>
-        <input id="cvs" type="number" min="0" step="1" value="50" />
-      </div>
-
-      <div>
-        <label for="minManual">Minutes per CV (manual polish)</label>
-        <input id="minManual" type="number" min="0" step="1" value="15" />
-        <span class="hint">(avg)</span>
-      </div>
-
-      <div>
-        <label for="hourRate">Recruiter hourly cost</label>
-        <input id="hourRate" type="number" min="0" step="1" value="30" />
-        <span class="hint">(avg)</span>
-      </div>
-    </div>
-
-    <div class="calc-out">
-      <div><span class="n" id="outHours">12.5</span> hours saved / month</div>
-      <div><span class="n" id="outMoney">£375</span> payroll saved / month</div>
-    </div>
-
-    <div class="small" id="planPick" style="margin-top:8px"></div>
-  </div>
-    </div>
   </div>
 
   <script>
-  function fmt(n){ return new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(n); }
-  function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
+    function fmt(n){ return new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(n); }
+    function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
-  // PAYG packs (unchanged visuals): Mini 35/£52.50 (£1.50), Standard 60/£84 (£1.40), Bulk 150/£195 (£1.30)
-  function bestPayg(volume){
-    const packs = [
-      {name:'Bulk (150 CVs)', size:150, cost:195},
-      {name:'Standard (60 CVs)', size:60, cost:84},
-      {name:'Mini (35 CVs)', size:35, cost:52.5},
-    ];
-    let best = {name:'PAYG packs', cost:Infinity, percv:Infinity, credits:0, breakdown:''};
+    // PAYG packs: new sizes/prices
+    // Mini 50 @ £1.50 (75), Standard 100 @ £1.40 (140), Bulk 200 @ £1.30 (260)
+    function bestPayg(volume){
+      const packs = [
+        {name:'Bulk (200 CVs)', size:200, cost:260},
+        {name:'Standard (100 CVs)', size:100, cost:140},
+        {name:'Mini (50 CVs)', size:50, cost:75},
+      ];
+      let best = {name:'PAYG packs', cost:Infinity, percv:Infinity, credits:0, breakdown:''};
 
-    for(let b=0; b<=Math.ceil(volume/150)+1; b++){
-      for(let s=0; s<=Math.ceil(Math.max(0,volume-150*b)/60)+1; s++){
-        const used = 150*b + 60*s;
-        const rem = Math.max(0, volume - used);
-        const m = Math.ceil(rem/35);
-        const credits = used + 35*m;
-        const cost = 195*b + 84*s + 52.5*m;
-        if(cost < best.cost){
-          const detail = [
-            b ? `${b}×Bulk` : null,
-            s ? `${s}×Standard` : null,
-            m ? `${m}×Mini` : null
-          ].filter(Boolean).join(' + ');
-          best = {name:'PAYG packs', cost, percv:(volume? cost/volume:0), credits, breakdown:detail};
+      for(let b=0; b<=Math.ceil(volume/200)+1; b++){
+        for(let s=0; s<=Math.ceil(Math.max(0,volume-200*b)/100)+1; s++){
+          const used = 200*b + 100*s;
+          const rem = Math.max(0, volume - used);
+          const m = Math.ceil(rem/50);
+          const credits = used + 50*m;
+          const cost = 260*b + 140*s + 75*m;
+          if(cost < best.cost){
+            const detail = [ b?`${b}×Bulk`:null, s?`${s}×Standard`:null, m?`${m}×Mini`:null ].filter(Boolean).join(' + ');
+            best = {name:'PAYG packs', cost, percv:(volume? cost/volume:0), credits, breakdown:detail};
+          }
         }
       }
+      return best;
     }
-    return best;
-  }
 
-  // Monthly plans used by the picker (Starter removed, overage @ £1.40)
-  function planOptions(volume){
-    return [
-      {name:'Team (120 CVs/mo)',  credits:120,  cost:150},
-      {name:'Pro (300 CVs/mo)',   credits:300,  cost:360},
-      {name:'Scale (600 CVs/mo)', credits:600,  cost:660},
-      // High Volume is volume-priced; we don't hard-price it in the picker.
-    ].map(p=>{
-      const over = Math.max(0, volume - p.credits);
-      const overCost = over * 1.40;
-      const total = p.cost + overCost;
-      return {name:p.name, cost:total, percv:(volume? total/volume:0), credits:p.credits, over};
-    });
-  }
+    // Monthly plans + plan-specific overage
+    // base cost = credits * perCV; overage = (volume - credits) * overRate (if > 0)
+    function planOptions(volume){
+      const plans = [
+        {name:'Team (250 CVs/mo)',  credits:250,  base:300,  over:1.15},
+        {name:'Pro (500 CVs/mo)',   credits:500,  base:550,  over:1.05},
+        {name:'Scale (750 CVs/mo)', credits:750,  base:750,  over:0.95},
+        {name:'High Volume (1000 CVs/mo)', credits:1000, base:900, over:0.85},
+        {name:'Enterprise (2000+ CVs/mo)', credits:2000, base:1500, over:0.60}, // priced so picker can compare
+      ];
+      return plans.map(p=>{
+        const extra = Math.max(0, volume - p.credits);
+        const total = p.base + extra * p.over;
+        return {kind:'Monthly', name:p.name, cost:total, percv:(volume? total/volume:0), over:extra, overRate:p.over, credits:p.credits};
+      });
+    }
 
-  function calc(){
-    const cvs = parseFloat(document.getElementById('cvs').value) || 0;
-    const mManual = parseFloat(document.getElementById('minManual').value) || 0;
-    const rate = parseFloat(document.getElementById('hourRate').value) || 0;
+    function calc(){
+      const cvs = parseFloat(document.getElementById('cvs').value) || 0;
+      const mManual = parseFloat(document.getElementById('minManual').value) || 0;
+      const rate = parseFloat(document.getElementById('hourRate').value) || 0;
 
-    // Savings (we only show hours + money, as requested)
-    const timeSavedMin = Math.max(0, mManual) * cvs;
-    const timeSavedHours = timeSavedMin / 60;
-    const moneySaved = timeSavedHours * rate;
+      // savings
+      const timeSavedHours = (Math.max(0, mManual) * cvs) / 60;
+      const moneySaved = timeSavedHours * rate;
+      document.getElementById('outHours').textContent = (Math.round(timeSavedHours*10)/10).toFixed(1);
+      document.getElementById('outMoney').textContent = fmt(Math.round(moneySaved));
 
-    document.getElementById('outHours').textContent = (Math.round(timeSavedHours*10)/10).toFixed(1);
-    document.getElementById('outMoney').textContent = fmt(Math.round(moneySaved));
+      // best option
+      const pickEl = document.getElementById('planPick');
+      if(!cvs){ pickEl.textContent = ''; return; }
 
-    // Best plan recommendation
-    const pickEl = document.getElementById('planPick');
-    if(!cvs){ pickEl.textContent = ''; return; }
+      const payg = bestPayg(cvs);
+      const monthly = planOptions(cvs);
+      const all = [
+        {kind:'PAYG', name:payg.name, cost:payg.cost, percv:payg.percv, meta:payg},
+        ...monthly
+      ].sort((a,b)=>a.cost - b.cost);
 
-    const payg = bestPayg(cvs);
-    const monthly = planOptions(cvs);
-    const all = [
-      {kind:'PAYG', name:payg.name, cost:payg.cost, percv:payg.percv, meta:payg},
-      ...monthly.map(x=>({kind:'Monthly', name:x.name, cost:x.cost, percv:x.percv, meta:x}))
-    ].sort((a,b)=>a.cost - b.cost);
+      const best = all[0];
+      const percv = best.percv ? ` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)` : '';
+      let extra = '';
+      if(best.kind==='PAYG' && best.meta.breakdown){ extra = ` · ${best.meta.breakdown}`; }
+      if(best.kind==='Monthly' && best.over>0){ extra = ` · includes ${best.over} overage @ £${best.overRate.toFixed(2)}`; }
 
-    const best = all[0];
-    const percv = best.percv ? ` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)` : '';
-    let extra = '';
-    if(best.kind==='PAYG' && best.meta.breakdown){ extra = ` · ${best.meta.breakdown}`; }
-    if(best.kind==='Monthly' && best.meta.over>0){ extra = ` · includes ${best.meta.over} overage @ £1.40`; }
+      const suffix = best.kind==='Monthly' ? '/mo' : ' total';
+      pickEl.innerHTML = `Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>${suffix}${percv}${extra}`;
+    }
 
-    // Nice suffix for cost
-    const suffix = best.kind==='Monthly' ? '/mo' : ' total';
-
-    // Hint about High Volume when relevant
-    const hvHint = cvs >= 900
-      ? `<br><span class="small">Around 1,000+ CVs/mo? High Volume may be cheaper (min 1,000 CVs/mo, £1.00–£0.60/CV). Let’s talk.</span>`
-      : '';
-
-    pickEl.innerHTML = `Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>${suffix}${percv}${extra}${hvHint}`;
-  }
-
-  document.addEventListener('input', calc);
-  document.addEventListener('DOMContentLoaded', calc);
-</script>
+    document.addEventListener('input', calc);
+    document.addEventListener('DOMContentLoaded', calc);
+  </script>
 </body>
 </html>
 """
@@ -1968,6 +1976,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

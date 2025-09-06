@@ -218,22 +218,32 @@ ABOUT_HTML = r"""
     }
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:1100px;margin:24px auto 56px;padding:0 20px}
-    .crumb{margin:0 0 10px}
-    .crumb a{color:var(--blue);font-weight:800;text-decoration:none}
+    .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
+
+    /* nav like homepage */
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
 
     .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:0;box-shadow:var(--shadow)}
-    .inner{max-width:760px;margin:0; padding:22px 24px}
-    h1{margin:0 0 10px;font-size:32px;color:var(--blue)}
-    h2{margin:18px 0 8px;font-size:20px;color:var(--blue)}
-    p,li{font-size:16px;line-height:1.6;color:var(--ink)}
-    ul{margin:6px 0 12px 22px}
-    .btn{display:inline-block;margin-top:14px;padding:12px 16px;border-radius:12px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--blue)}
+    .inner{max-width:780px;padding:24px}
+    h1{margin:6px 0 14px;font-size:32px;color:var(--blue)}
+    h2{margin:22px 0 10px;font-size:20px;color:var(--blue)}
+    p{margin:8px 0;color:var(--ink);font-size:16px;line-height:1.6}
+    ul{margin:8px 0 16px 20px;color:var(--ink);font-size:16px;line-height:1.6}
+    .btn{display:inline-block;margin-top:14px;padding:12px 16px;border-radius:12px;background:linear-gradient(90deg,var(--blue),var(--blue-2));border:none;text-decoration:none;font-weight:800;color:#fff}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="crumb"><a href="/">← Home</a></div>
+    <div class="nav">
+      <a class="brand" href="/">CVStudio</a>
+      <div>
+        <a href="/pricing">Pricing</a>
+        <a href="/about" style="margin-left:18px">About</a>
+        <a href="/login" style="margin-left:18px">Sign in</a>
+      </div>
+    </div>
 
     <div class="card">
       <div class="inner">
@@ -251,22 +261,23 @@ ABOUT_HTML = r"""
         <h2>How it works</h2>
         <ul>
           <li><strong>Upload</strong> a raw CV (PDF / DOCX / TXT).</li>
-          <li><strong>Extract & structure</strong> the real content (no invented facts).</li>
-          <li><strong>Lay out in your template</strong>: headers/footers, fonts, spacing applied automatically.</li>
+          <li><strong>Extract & structure:</strong> we pull out the real content (experience, education, skills) without inventing facts.</li>
+          <li><strong>Lay out in your template:</strong> headers/footers, fonts, sizes and spacing are applied automatically.</li>
           <li><strong>Download</strong> a polished DOCX.</li>
         </ul>
 
         <h2>Privacy & control</h2>
         <ul>
-          <li>No CV content is stored by default—only basic usage metrics (filename + timestamp) for volume/billing.</li>
+          <li>No CV content is stored by default—only basic usage metrics (filename + timestamp) for tracking volume and billing.</li>
           <li>Your company template and logo are stored securely to ensure output is always on-brand.</li>
         </ul>
 
-        <h2>Roadmap</h2>
+        <h2>What’s on the site</h2>
         <ul>
-          <li>Multi-company login</li>
-          <li>Director dashboard (usage, CSV export, trends)</li>
-          <li>Self-serve template builder</li>
+          <li>Multi-company login (soon): per-company routes and templates.</li>
+          <li>Director dashboards (soon): usage counts, CSV export, trends.</li>
+          <li>Credit plans: pay-as-you-go or monthly bundles.</li>
+          <li>Self-serve template builder (soon): upload a DOCX to switch branding instantly.</li>
         </ul>
 
         <a class="btn" href="/start">Start free trial</a>
@@ -289,125 +300,133 @@ PRICING_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      /* same “electric” palette as homepage */
       --blue:#0d3b66; --blue-2:#2f6fde;
       --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
       --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
     }
     *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:1100px;margin:24px auto 48px;padding:0 20px}
-    .crumb{margin:0 0 10px}
-    .crumb a{color:var(--blue);font-weight:800;text-decoration:none}
-    h1{margin:0 0 12px;font-size:36px;color:var(--blue)}
-    p.sub{margin:0 0 16px;color:var(--muted);font-size:16px}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
 
-    .section{margin-top:18px;margin-bottom:8px;font-weight:900;color:var(--blue)}
-    .note{margin:6px 0 14px;color:var(--muted);font-size:13px}
+    /* top nav (match homepage) */
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+
+    h1{margin:6px 0 10px;font-size:32px;color:var(--blue)}
+    p.sub{margin:0 0 16px;color:var(--muted)}
 
     .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
     .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
-    .name{font-weight:900;color:var(--blue);margin-bottom:6px}
-    .big{font-size:28px;font-weight:900;letter-spacing:-.01em}
-    .small{color:var(--muted);font-size:13px}
-    .btn{display:inline-block;margin-top:12px;padding:12px 16px;border-radius:12px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:900;color:var(--blue)}
+    @media(max-width:1000px){ .grid5{grid-template-columns:1fr 1fr} .grid3{grid-template-columns:1fr 1fr} }
+    @media(max-width:620px){ .grid5,.grid3{grid-template-columns:1fr} }
+
+    .section{margin-top:18px;margin-bottom:8px;font-weight:900;color:var(--blue);font-size:20px}
+    .note{margin:6px 0 14px;color:var(--muted);font-size:13px}
+
+    .card{
+      background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)
+    }
+    .name{font-weight:900;color:var(--blue);margin-bottom:8px;font-size:18px}
+    .price{font-size:24px;font-weight:900;margin:2px 0 4px}
+    .small{color:var(--muted);font-size:12px}
+    .btn{display:inline-block;margin-top:12px;padding:10px 14px;border-radius:12px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--blue)}
     .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none}
 
-    @media(max-width:1000px){ .grid5{grid-template-columns:1fr 1fr} }
-    @media(max-width:760px){ .grid3,.grid5{grid-template-columns:1fr} }
-
-    /* calculator */
-    .calc{margin-top:14px}
-    .calc h3{margin:0 0 8px;color:var(--blue)}
+    /* Calculator */
+    .calc{margin-top:12px}
     .calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
     .calc label{display:block;font-weight:800;margin-bottom:6px}
-    .calc .hint{display:block;color:var(--muted);font-size:12px;margin-top:4px}
-    .calc input[type=number]{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px}
-    .calc-out{display:flex;gap:20px;align-items:center;margin-top:12px}
-    .calc-out .n{font-weight:900;color:var(--blue);font-size:22px}
+    .hint{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+    .calc input[type=number]{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px}
+    .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px}
+    .calc-out .n{font-weight:900;color:var(--blue);font-size:20px}
     @media(max-width:900px){ .calc-grid{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="crumb"><a href="/">← Home</a></div>
+    <div class="nav">
+      <a class="brand" href="/">CVStudio</a>
+      <div>
+        <a href="/pricing">Pricing</a>
+        <a href="/about" style="margin-left:18px">About</a>
+        <a href="/login" style="margin-left:18px">Sign in</a>
+      </div>
+    </div>
+
     <h1>Pricing</h1>
     <p class="sub">Start with a free trial (5 CVs). Upgrade any time.</p>
 
     <!-- PAYG -->
     <div class="section">Pay-as-you-go packs</div>
-    <p class="note">For occasional use. No commitment.</p>
+    <p class="note">For occasional use. No commitment. Overage: £1.50/CV.</p>
     <div class="grid3">
       <div class="card">
         <div class="name">Mini</div>
-        <div class="big">50 CVs • £75</div>
+        <div class="price">50 CVs • £75</div>
         <div class="small">£1.50 per CV</div>
         <a class="btn" href="/trial">Buy pack</a>
       </div>
       <div class="card">
         <div class="name">Standard</div>
-        <div class="big">100 CVs • £140</div>
+        <div class="price">100 CVs • £140</div>
         <div class="small">£1.40 per CV</div>
         <a class="btn" href="/trial">Buy pack</a>
       </div>
       <div class="card">
         <div class="name">Bulk</div>
-        <div class="big">200 CVs • £260</div>
+        <div class="price">200 CVs • £260</div>
         <div class="small">£1.30 per CV</div>
         <a class="btn" href="/trial">Buy pack</a>
       </div>
     </div>
 
     <!-- Monthly -->
-    <div class="section" style="margin-top:16px">Monthly plans</div>
+    <div class="section">Monthly plans</div>
     <p class="note">
-      CVs reset monthly. Overage by plan:
+      CVs reset monthly. Overage varies by plan:
       Team £1.15/CV · Pro £1.05/CV · Scale £0.95/CV · High Volume £0.85/CV · Enterprise £0.60/CV.
       You can also buy a PAYG pack at any time.
     </p>
-
     <div class="grid5">
       <div class="card">
         <div class="name">Team</div>
-        <div class="big">£300<span class="small">/mo</span></div>
-        <div class="small">250 CVs • £1.20/CV</div>
-        <a class="btn primary" href="/trial">Start plan</a>
+        <div class="price">£300<span class="small">/mo</span></div>
+        <div class="small">250 CVs · £1.20/CV</div>
+        <a class="btn primary" href="/trial">Join plan</a>
       </div>
-
       <div class="card">
         <div class="name">Pro</div>
-        <div class="big">£550<span class="small">/mo</span></div>
-        <div class="small">500 CVs • £1.10/CV</div>
-        <a class="btn primary" href="/trial">Start plan</a>
+        <div class="price">£550<span class="small">/mo</span></div>
+        <div class="small">500 CVs · £1.10/CV</div>
+        <a class="btn primary" href="/trial">Join plan</a>
       </div>
-
       <div class="card">
         <div class="name">Scale</div>
-        <div class="big">£750<span class="small">/mo</span></div>
-        <div class="small">750 CVs • £1.00/CV</div>
-        <a class="btn primary" href="/trial">Start plan</a>
+        <div class="price">£750<span class="small">/mo</span></div>
+        <div class="small">750 CVs · £1.00/CV</div>
+        <a class="btn primary" href="/trial">Join plan</a>
       </div>
-
       <div class="card">
         <div class="name">High Volume</div>
-        <div class="big">1,000 CVs<span class="small">/mo</span></div>
+        <div class="price">1,000 CVs<span class="small">/mo</span></div>
         <div class="small">£0.90 per CV</div>
         <a class="btn" href="/contact">Contact us</a>
       </div>
-
       <div class="card">
-        <div class="name">Enterprise</div>
-        <div class="big">2,000+ CVs<span class="small">/mo</span></div>
-        <div class="small">£0.75 per CV (volume-based)</div>
+        <div class="name">Enterprise (2,000+)</div>
+        <div class="price">Let’s talk</div>
+        <div class="small">£0.75 per CV · custom terms</div>
         <a class="btn" href="/contact">Contact us</a>
       </div>
     </div>
 
     <!-- Calculator -->
     <div class="card calc">
-      <h3>Savings calculator</h3>
+      <div class="name">Savings calculator</div>
       <div class="small">Estimate monthly time and payroll savings with CVStudio.</div>
+
       <div class="calc-grid" style="margin-top:10px">
         <div>
           <label>CVs per month</label>
@@ -422,15 +441,17 @@ PRICING_HTML = r"""
           <input id="hourRate" type="number" min="0" value="30">
         </div>
       </div>
+
       <div class="calc-out">
         <div><span class="n" id="outHours">12.5</span> hours saved / month</div>
         <div><span class="n">£<span id="outMoney">375</span></span> payroll saved / month</div>
       </div>
+
       <div class="small" id="planPick" style="margin-top:8px"></div>
     </div>
 
-    <!-- Template setup (last) -->
-    <div class="card" style="margin-top:12px">
+    <!-- Template setup (last on page) -->
+    <div class="card" style="margin-top:14px">
       <div class="name">Template setup</div>
       <div class="small">£50 one-off per company — fully credited back as usage (your first £50 of CVs are free once you start paying).</div>
     </div>
@@ -438,16 +459,22 @@ PRICING_HTML = r"""
 
   <script>
     function fmt(n){ return new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(n); }
-    function fmtGBP(n){ return '£' + fmt(Math.round(n)); }
+    function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
-    // PAYG packs: 200/£260, 100/£140, 50/£75
+    // PAYG packs — updated sizes/costs
     function bestPayg(volume){
-      let best = {name:'PAYG packs', cost:Infinity, percv:Infinity, breakdown:''};
+      const packs = [
+        {name:'Bulk (200 CVs)', size:200, cost:260},   // £1.30
+        {name:'Standard (100 CVs)', size:100, cost:140}, // £1.40
+        {name:'Mini (50 CVs)', size:50, cost:75},      // £1.50
+      ];
+      let best = {name:'PAYG packs', cost:Infinity, percv:Infinity, credits:0, breakdown:''};
       for(let b=0; b<=Math.ceil(volume/200)+1; b++){
         for(let s=0; s<=Math.ceil(Math.max(0,volume-200*b)/100)+1; s++){
           const used = 200*b + 100*s;
           const rem = Math.max(0, volume - used);
           const m = Math.ceil(rem/50);
+          const credits = used + 50*m;
           const cost = 260*b + 140*s + 75*m;
           if(cost < best.cost){
             const detail = [
@@ -455,54 +482,67 @@ PRICING_HTML = r"""
               s ? `${s}×Standard` : null,
               m ? `${m}×Mini` : null
             ].filter(Boolean).join(' + ');
-            best = {name:'PAYG packs', cost, percv:(volume? cost/volume:0), breakdown:detail};
+            best = {name:'PAYG packs', cost, percv:(volume? cost/volume:0), credits, breakdown:detail};
           }
         }
       }
       return best;
     }
 
-    // Monthly plans + overage: Team 250 @1.20 (+1.15), Pro 500 @1.10 (+1.05), Scale 750 @1.00 (+0.95), HV 1000 @0.90 (+0.85), Ent 2000 @0.75 (+0.60)
+    // Monthly plan options with NEW sizes/costs + overage per plan
     function planOptions(volume){
       const plans = [
-        {name:'Team (250 CVs/mo)',  base:300,  cap:250, over:1.15},
-        {name:'Pro (500 CVs/mo)',   base:550,  cap:500, over:1.05},
-        {name:'Scale (750 CVs/mo)', base:750,  cap:750, over:0.95},
-        {name:'High Volume (1000 CVs/mo)', base:900, cap:1000, over:0.85},
-        {name:'Enterprise (2000+ CVs/mo)', base:1500, cap:2000, over:0.60}
+        {name:'Team (250 CVs/mo)',  credits:250,  cost:300, overRate:1.15},
+        {name:'Pro (500 CVs/mo)',   credits:500,  cost:550, overRate:1.05},
+        {name:'Scale (750 CVs/mo)', credits:750,  cost:750, overRate:0.95},
+        {name:'High Volume (1000 CVs/mo)', credits:1000, cost:900, overRate:0.85},
+        // Enterprise is “let’s talk”; include for math only so recs aren’t crazy:
+        {name:'Enterprise (2000+ CVs/mo)', credits:2000, cost:1500, overRate:0.60}
       ];
       return plans.map(p=>{
-        const extra = Math.max(0, volume - p.cap);
-        const total = p.base + extra*p.over;
-        return {name:p.name, cost:total, percv:(volume? total/volume:0), extra, over:p.over};
+        const over = Math.max(0, volume - p.credits);
+        const overCost = over * p.overRate;
+        const total = p.cost + overCost;
+        return {name:p.name, cost:total, percv:(volume? total/volume:0), credits:p.credits, over, overRate:p.overRate};
       });
     }
 
     function calc(){
-      const cvs = parseFloat(document.getElementById('cvs').value)||0;
-      const mManual = parseFloat(document.getElementById('minManual').value)||0;
-      const rate = parseFloat(document.getElementById('hourRate').value)||0;
+      const cvs = parseFloat(document.getElementById('cvs').value) || 0;
+      const mManual = parseFloat(document.getElementById('minManual').value) || 0;
+      const rate = parseFloat(document.getElementById('hourRate').value) || 0;
 
-      const timeSavedHours = (mManual*cvs)/60;
+      const timeSavedMin = Math.max(0, mManual) * cvs;
+      const timeSavedHours = timeSavedMin / 60;
       const moneySaved = timeSavedHours * rate;
+
       document.getElementById('outHours').textContent = (Math.round(timeSavedHours*10)/10).toFixed(1);
-      document.getElementById('outMoney').textContent = fmt(moneySaved);
+      document.getElementById('outMoney').textContent = fmt(Math.round(moneySaved));
 
       const pickEl = document.getElementById('planPick');
-      if(!cvs){ pickEl.textContent=''; return; }
+      if(!cvs){ pickEl.textContent = ''; return; }
 
       const payg = bestPayg(cvs);
       const monthly = planOptions(cvs);
-      const all = [{kind:'PAYG', ...payg}, ...monthly.map(m=>({kind:'Monthly', ...m}))].sort((a,b)=>a.cost-b.cost);
+      const all = [
+        {kind:'PAYG', name:payg.name, cost:payg.cost, percv:payg.percv, meta:payg},
+        ...monthly.map(x=>({kind:'Monthly', name:x.name, cost:x.cost, percv:x.percv, meta:x}))
+      ].sort((a,b)=>a.cost - b.cost);
 
       const best = all[0];
       const percv = best.percv ? ` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)` : '';
       let extra = '';
-      if(best.kind==='PAYG' && best.breakdown){ extra = ` · ${best.breakdown}`; }
-      if(best.kind==='Monthly' && best.extra>0){ extra = ` · includes ${best.extra} overage @ £${best.over.toFixed(2)}`; }
+      if(best.kind==='PAYG' && best.meta.breakdown){ extra = ` · ${best.meta.breakdown}`; }
+      if(best.kind==='Monthly' && best.meta.over>0){ extra = ` · includes ${best.meta.over} overage @ £${best.meta.overRate.toFixed(2)}`; }
 
-      pickEl.innerHTML = `Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>${best.kind==='Monthly'?'/mo':' total'}${percv}${extra}`;
+      const suffix = best.kind==='Monthly' ? '/mo' : ' total';
+      const hvHint = (cvs >= 900)
+        ? `<br><span class="small">Around 1,000+ CVs/mo? High Volume or Enterprise may be cheaper.</span>`
+        : '';
+
+      pickEl.innerHTML = `Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>${suffix}${percv}${extra}${hvHint}`;
     }
+
     document.addEventListener('input', calc);
     document.addEventListener('DOMContentLoaded', calc);
   </script>
@@ -1952,6 +1992,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

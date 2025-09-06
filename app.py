@@ -297,10 +297,10 @@ PRICING_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --blue:#0d3b66; --blue-2:#2f6fde;
-      --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
-      --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
-    }
+  --blue:#0d3b66; --blue-2:#2f6fde;
+  --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+  --bg:#f5f8fd; --card:#ffffff;
+}
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
     .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
@@ -1979,6 +1979,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

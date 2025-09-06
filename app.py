@@ -211,27 +211,28 @@ ABOUT_HTML = r"""
   <title>About — CVStudio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{
-      --blue:#0d3b66; --blue-2:#2f6fde;
-      --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
-      --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
-    }
-    *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+  :root{
+    --blue:#0d3b66; --blue-2:#2f6fde;
+    --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+    --bg:#f5f8fd; --card:#ffffff; --shadow:0 10px 28px rgba(13,59,102,.08);
+  }
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+  .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
+  .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+  .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
+  .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
 
-    /* same shell as Home/Pricing */
-    .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
-    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
-
-    .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow)}
-    h1{margin:0 0 10px;font-size:28px;color:var(--blue);letter-spacing:-.01em}
-    h2{margin:18px 0 8px;font-size:18px;color:var(--blue)}
-    p{margin:8px 0;font-size:16px;line-height:1.5;color:var(--ink)}
-    ul{margin:6px 0 12px 20px;color:var(--ink);font-size:16px;line-height:1.5}
-    .btn{display:inline-block;margin-top:14px;padding:12px 16px;border-radius:12px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--blue)}
-  </style>
+  .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:var(--shadow)}
+  /* readable center column inside the card */
+  .inner{max-width:72ch;margin:0 auto}
+  h1{margin:0 0 10px;font-size:28px;color:var(--blue);letter-spacing:-.01em}
+  h2{margin:18px 0 8px;font-size:18px;color:var(--blue)}
+  p{margin:8px 0;color:var(--ink);font-size:16px;line-height:1.65}
+  ul{margin:6px 0 12px 20px;color:var(--ink);font-size:16px;line-height:1.65}
+  .btn{display:inline-block;margin-top:14px;padding:12px 16px;border-radius:12px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--blue)}
+  .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border-color:transparent}
+</style>
 </head>
 <body>
   <div class="wrap">
@@ -296,46 +297,45 @@ PRICING_HTML = r"""
   <title>Pricing — CVStudio</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{
-  --blue:#0d3b66; --blue-2:#2f6fde;
-  --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
-  --bg:#f5f8fd; --card:#ffffff;
-}
-    *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
+  :root{
+    --blue:#0d3b66; --blue-2:#2f6fde;
+    --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+    --bg:#f5f8fd; --card:#ffffff; --shadow:0 10px 28px rgba(13,59,102,.08);
+  }
+  body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
 
-    /* top nav to match homepage */
-    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+  h1{margin:0 0 12px;font-size:28px;color:var(--blue)}
+  p.sub{margin:0 0 16px;color:var(--muted)}
 
-    h1{margin:10px 0 10px;font-size:28px;color:var(--blue)}
-    p.sub{margin:0 0 16px;color:var(--muted)}
-    .section{margin:18px 0 10px;font-weight:900;color:var(--blue)}
+  .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
 
-    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
-    @media(max-width:1000px){ .grid5{grid-template-columns:1fr 1fr} .grid3{grid-template-columns:1fr 1fr} }
-    @media(max-width:620px){ .grid5,.grid3{grid-template-columns:1fr} }
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+  .name{font-weight:800;color:var(--blue);margin-bottom:6px}
+  .price{font-size:22px;font-weight:900;margin:4px 0}
+  .small{color:var(--muted);font-size:12px}
 
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;box-shadow:var(--shadow)}
-    .name{font-weight:900;color:var(--blue);margin-bottom:6px}
-    .price{font-size:22px;font-weight:900;margin:4px 0}
-    .small{color:var(--muted);font-size:12px}
-    .btn{display:inline-block;margin-top:10px;padding:10px 14px;border-radius:10px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--blue)}
-    .note{margin:8px 0 14px;color:var(--muted);font-size:12px}
+  .btn{display:inline-block;margin-top:10px;padding:10px 14px;border-radius:12px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--blue)}
+  .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border-color:transparent}
 
-    /* Calculator tidy */
-    .calc{ margin-top:12px; }
-    .calc-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
-    .calc label{ display:block; font-weight:800; margin-bottom:6px; }
-    .calc .hint{ display:block; color:var(--muted); font-size:12px; margin-top:6px; }
-    .calc input[type=number]{ width:100%; padding:10px; border:1px solid var(--line); border-radius:10px; }
-    @media(max-width:900px){ .calc-grid{ grid-template-columns:1fr; } }
-    .calc-out{ display:flex; flex-wrap:wrap; gap:24px; align-items:center; margin-top:14px; }
-    .calc-out .n{ font-weight:900; color:var(--blue); font-size:22px; }
-  </style>
+  .section{margin-top:18px;margin-bottom:10px;font-weight:900;color:var(--blue)}
+  .note{margin:8px 0 14px;color:var(--muted);font-size:12px}
+
+  @media(max-width:1000px){ .grid5{grid-template-columns:1fr 1fr} .grid3{grid-template-columns:1fr 1fr} }
+  @media(max-width:620px){ .grid5,.grid3{grid-template-columns:1fr} }
+
+  /* Savings calculator tidy-up */
+  .calc{ margin-top:12px; }
+  .calc-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+  .calc label{ display:block; font-weight:800; margin-bottom:6px; }
+  .calc .hint{ display:block; color:var(--muted); font-size:12px; margin-top:6px; }
+  .calc input[type=number]{ width:100%; padding:10px; border:1px solid var(--line); border-radius:10px; }
+  @media(max-width:900px){ .calc-grid{ grid-template-columns:1fr; } }
+
+  .calc-out{ display:flex; flex-wrap:wrap; gap:24px; align-items:center; margin-top:14px; }
+  .calc-out .n{ font-weight:900; color:var(--blue); font-size:22px; }
+</style>
 </head>
 <body>
   <div class="wrap">
@@ -1979,6 +1979,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

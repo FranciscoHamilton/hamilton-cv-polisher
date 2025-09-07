@@ -491,26 +491,55 @@ PRICING_HTML = r"""
       </div>
     </div>
 
-    <!-- Calculator -->
-    <div class="card calc" style="margin-top:6px">
-      <div class="inner">
-        <div class="name">Savings calculator</div>
-        <div class="sub">Estimate monthly time and payroll savings with CVStudio.</div>
+    /* calc (OLD STYLE) */
+.calc .inner{
+  /* undo card centering just for calculator */
+  align-items: stretch !important;
+  text-align: left !important;
+}
+.calc .name{font-size:18px;color:var(--brand); text-align:left}
+.calc .sub{ text-align:left }
 
-        <div class="calc-grid" style="margin-top:10px">
-          <div><label>CVs per month</label><input id="cvs" type="number" min="0" value="50"></div>
-          <div><label>Minutes per CV (manual polish) <span class="hint">(avg)</span></label><input id="minManual" type="number" min="0" value="15"></div>
-          <div><label>Recruiter hourly cost <span class="hint">(avg)</span></label><input id="hourRate" type="number" min="0" value="30"></div>
-        </div>
+.calc-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+}
+@media(max-width:900px){
+  .calc-grid{grid-template-columns:1fr}
+}
 
-        <div class="calc-out">
-          <div><span class="n" id="outHours">12.5</span> hours saved / month</div>
-          <div><span class="n">£<span id="outMoney">375</span></span> payroll saved / month</div>
-        </div>
+/* labels ABOVE inputs */
+.calc label{
+  display:block;
+  font-weight:900;
+  margin-bottom:6px;
+}
 
-        <div class="sub" id="planPick" style="margin-top:8px"></div>
-      </div>
-    </div>
+/* inputs: boxed, rounded */
+.calc input[type=number]{
+  width:100%;
+  padding:12px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  box-shadow: inset 0 1px 2px rgba(2,6,23,.03);
+}
+
+/* outputs left-aligned, brand color numbers */
+.calc-out{
+  display:flex;
+  flex-wrap:wrap;
+  gap:24px;
+  align-items:center;
+  margin-top:12px;
+  justify-content:flex-start;   /* left */
+}
+.calc-out .n{
+  font-weight:900;
+  color:var(--brand);
+  font-size:22px;
+}
 
     <!-- Template setup -->
     <div class="card tight" style="margin-top:14px">
@@ -2211,6 +2240,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

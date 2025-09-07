@@ -316,14 +316,13 @@ PRICING_HTML = r"""
     .nav a{font-weight:900;text-decoration:none;color:var(--ink)}
 
     /* headings */
-    h1{margin:6px 0 10px;font-size:40px;letter-spacing:-.01em;color:var(--brand)}
+    h1{margin:6px 0 10px;font-size:40px;letter-spacing:-.01em;color:var(--ink)} /* toned heading */
     .sub{margin:0 0 18px;color:var(--muted)}
     .section{margin:22px 0 8px;font-weight:900;color:var(--brand);font-size:22px}
     .note{margin:6px 0 18px;color:var(--muted);font-size:13.5px}
 
-    /* grids */
-    .grid3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
-    .grid5{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+    /* grids (same sizing for PAYG and Monthly) */
+    .grid3,.grid5{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
     @media(max-width:640px){ .grid3,.grid5{grid-template-columns:1fr} }
 
     /* cards */
@@ -331,38 +330,38 @@ PRICING_HTML = r"""
       background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden;
       box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:230px; position:relative;
     }
+    .card.tight{min-height:unset}
     .topbar{height:6px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
-    .inner{padding:16px;display:flex;flex-direction:column;height:100%}
+    .inner{
+      padding:16px;display:flex;flex-direction:column;height:100%;
+      align-items:center; text-align:center; /* center everything */
+    }
+    .card.tight .inner{padding:12px 16px}
+
     .name{font-weight:900;color:var(--ink);font-size:15px;margin:6px 0 8px}
     .price-row{display:flex;align-items:baseline;gap:8px;margin:0 0 6px}
     .price-row .amount{font-size:30px;font-weight:900;letter-spacing:-.01em}
     .price-row .cost{font-size:30px;font-weight:900;letter-spacing:-.01em}
     .price-row .per{font-size:14px;color:var(--muted);font-weight:700}
+
     .chip{display:inline-block;margin-top:2px;padding:6px 10px;border-radius:999px;background:#f1f5ff;border:1px solid #dbeafe;color:#1e3a8a;font-weight:800;font-size:12px}
     .muted{color:var(--muted);font-size:12.5px;margin-top:6px}
 
     .btn{margin-top:auto;display:inline-block;padding:12px 14px;border-radius:12px;text-align:center;
-         font-weight:900;text-decoration:none;border:1px solid var(--line);color:var(--brand);background:#fff}
+         font-weight:900;text-decoration:none;border:1px solid var(--line);color:var(--brand);background:#fff;transition:transform .15s ease}
     .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none}
     .btn:hover{transform:translateY(-1px)}
     .cta-spacer{height:44px}
 
     .badge{position:absolute;top:10px;right:10px;background:#0ea5e9;color:#fff;font-weight:900;
            padding:6px 10px;border-radius:999px;font-size:11px;letter-spacing:.08em}
-    .feat{margin:8px 0 0 0;padding:0;list-style:none;color:var(--muted);font-size:12.5px}
-    .feat li{display:flex;align-items:center;gap:6px;margin-top:4px}
+    .feat{margin:8px 0 0 0;padding:0;list-style:none;color:var(--muted);font-size:12.5px;display:flex;flex-direction:column;align-items:center}
+    .feat li{display:flex;align-items:center;gap:6px;margin-top:4px;justify-content:center}
     .tick{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;
           background:rgba(34,211,238,.15);color:#0891b2;font-weight:900;font-size:11px}
 
-    /* calc */
-    .calc .name{font-size:18px;color:var(--brand)}
-    .calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .calc label{display:flex;justify-content:space-between;gap:8px;font-weight:900;margin-bottom:6px}
-    .hint{color:var(--muted);font-size:12px;white-space:nowrap}
-    .calc input[type=number]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px}
-    .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px}
-    .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
-    @media(max-width:900px){ .calc-grid{grid-template-columns:1fr} }
+    /* show more toggle row */
+    .moreRow{display:flex;justify-content:center;margin:6px 0 10px}
   </style>
 </head>
 <body>
@@ -385,7 +384,7 @@ PRICING_HTML = r"""
           <div class="name">Mini</div>
           <div class="price-row"><div class="amount">50 CVs</div><div class="per">•</div><div class="cost">£75</div></div>
           <span class="chip">£1.50 per CV</span>
-          <a class="btn" href="/trial">Buy pack</a>
+          <a class="btn primary" href="/trial">Buy pack</a>
         </div>
       </div>
 
@@ -395,7 +394,7 @@ PRICING_HTML = r"""
           <div class="name">Standard</div>
           <div class="price-row"><div class="amount">100 CVs</div><div class="per">•</div><div class="cost">£140</div></div>
           <span class="chip">£1.40 per CV</span>
-          <a class="btn" href="/trial">Buy pack</a>
+          <a class="btn primary" href="/trial">Buy pack</a>
         </div>
       </div>
 
@@ -405,7 +404,7 @@ PRICING_HTML = r"""
           <div class="name">Bulk</div>
           <div class="price-row"><div class="amount">200 CVs</div><div class="per">•</div><div class="cost">£260</div></div>
           <span class="chip">£1.30 per CV</span>
-          <a class="btn" href="/trial">Buy pack</a>
+          <a class="btn primary" href="/trial">Buy pack</a>
         </div>
       </div>
     </div>
@@ -414,6 +413,7 @@ PRICING_HTML = r"""
     <div class="section">Monthly plans</div>
     <p class="note">CVs reset monthly. Overage is cheaper than PAYG and varies by plan.</p>
 
+    <!-- Visible (3) -->
     <div class="grid5">
       <div class="card">
         <div class="topbar"></div>
@@ -448,15 +448,23 @@ PRICING_HTML = r"""
           <a class="btn primary" href="/trial">Join plan</a>
         </div>
       </div>
+    </div>
 
+    <!-- Toggle -->
+    <div class="moreRow">
+      <button id="togglePlans" class="btn">Show more plans</button>
+    </div>
+
+    <!-- Hidden (3): High Volume, Enterprise, Enterprise+ -->
+    <div id="plansMore" class="grid5" style="display:none">
       <div class="card">
         <div class="topbar"></div>
         <div class="inner">
           <div class="name">High Volume</div>
-          <div class="price-row"><div class="amount">1,000 CVs</div><div class="per">/mo</div></div>
-          <span class="chip">£0.90 per CV</span>
+          <div class="price-row"><div class="cost">£900</div><div class="per">/mo</div></div>
+          <span class="chip">1,000 CVs · £0.90/CV</span>
           <ul class="feat"><li><span class="tick">✓</span><span>Dedicated success</span></li></ul>
-          <div class="cta-spacer"></div>
+          <a class="btn primary" href="/trial">Join plan</a>
         </div>
       </div>
 
@@ -464,9 +472,20 @@ PRICING_HTML = r"""
         <div class="topbar"></div>
         <div class="inner">
           <div class="name">Enterprise</div>
-          <div class="price-row"><div class="amount">2,000+ CVs</div><div class="per">/mo</div></div>
-          <span class="chip">£0.75 per CV · custom terms</span>
+          <div class="price-row"><div class="cost">£1,500</div><div class="per">/mo</div></div>
+          <span class="chip">2,000+ CVs · £0.75/CV · custom terms</span>
           <ul class="feat"><li><span class="tick">✓</span><span>Custom SLAs</span></li></ul>
+          <a class="btn primary" href="/trial">Join plan</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="topbar"></div>
+        <div class="inner">
+          <div class="name">Enterprise+ (5,000+)</div>
+          <div class="price-row"><div class="amount">5,000+ CVs</div><div class="per">/mo</div></div>
+          <span class="chip">£0.60 per CV · custom terms</span>
+          <ul class="feat"><li><span class="tick">✓</span><span>Volume pricing</span></li></ul>
           <div class="cta-spacer"></div>
         </div>
       </div>
@@ -494,7 +513,7 @@ PRICING_HTML = r"""
     </div>
 
     <!-- Template setup -->
-    <div class="card" style="margin-top:14px">
+    <div class="card tight" style="margin-top:14px">
       <div class="inner">
         <div class="name">Template setup</div>
         <div class="sub">£50 one-off per company — fully credited back as usage (your first £50 of CVs are free once you start paying).</div>
@@ -541,6 +560,19 @@ PRICING_HTML = r"""
       pickEl.innerHTML=`Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>${suffix}${percv}${extra}${hvHint}`;
     }
     document.addEventListener('input',calc); document.addEventListener('DOMContentLoaded',calc);
+
+    /* Show/Hide extra monthly plans */
+    document.addEventListener('DOMContentLoaded', function(){
+      const more = document.getElementById('plansMore');
+      const btn  = document.getElementById('togglePlans');
+      if(btn && more){
+        btn.addEventListener('click', function(){
+          const show = (more.style.display==='none' || more.style.display==='');
+          more.style.display = show ? 'grid' : 'none';
+          btn.textContent = show ? 'Hide extra plans' : 'Show more plans';
+        });
+      }
+    });
   </script>
 </body>
 </html>
@@ -2179,6 +2211,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

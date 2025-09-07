@@ -302,70 +302,91 @@ PRICING_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --brand:#2563eb;          /* electric blue */
+      --brand:#2563eb;          /* brand blue */
       --brand-2:#22d3ee;        /* cyan accent  */
       --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
-      --bg:#f5f8fd; --card:#fff; --shadow:0 12px 28px rgba(2,6,23,.07);
+      --bg:#f6f9ff; --card:#fff; --shadow:0 10px 24px rgba(2,6,23,.06);
     }
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:1100px;margin:12px auto 64px;padding:0 20px}
+    /* NARROWER PAGE MARGINS (like your second screenshot) */
+    .wrap{max-width:980px;margin:28px auto 64px;padding:0 24px}
 
-    /* nav right */
+    /* top-right nav */
     .nav{display:flex;justify-content:flex-end;gap:22px;margin:6px 0 8px}
     .nav a{font-weight:900;text-decoration:none;color:var(--ink)}
 
     /* headings */
-    h1{margin:6px 0 10px;font-size:40px;letter-spacing:-.01em;color:var(--ink)} /* toned heading */
+    h1{margin:6px 0 10px;font-size:40px;letter-spacing:-.01em;color:#122033}
     .sub{margin:0 0 18px;color:var(--muted)}
-    .section{margin:22px 0 8px;font-weight:900;color:var(--brand);font-size:22px}
+    .section{margin:24px 0 8px;font-weight:900;color:var(--brand);font-size:22px}
     .note{margin:6px 0 18px;color:var(--muted);font-size:13.5px}
 
-    /* grids */
-    .grid3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-    .grid5{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+    /* compact, neat grids */
+    .grid3{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
+    .grid5{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
     @media(max-width:640px){ .grid3,.grid5{grid-template-columns:1fr} }
 
-    /* cards — shorter + centered */
+    /* CARD STYLE — clean Mailchimp-like */
     .card{
-      background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden;
-      box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:168px; position:relative;
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      display:flex;flex-direction:column;
+      min-height:210px;            /* shorter boxes per your request */
     }
-    .card.tight{min-height:auto}
-    .topbar{height:5px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
-    .inner{padding:12px 14px;display:flex;flex-direction:column;align-items:center;text-align:center;height:100%}
-    .name{font-weight:900;color:var(--ink);font-size:16px;margin:4px 0 8px}
-    .price-row{display:flex;align-items:baseline;gap:8px;margin:0 0 8px}
-    .price-row .amount{font-size:30px;font-weight:900;letter-spacing:-.01em}
+    .inner{padding:18px 18px 20px;display:flex;flex-direction:column;height:100%}
+    .name{font-weight:900;color:#0b1220;font-size:16px;margin:4px 0 10px}
+
+    .qty{font-size:28px;font-weight:900;letter-spacing:-.01em}
+    .per{font-size:14px;color:var(--muted);font-weight:700;margin-left:6px}
+
+    /* PRICE CHIP now holds the money (and per-CV) */
     .chip{
-      display:inline-block;margin-top:2px;padding:8px 12px;border-radius:999px;
-      background:#eef3ff;border:1px solid #dbeafe;color:#1e3a8a;font-weight:800;font-size:12.5px
+      display:inline-block;align-self:flex-start;
+      margin-top:10px;padding:8px 12px;border-radius:999px;
+      background:#eef4ff;border:1px solid #dbeafe;color:#132a63;font-weight:800;font-size:12.5px
     }
 
-    .btn{margin-top:auto;display:inline-block;padding:12px 14px;border-radius:12px;text-align:center;
-         font-weight:900;text-decoration:none;border:1px solid var(--line);color:var(--brand);background:#fff}
+    /* Buttons — pill, tidy */
+    .btn{
+      margin-top:auto;display:inline-block;padding:12px 16px;border-radius:999px;text-align:center;
+      font-weight:900;text-decoration:none;border:1px solid var(--line);color:#0b1220;background:#fff
+    }
     .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none}
     .btn:hover{transform:translateY(-1px)}
-    .badge{position:absolute;top:10px;right:10px;background:#0ea5e9;color:#fff;font-weight:900;
-           padding:6px 10px;border-radius:999px;font-size:11px;letter-spacing:.08em}
-    .feat{margin:8px 0 0 0;padding:0;list-style:none;color:var(--muted);font-size:12.5px}
-    .feat li{display:flex;align-items:center;gap:6px;margin-top:4px}
+
+    /* small feature list (kept) */
+    .feat{margin:10px 0 0 0;padding:0;list-style:none;color:var(--muted);font-size:12.5px}
+    .feat li{display:flex;align-items:center;gap:6px;margin-top:6px}
     .tick{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;
           background:rgba(34,211,238,.15);color:#0891b2;font-weight:900;font-size:11px}
 
-    /* Show-more row */
-    .moreRow{display:flex;justify-content:center;margin:8px 0 10px}
+    /* “Recommended” ribbon (kept but brand colored) */
+    .badge{
+      position:absolute;left:0;right:0;top:0;height:32px;display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;font-weight:900;font-size:12px;letter-spacing:.06em
+    }
+    .card.has-badge{padding-top:32px}
 
-    /* Calculator — old style (labels above inputs, left aligned) */
-    .calc .inner{align-items:stretch !important;text-align:left !important}
-    .calc .name{font-size:18px;color:var(--brand);text-align:left}
-    .calc .sub{text-align:left}
+    /* Center toggle button row */
+    .moreRow{display:flex;justify-content:center;margin:6px 0 4px}
+
+    /* CALCULATOR — keep “old” tidy style */
+    .card.calc .inner{align-items:stretch;text-align:left}
+    .card.calc .name{font-size:18px;color:var(--brand);text-align:left}
+    .card.calc .sub{text-align:left}
     .calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
     @media(max-width:900px){ .calc-grid{grid-template-columns:1fr} }
     .calc label{display:block;font-weight:900;margin-bottom:6px}
     .calc input[type=number]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:inset 0 1px 2px rgba(2,6,23,.03)}
     .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px;justify-content:flex-start}
     .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
+
+    /* Template setup tighter */
+    .card.tight .inner{padding:16px 18px}
   </style>
 </head>
 <body>
@@ -383,31 +404,28 @@ PRICING_HTML = r"""
 
     <div class="grid3">
       <div class="card">
-        <div class="topbar"></div>
         <div class="inner">
           <div class="name">Mini</div>
-          <div class="price-row"><div class="amount">50 CVs</div></div>
-          <span class="chip">£75 · £1.50 per CV</span>
+          <div class="qty">50 CVs</div>
+          <span class="chip">£75 — £1.50 per CV</span>
           <a class="btn primary" href="/trial">Buy pack</a>
         </div>
       </div>
 
       <div class="card">
-        <div class="topbar"></div>
         <div class="inner">
           <div class="name">Standard</div>
-          <div class="price-row"><div class="amount">100 CVs</div></div>
-          <span class="chip">£140 · £1.40 per CV</span>
+          <div class="qty">100 CVs</div>
+          <span class="chip">£140 — £1.40 per CV</span>
           <a class="btn primary" href="/trial">Buy pack</a>
         </div>
       </div>
 
       <div class="card">
-        <div class="topbar"></div>
         <div class="inner">
           <div class="name">Bulk</div>
-          <div class="price-row"><div class="amount">200 CVs</div></div>
-          <span class="chip">£260 · £1.30 per CV</span>
+          <div class="qty">200 CVs</div>
+          <span class="chip">£260 — £1.30 per CV</span>
           <a class="btn primary" href="/trial">Buy pack</a>
         </div>
       </div>
@@ -420,35 +438,41 @@ PRICING_HTML = r"""
     <!-- Visible (3) -->
     <div class="grid5">
       <div class="card">
-        <div class="topbar"></div>
         <div class="inner">
           <div class="name">Team</div>
-          <div class="price-row"><div class="amount">250 CVs</div></div>
-          <span class="chip">£300/mo · £1.20 per CV</span>
-          <ul class="feat"><li><span class="tick">✓</span><span>Shared workspace</span></li><li><span class="tick">✓</span><span>Email support</span></li></ul>
+          <div class="qty">250 CVs<span class="per">/mo</span></div>
+          <span class="chip">£300/mo — £1.20 per CV</span>
+          <ul class="feat">
+            <li><span class="tick">✓</span><span>Shared workspace</span></li>
+            <li><span class="tick">✓</span><span>Email support</span></li>
+          </ul>
           <a class="btn primary" href="/trial">Join plan</a>
         </div>
       </div>
 
-      <div class="card">
-        <span class="badge">MOST POPULAR</span>
-        <div class="topbar"></div>
+      <div class="card has-badge" style="position:relative">
+        <div class="badge">RECOMMENDED</div>
         <div class="inner">
           <div class="name">Pro</div>
-          <div class="price-row"><div class="amount">500 CVs</div></div>
-          <span class="chip">£550/mo · £1.10 per CV</span>
-          <ul class="feat"><li><span class="tick">✓</span><span>Priority processing</span></li><li><span class="tick">✓</span><span>Team analytics</span></li></ul>
+          <div class="qty">500 CVs<span class="per">/mo</span></div>
+          <span class="chip">£550/mo — £1.10 per CV</span>
+          <ul class="feat">
+            <li><span class="tick">✓</span><span>Priority processing</span></li>
+            <li><span class="tick">✓</span><span>Team analytics</span></li>
+          </ul>
           <a class="btn primary" href="/trial">Join plan</a>
         </div>
       </div>
 
       <div class="card">
-        <div class="topbar"></div>
         <div class="inner">
           <div class="name">Scale</div>
-          <div class="price-row"><div class="amount">750 CVs</div></div>
-          <span class="chip">£750/mo · £1.00 per CV</span>
-          <ul class="feat"><li><span class="tick">✓</span><span>Advanced reporting</span></li><li><span class="tick">✓</span><span>Priority support</span></li></ul>
+          <div class="qty">750 CVs<span class="per">/mo</span></div>
+          <span class="chip">£750/mo — £1.00 per CV</span>
+          <ul class="feat">
+            <li><span class="tick">✓</span><span>Advanced reporting</span></li>
+            <li><span class="tick">✓</span><span>Priority support</span></li>
+          </ul>
           <a class="btn primary" href="/trial">Join plan</a>
         </div>
       </div>
@@ -462,41 +486,38 @@ PRICING_HTML = r"""
     <!-- Hidden (3): High Volume, Enterprise, Enterprise+ -->
     <div id="plansMore" class="grid5" style="display:none">
       <div class="card">
-        <div class="topbar"></div>
         <div class="inner">
           <div class="name">High Volume</div>
-          <div class="price-row"><div class="amount">1,000 CVs</div></div>
-          <span class="chip">£900/mo · £0.90 per CV</span>
+          <div class="qty">1,000 CVs<span class="per">/mo</span></div>
+          <span class="chip">£900/mo — £0.90 per CV</span>
           <ul class="feat"><li><span class="tick">✓</span><span>Dedicated success</span></li></ul>
           <a class="btn primary" href="/trial">Join plan</a>
         </div>
       </div>
 
       <div class="card">
-        <div class="topbar"></div>
         <div class="inner">
           <div class="name">Enterprise</div>
-          <div class="price-row"><div class="amount">2,000+ CVs</div></div>
-          <span class="chip">£1,500/mo · £0.75 per CV · custom terms</span>
+          <div class="qty">2,000+ CVs<span class="per">/mo</span></div>
+        <span class="chip">£1,500/mo — £0.75 per CV · custom terms</span>
           <ul class="feat"><li><span class="tick">✓</span><span>Custom SLAs</span></li></ul>
           <a class="btn primary" href="/trial">Join plan</a>
         </div>
       </div>
 
       <div class="card">
-        <div class="topbar"></div>
         <div class="inner">
           <div class="name">Enterprise+ (5,000+)</div>
-          <div class="price-row"><div class="amount">5,000+ CVs</div></div>
+          <div class="qty">5,000+ CVs<span class="per">/mo</span></div>
           <span class="chip">£0.60 per CV · custom terms</span>
           <ul class="feat"><li><span class="tick">✓</span><span>Volume pricing</span></li></ul>
-          <div class="cta-spacer"></div>
+          <a class="btn" href="/trial">Contact sales</a>
         </div>
       </div>
     </div>
 
     <!-- Calculator -->
-    <div class="card calc" style="margin-top:6px">
+    <div class="card calc" style="margin-top:10px">
       <div class="inner">
         <div class="name">Savings calculator</div>
         <div class="sub">Estimate monthly time and payroll savings with CVStudio.</div>
@@ -516,7 +537,7 @@ PRICING_HTML = r"""
       </div>
     </div>
 
-    <!-- Template setup (tight) -->
+    <!-- Template setup -->
     <div class="card tight" style="margin-top:14px">
       <div class="inner">
         <div class="name">Template setup</div>
@@ -529,7 +550,7 @@ PRICING_HTML = r"""
     function fmt(n){ return new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(n); }
     function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
-    // PAYG optimizer (unchanged)
+    // PAYG helper (unchanged maths)
     function bestPayg(volume){
       const packs=[{name:'Bulk (200 CVs)',size:200,cost:260},{name:'Standard (100 CVs)',size:100,cost:140},{name:'Mini (50 CVs)',size:50,cost:75}];
       let best={name:'PAYG packs',cost:Infinity,percv:Infinity,credits:0,breakdown:''};
@@ -542,7 +563,8 @@ PRICING_HTML = r"""
         }
       } return best;
     }
-    // Monthly plan cost model (unchanged)
+
+    // Monthly options (unchanged maths)
     function planOptions(volume){
       const plans=[
         {name:'Team (250 CVs/mo)',credits:250,cost:300,overRate:1.15},
@@ -558,14 +580,18 @@ PRICING_HTML = r"""
         return {name:p.name,cost:total,percv:(volume?total/volume:0),credits:p.credits,over,overRate:p.overRate};
       });
     }
+
     function calc(){
       const cvs=parseFloat(document.getElementById('cvs').value)||0;
       const mManual=parseFloat(document.getElementById('minManual').value)||0;
       const rate=parseFloat(document.getElementById('hourRate').value)||0;
+
       const timeSavedHours=(Math.max(0,mManual)*cvs)/60;
       const moneySaved=timeSavedHours*rate;
+
       document.getElementById('outHours').textContent=(Math.round(timeSavedHours*10)/10).toFixed(1);
       document.getElementById('outMoney').textContent=fmt(Math.round(moneySaved));
+
       const pickEl=document.getElementById('planPick'); if(!cvs){ pickEl.textContent=''; return; }
       const payg=bestPayg(cvs); const monthly=planOptions(cvs);
       const all=[{kind:'PAYG',name:payg.name,cost:payg.cost,percv:payg.percv,meta:payg},...monthly.map(x=>({kind:'Monthly',name:x.name,cost:x.cost,percv:x.percv,meta:x}))].sort((a,b)=>a.cost-b.cost);
@@ -2228,6 +2254,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

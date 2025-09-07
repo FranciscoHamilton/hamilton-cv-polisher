@@ -788,6 +788,14 @@ button[disabled]{opacity:.6;cursor:not-allowed}
   display:inline-block;border:1px dashed var(--line);border-radius:12px;padding:6px 10px;font-weight:800;
   color:var(--blue);background:#fff
 }
+.pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border:1px solid var(--line);border-radius:999px;
+  margin:4px 6px 0 0;font-weight:800;font-size:12px;background:#fff
+}
+.pill.base{opacity:.85}
+.pill.off{opacity:.55;text-decoration:line-through}
+.pill .x{cursor:pointer;border:none;background:transparent;font-weight:900}
   </style>
   <script>
     let timer=null, pct=0;
@@ -884,6 +892,52 @@ button[disabled]{opacity:.6;cursor:not-allowed}
     }
   }catch(e){}
 }
+async function loadSkills(){
+  const r = await fetch('/skills', {cache:'no-store'}); if(!r.ok) return;
+  const s = await r.json(); renderSkills(s);
+}
+function makePill(label, actionLabel, onClick, extraClass){
+  const span = document.createElement('span'); span.className='pill' + (extraClass?(' '+extraClass):'');
+  span.append(document.createTextNode(label+' '));
+  const b = document.createElement('button'); b.type='button'; b.className='x'; b.textContent = actionLabel;
+  b.addEventListener('click', onClick); span.appendChild(b); return span;
+}
+function renderSkills(s){
+  const custom = document.getElementById('customSkills');
+  const base = document.getElementById('baseSkills');
+  // sort defensively A–Z client-side too
+  const sortAZ = arr => (arr||[]).slice().sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+  if(custom){
+    custom.innerHTML='';
+    sortAZ(s.custom).forEach(k=>{
+      custom.appendChild(makePill(k,'×',()=> removeCustom(k)));
+    });
+  }
+  if(base){
+    base.innerHTML='';
+    const disabled = new Set(sortAZ(s.base_disabled).map(x=>x.toLowerCase()));
+    sortAZ(s.base).forEach(k=>{
+      const off = disabled.has(k.toLowerCase());
+      base.appendChild(
+        makePill(k, off?'Enable':'Disable', ()=> toggleBase(k, off?'enable':'disable'), 'base'+(off?' off':'')));
+    });
+  }
+}
+async function addCustom(skill){
+  const fd = new FormData(); fd.append('skill', skill);
+  const r = await fetch('/skills/custom/add', {method:'POST', body: fd});
+  if(r.ok){ renderSkills(await r.json()); }
+}
+async function removeCustom(skill){
+  const fd = new FormData(); fd.append('skill', skill);
+  const r = await fetch('/skills/custom/remove', {method:'POST', body: fd});
+  if(r.ok){ renderSkills(await r.json()); }
+}
+async function toggleBase(skill, action){
+  const fd = new FormData(); fd.append('skill', skill); fd.append('action', action);
+  const r = await fetch('/skills/base/toggle', {method:'POST', body: fd});
+  if(r.ok){ renderSkills(await r.json()); }
+}
     document.addEventListener('DOMContentLoaded',()=>{
       refreshStats();
       setInterval(refreshStats, 5000);
@@ -922,6 +976,35 @@ button[disabled]{opacity:.6;cursor:not-allowed}
         const name=v.replace(/[_-]/g,' ').replace(/\.(pdf|docx|txt)$/i,'');
         if(name){document.getElementById('filenamePreview').textContent=name;}
       });
+      fileInput.addEventListener('change',()=>{
+  const v=fileInput.files?.[0]?.name||'';
+  const name=v.replace(/[_-]/g,' ').replace(/\.(pdf|docx|txt)$/i,'');
+  if(name){document.getElementById('filenamePreview').textContent=name;}
+});
+
+// Skills manager toggle + events
+const skillsToggle = document.getElementById('skillsToggle');
+const skillsCard = document.getElementById('skillsCard');
+if (skillsToggle && skillsCard){
+  skillsToggle.addEventListener('click', ()=>{
+    const show = skillsCard.style.display === 'none' || skillsCard.style.display === '';
+    skillsCard.style.display = show ? 'block' : 'none';
+    skillsToggle.textContent = show ? 'Hide' : 'Show';
+    if (show) loadSkills();
+  });
+}
+const skillForm = document.getElementById('skillAddForm');
+if (skillForm){
+  skillForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const inp = document.getElementById('skillInput');
+    const val = (inp.value||'').trim();
+    if (val){ addCustom(val); inp.value=''; }
+  });
+}
+
+});
+</script>
     });
   </script>
 </head>
@@ -982,6 +1065,24 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 
         <div class="ts" style="margin:8px 0 6px 2px;">Full History</div>
         <div id="history" class="history"></div>
+        <!-- Skills manager (hide/show) -->
+<div class="kicker" style="margin:10px 0 6px 2px; display:flex; align-items:center; justify-content:space-between">
+  <span>Skills dictionary (matching keywords)</span>
+  <button id="skillsToggle" type="button" class="chip">Show</button>
+</div>
+<div id="skillsCard" class="ts" style="display:none; border:1px dashed var(--line); border-radius:12px; padding:10px; background:#fff">
+  <div class="ts" style="margin-bottom:8px">
+    These keywords are used to surface <strong>Skills</strong> when polishing. Add your own, remove yours, or disable built-ins.
+  </div>
+  <form id="skillAddForm" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px">
+    <input id="skillInput" placeholder="Add a skill (e.g., ACCA)" style="flex:1; min-width:220px; padding:10px; border:1px solid var(--line); border-radius:10px"/>
+    <button type="submit">Add</button>
+  </form>
+  <div class="ts" style="margin:6px 0 2px">Custom skills (A–Z)</div>
+  <div id="customSkills"></div>
+  <div class="ts" style="margin:10px 0 2px">Built-in skills (A–Z)</div>
+  <div id="baseSkills"></div>
+</div>
       </div>
     </div>
   </div>
@@ -1276,7 +1377,7 @@ APP_ADMIN_PASS = os.getenv("APP_ADMIN_PASS", "hamilton")
 # ------------------------ Gate protected routes (/app, /polish, /stats, /director*) ------------------------
 @app.before_request
 def gate_protected_routes():
-    protected_prefixes = ["/app", "/polish", "/stats", "/director"]
+    protected_prefixes = ["/app", "/polish", "/stats", "/director", "/skills"]
     p = request.path or "/"
     if any(p.startswith(x) for x in protected_prefixes):
         if not session.get("authed"):
@@ -1583,17 +1684,15 @@ def _effective_skills():
 def extract_top_skills(text: str):
     tokens = re.findall(r"[A-Za-z0-9\-\&\./+]+", text)
     txt_up = " ".join(tokens).upper()
-    found = []
-    for s in SKILL_CANON:
+    canon = _effective_skills()
+    found, seen = [], set()
+    for s in canon:
         if s.upper() in txt_up:
-            found.append(s)
-    out, seen = [], set()
-    for it in found:
-        key = it.lower()
-        if key not in seen:
-            seen.add(key)
-            out.append(it)
-    return out[:25]
+            k = s.lower()
+            if k not in seen:
+                seen.add(k)
+                found.append(s)
+    return found[:25]
 
 # ---------- Word helpers ----------
 SOFT_BLACK = RGBColor(64, 64, 64)
@@ -1843,6 +1942,68 @@ def stats():
     resp = jsonify(data)
     resp.headers["Cache-Control"] = "no-store"
     return resp
+    # ---------- Skills API (view/add/remove/toggle) ----------
+@app.get("/skills")
+def skills_get():
+    data = {
+        "base": sorted(SKILL_CANON, key=lambda s: s.lower()),
+        "custom": sorted(SKILLS_CFG.get("custom", []), key=lambda s: s.lower()),
+        "base_disabled": sorted(SKILLS_CFG.get("base_disabled", []), key=lambda s: s.lower()),
+        "effective": sorted(_effective_skills(), key=lambda s: s.lower()),
+    }
+    resp = jsonify(data)
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+@app.post("/skills/custom/add")
+def skills_custom_add():
+    # accept form or JSON
+    skill = (request.form.get("skill") or (request.json.get("skill") if request.is_json else "")).strip()
+    if not skill or len(skill) > 60 or re.search(r"[<>]", skill):
+        abort(400, "Invalid skill")
+    custom = SKILLS_CFG.setdefault("custom", [])
+    if skill.lower() not in {x.lower() for x in custom} and skill.lower() not in {x.lower() for x in SKILL_CANON}:
+        custom.append(skill)
+        custom.sort(key=lambda s: s.lower())
+        _save_skills_config()
+    return jsonify({
+        "ok": True,
+        "custom": sorted(SKILLS_CFG["custom"], key=lambda s: s.lower()),
+        "effective": sorted(_effective_skills(), key=lambda s: s.lower())
+    })
+
+@app.post("/skills/custom/remove")
+def skills_custom_remove():
+    skill = (request.form.get("skill") or (request.json.get("skill") if request.is_json else "")).strip()
+    custom = SKILLS_CFG.setdefault("custom", [])
+    SKILLS_CFG["custom"] = [x for x in custom if x.lower() != skill.lower()]
+    _save_skills_config()
+    return jsonify({
+        "ok": True,
+        "custom": sorted(SKILLS_CFG["custom"], key=lambda s: s.lower()),
+        "effective": sorted(_effective_skills(), key=lambda s: s.lower())
+    })
+
+@app.post("/skills/base/toggle")
+def skills_base_toggle():
+    skill = (request.form.get("skill") or (request.json.get("skill") if request.is_json else "")).strip()
+    action = (request.form.get("action") or (request.json.get("action") if request.is_json else "")).strip().lower()
+    if skill not in SKILL_CANON:
+        abort(400, "Unknown built-in skill")
+    disabled = {*(SKILLS_CFG.setdefault("base_disabled", []))}
+    if action == "disable":
+        disabled.add(skill)
+    elif action == "enable":
+        disabled.discard(skill)
+    else:
+        abort(400, "Bad action")
+    SKILLS_CFG["base_disabled"] = sorted(disabled, key=lambda s: s.lower())
+    _save_skills_config()
+    return jsonify({
+        "ok": True,
+        "base_disabled": sorted(SKILLS_CFG["base_disabled"], key=lambda s: s.lower()),
+        "effective": sorted(_effective_skills(), key=lambda s: s.lower())
+    })
 
 # ---------- Director routes ----------
 @app.get("/director")
@@ -2020,6 +2181,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

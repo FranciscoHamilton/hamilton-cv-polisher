@@ -1552,6 +1552,34 @@ SKILL_CANON = [
     "SQL","VBA","Prophet","Anaplan","Internal Controls","Regulatory Compliance",
     "Underwriting","NatCat","Catastrophe Modelling"
 ]
+# --- Per-client skills config (custom skills + disabled built-ins) ---
+SKILLS_FILE = PROJECT_DIR / "skills.json"
+
+def _load_skills_config():
+    try:
+        if SKILLS_FILE.exists():
+            return json.loads(SKILLS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    # default: no custom, nothing disabled
+    return {"custom": [], "base_disabled": []}
+
+SKILLS_CFG = _load_skills_config()
+
+def _save_skills_config():
+    SKILLS_FILE.write_text(json.dumps(SKILLS_CFG, indent=2), encoding="utf-8")
+
+def _effective_skills():
+    """Built-ins minus disabled + custom (dedup, case-insensitive)."""
+    disabled = {s.lower() for s in SKILLS_CFG.get("base_disabled", [])}
+    base = [s for s in SKILL_CANON if s.lower() not in disabled]
+    custom = [s.strip() for s in SKILLS_CFG.get("custom", []) if isinstance(s, str) and s.strip()]
+    eff, seen = [], set()
+    for s in base + custom:
+        k = s.lower()
+        if k not in seen:
+            seen.add(k); eff.append(s)
+    return eff
 def extract_top_skills(text: str):
     tokens = re.findall(r"[A-Za-z0-9\-\&\./+]+", text)
     txt_up = " ".join(tokens).upper()
@@ -1992,6 +2020,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

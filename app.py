@@ -302,89 +302,73 @@ PRICING_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      /* calm, professional palette (no pink) */
-      --brand:#2563eb;         /* vivid indigo */
-      --brand-2:#22d3ee;       /* bright cyan  */
+      --brand:#2563eb;          /* electric blue */
+      --brand-2:#22d3ee;        /* cyan accent  */
       --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
-      --bg:#f5f8fd; --card:#ffffff; --shadow:0 12px 28px rgba(2,6,23,.07);
-      --ok:#16a34a;
+      --bg:#f5f8fd; --card:#fff; --shadow:0 12px 28px rgba(2,6,23,.07);
     }
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:1100px;margin:12px auto 56px;padding:0 20px}
+    .wrap{max-width:1100px;margin:12px auto 64px;padding:0 20px}
 
-    /* top nav (right aligned) */
-    .nav{display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px}
-    .nav a{color:var(--ink);text-decoration:none;font-weight:900;margin-left:22px}
+    /* nav right */
+    .nav{display:flex;justify-content:flex-end;gap:22px;margin:6px 0 8px}
+    .nav a{font-weight:900;text-decoration:none;color:var(--ink)}
 
+    /* headings */
     h1{margin:6px 0 10px;font-size:40px;letter-spacing:-.01em;color:var(--brand)}
-    p.sub{margin:0 0 16px;color:var(--muted)}
-
-    .section{margin-top:22px;margin-bottom:8px;font-weight:900;color:var(--brand);font-size:22px;letter-spacing:.1px}
+    .sub{margin:0 0 18px;color:var(--muted)}
+    .section{margin:22px 0 8px;font-weight:900;color:var(--brand);font-size:22px}
     .note{margin:6px 0 18px;color:var(--muted);font-size:13.5px}
 
-    /* responsive grids */
-    .grid3{
-      display:grid; gap:16px;
-      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-      margin-bottom:18px;
-    }
-    .grid5{
-      display:grid; gap:16px;
-      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
-      margin-bottom:18px;
-    }
-    @media (max-width:640px){ .grid3,.grid5{grid-template-columns:1fr} }
+    /* grids */
+    .grid3{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+    .grid5{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+    @media(max-width:640px){ .grid3,.grid5{grid-template-columns:1fr} }
 
-    /* cards (compact, consistent) */
+    /* cards */
     .card{
-      background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px;
-      box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:220px;
+      background:var(--card); border:1px solid var(--line); border-radius:18px; overflow:hidden;
+      box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:230px; position:relative;
     }
-    .name{font-weight:900;color:var(--ink);font-size:16px;margin-bottom:8px}
-    .price-row{display:flex;align-items:baseline;gap:8px;margin:2px 0 6px}
+    .topbar{height:6px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+    .inner{padding:16px;display:flex;flex-direction:column;height:100%}
+    .name{font-weight:900;color:var(--ink);font-size:15px;margin:6px 0 8px}
+    .price-row{display:flex;align-items:baseline;gap:8px;margin:0 0 6px}
     .price-row .amount{font-size:30px;font-weight:900;letter-spacing:-.01em}
-    .price-row .dot{opacity:.4;font-size:20px}
-    .price-row .cost{font-size:28px;font-weight:900;letter-spacing:-.01em}
-    .subline{color:var(--muted);font-size:12.5px;margin-top:0}
-    .btn{
-      display:inline-block;margin-top:auto;padding:12px 14px;border-radius:12px;background:#fff;
-      border:1px solid var(--line);text-decoration:none;font-weight:900;color:var(--brand);text-align:center
-    }
+    .price-row .cost{font-size:30px;font-weight:900;letter-spacing:-.01em}
+    .price-row .per{font-size:14px;color:var(--muted);font-weight:700}
+    .chip{display:inline-block;margin-top:2px;padding:6px 10px;border-radius:999px;background:#f1f5ff;border:1px solid #dbeafe;color:#1e3a8a;font-weight:800;font-size:12px}
+    .muted{color:var(--muted);font-size:12.5px;margin-top:6px}
+
+    .btn{margin-top:auto;display:inline-block;padding:12px 14px;border-radius:12px;text-align:center;
+         font-weight:900;text-decoration:none;border:1px solid var(--line);color:var(--brand);background:#fff}
     .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none}
-    .badge{
-      align-self:flex-start;background:#0ea5e9; color:#fff; font-weight:900;
-      padding:6px 10px;border-radius:999px; font-size:11px; letter-spacing:.08em;
-      transform:translateY(-4px)
-    }
-    .cta-spacer{height:44px} /* keep height where there is no button */
+    .btn:hover{transform:translateY(-1px)}
+    .cta-spacer{height:44px}
 
-    /* subtle list for monthly features (makes cards feel fuller without noise) */
-    .feat{margin:8px 0 0 0; padding:0; list-style:none; color:var(--muted); font-size:12.5px}
-    .feat li{display:flex; align-items:center; gap:6px; margin-top:4px}
+    .badge{position:absolute;top:10px;right:10px;background:#0ea5e9;color:#fff;font-weight:900;
+           padding:6px 10px;border-radius:999px;font-size:11px;letter-spacing:.08em}
+    .feat{margin:8px 0 0 0;padding:0;list-style:none;color:var(--muted);font-size:12.5px}
+    .feat li{display:flex;align-items:center;gap:6px;margin-top:4px}
     .tick{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;
-          background:rgba(34,211,238,.15); color:#0891b2; font-weight:900; font-size:11px}
+          background:rgba(34,211,238,.15);color:#0891b2;font-weight:900;font-size:11px}
 
-    /* calculator */
-    .calc{display:block;width:100%;margin-top:8px}
+    /* calc */
     .calc .name{font-size:18px;color:var(--brand)}
     .calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .calc label{display:flex;align-items:center;justify-content:space-between;font-weight:900;margin-bottom:6px;gap:8px}
-    .hint{color:var(--muted);font-size:12px;margin:0;white-space:nowrap}
+    .calc label{display:flex;justify-content:space-between;gap:8px;font-weight:900;margin-bottom:6px}
+    .hint{color:var(--muted);font-size:12px;white-space:nowrap}
     .calc input[type=number]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px}
     .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px}
     .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
-    @media (max-width:900px){ .calc-grid{grid-template-columns:1fr} }
+    @media(max-width:900px){ .calc-grid{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
   <div class="wrap">
     <div class="nav">
-      <div>
-        <a href="/">Home</a>
-        <a href="/about" style="margin-left:18px">About</a>
-        <a href="/login" style="margin-left:18px">Sign in</a>
-      </div>
+      <a href="/">Home</a><a href="/about">About</a><a href="/login">Sign in</a>
     </div>
 
     <h1>Pricing</h1>
@@ -396,30 +380,33 @@ PRICING_HTML = r"""
 
     <div class="grid3">
       <div class="card">
-        <div class="name">Mini</div>
-        <div class="price-row">
-          <div class="amount">50 CVs</div><div class="dot">•</div><div class="cost">£75</div>
+        <div class="topbar"></div>
+        <div class="inner">
+          <div class="name">Mini</div>
+          <div class="price-row"><div class="amount">50 CVs</div><div class="per">•</div><div class="cost">£75</div></div>
+          <span class="chip">£1.50 per CV</span>
+          <a class="btn" href="/trial">Buy pack</a>
         </div>
-        <p class="subline">£1.50 per CV</p>
-        <a class="btn" href="/trial">Buy pack</a>
       </div>
 
       <div class="card">
-        <div class="name">Standard</div>
-        <div class="price-row">
-          <div class="amount">100 CVs</div><div class="dot">•</div><div class="cost">£140</div>
+        <div class="topbar"></div>
+        <div class="inner">
+          <div class="name">Standard</div>
+          <div class="price-row"><div class="amount">100 CVs</div><div class="per">•</div><div class="cost">£140</div></div>
+          <span class="chip">£1.40 per CV</span>
+          <a class="btn" href="/trial">Buy pack</a>
         </div>
-        <p class="subline">£1.40 per CV</p>
-        <a class="btn" href="/trial">Buy pack</a>
       </div>
 
       <div class="card">
-        <div class="name">Bulk</div>
-        <div class="price-row">
-          <div class="amount">200 CVs</div><div class="dot">•</div><div class="cost">£260</div>
+        <div class="topbar"></div>
+        <div class="inner">
+          <div class="name">Bulk</div>
+          <div class="price-row"><div class="amount">200 CVs</div><div class="per">•</div><div class="cost">£260</div></div>
+          <span class="chip">£1.30 per CV</span>
+          <a class="btn" href="/trial">Buy pack</a>
         </div>
-        <p class="subline">£1.30 per CV</p>
-        <a class="btn" href="/trial">Buy pack</a>
       </div>
     </div>
 
@@ -428,94 +415,90 @@ PRICING_HTML = r"""
     <p class="note">CVs reset monthly. Overage is cheaper than PAYG and varies by plan.</p>
 
     <div class="grid5">
-
       <div class="card">
-        <div class="name">Team</div>
-        <div class="price-row"><div class="cost">£300</div><span class="subline">/mo</span></div>
-        <p class="subline">250 CVs · £1.20/CV</p>
-        <ul class="feat">
-          <li><span class="tick">✓</span><span>Shared workspace</span></li>
-          <li><span class="tick">✓</span><span>Email support</span></li>
-        </ul>
-        <a class="btn primary" href="/trial">Join plan</a>
+        <div class="topbar"></div>
+        <div class="inner">
+          <div class="name">Team</div>
+          <div class="price-row"><div class="cost">£300</div><div class="per">/mo</div></div>
+          <span class="chip">250 CVs · £1.20/CV</span>
+          <ul class="feat"><li><span class="tick">✓</span><span>Shared workspace</span></li><li><span class="tick">✓</span><span>Email support</span></li></ul>
+          <a class="btn primary" href="/trial">Join plan</a>
+        </div>
       </div>
 
       <div class="card">
         <span class="badge">MOST POPULAR</span>
-        <div class="name">Pro</div>
-        <div class="price-row"><div class="cost">£550</div><span class="subline">/mo</span></div>
-        <p class="subline">500 CVs · £1.10/CV</p>
-        <ul class="feat">
-          <li><span class="tick">✓</span><span>Priority processing</span></li>
-          <li><span class="tick">✓</span><span>Team analytics</span></li>
-        </ul>
-        <a class="btn primary" href="/trial">Join plan</a>
+        <div class="topbar"></div>
+        <div class="inner">
+          <div class="name">Pro</div>
+          <div class="price-row"><div class="cost">£550</div><div class="per">/mo</div></div>
+          <span class="chip">500 CVs · £1.10/CV</span>
+          <ul class="feat"><li><span class="tick">✓</span><span>Priority processing</span></li><li><span class="tick">✓</span><span>Team analytics</span></li></ul>
+          <a class="btn primary" href="/trial">Join plan</a>
+        </div>
       </div>
 
       <div class="card">
-        <div class="name">Scale</div>
-        <div class="price-row"><div class="cost">£750</div><span class="subline">/mo</span></div>
-        <p class="subline">750 CVs · £1.00/CV</p>
-        <ul class="feat">
-          <li><span class="tick">✓</span><span>Advanced reporting</span></li>
-          <li><span class="tick">✓</span><span>Priority support</span></li>
-        </ul>
-        <a class="btn primary" href="/trial">Join plan</a>
+        <div class="topbar"></div>
+        <div class="inner">
+          <div class="name">Scale</div>
+          <div class="price-row"><div class="cost">£750</div><div class="per">/mo</div></div>
+          <span class="chip">750 CVs · £1.00/CV</span>
+          <ul class="feat"><li><span class="tick">✓</span><span>Advanced reporting</span></li><li><span class="tick">✓</span><span>Priority support</span></li></ul>
+          <a class="btn primary" href="/trial">Join plan</a>
+        </div>
       </div>
 
       <div class="card">
-        <div class="name">High Volume</div>
-        <div class="price-row"><div class="amount">1,000 CVs</div><span class="subline">/mo</span></div>
-        <p class="subline">£0.90 per CV</p>
-        <ul class="feat">
-          <li><span class="tick">✓</span><span>Dedicated success</span></li>
-        </ul>
-        <div class="cta-spacer"></div>
+        <div class="topbar"></div>
+        <div class="inner">
+          <div class="name">High Volume</div>
+          <div class="price-row"><div class="amount">1,000 CVs</div><div class="per">/mo</div></div>
+          <span class="chip">£0.90 per CV</span>
+          <ul class="feat"><li><span class="tick">✓</span><span>Dedicated success</span></li></ul>
+          <div class="cta-spacer"></div>
+        </div>
       </div>
 
       <div class="card">
-        <div class="name">Enterprise</div>
-        <div class="price-row"><div class="amount">2,000+ CVs</div><span class="subline">/mo</span></div>
-        <p class="subline">£0.75 per CV · custom terms</p>
-        <ul class="feat">
-          <li><span class="tick">✓</span><span>Custom SLAs</span></li>
-        </ul>
-        <div class="cta-spacer"></div>
+        <div class="topbar"></div>
+        <div class="inner">
+          <div class="name">Enterprise</div>
+          <div class="price-row"><div class="amount">2,000+ CVs</div><div class="per">/mo</div></div>
+          <span class="chip">£0.75 per CV · custom terms</span>
+          <ul class="feat"><li><span class="tick">✓</span><span>Custom SLAs</span></li></ul>
+          <div class="cta-spacer"></div>
+        </div>
       </div>
     </div>
 
     <!-- Calculator -->
-    <div class="card calc">
-      <div class="name">Savings calculator</div>
-      <div class="subline">Estimate monthly time and payroll savings with CVStudio.</div>
+    <div class="card calc" style="margin-top:6px">
+      <div class="inner">
+        <div class="name">Savings calculator</div>
+        <div class="sub">Estimate monthly time and payroll savings with CVStudio.</div>
 
-      <div class="calc-grid" style="margin-top:10px">
-        <div>
-          <label>CVs per month</label>
-          <input id="cvs" type="number" min="0" value="50">
+        <div class="calc-grid" style="margin-top:10px">
+          <div><label>CVs per month</label><input id="cvs" type="number" min="0" value="50"></div>
+          <div><label>Minutes per CV (manual polish) <span class="hint">(avg)</span></label><input id="minManual" type="number" min="0" value="15"></div>
+          <div><label>Recruiter hourly cost <span class="hint">(avg)</span></label><input id="hourRate" type="number" min="0" value="30"></div>
         </div>
-        <div>
-          <label>Minutes per CV (manual polish) <span class="hint">(avg)</span></label>
-          <input id="minManual" type="number" min="0" value="15">
+
+        <div class="calc-out">
+          <div><span class="n" id="outHours">12.5</span> hours saved / month</div>
+          <div><span class="n">£<span id="outMoney">375</span></span> payroll saved / month</div>
         </div>
-        <div>
-          <label>Recruiter hourly cost <span class="hint">(avg)</span></label>
-          <input id="hourRate" type="number" min="0" value="30">
-        </div>
+
+        <div class="sub" id="planPick" style="margin-top:8px"></div>
       </div>
-
-      <div class="calc-out">
-        <div><span class="n" id="outHours">12.5</span> hours saved / month</div>
-        <div><span class="n">£<span id="outMoney">375</span></span> payroll saved / month</div>
-      </div>
-
-      <div class="subline" id="planPick" style="margin-top:8px"></div>
     </div>
 
     <!-- Template setup -->
     <div class="card" style="margin-top:14px">
-      <div class="name">Template setup</div>
-      <div class="subline">£50 one-off per company — fully credited back as usage (your first £50 of CVs are free once you start paying).</div>
+      <div class="inner">
+        <div class="name">Template setup</div>
+        <div class="sub">£50 one-off per company — fully credited back as usage (your first £50 of CVs are free once you start paying).</div>
+      </div>
     </div>
   </div>
 
@@ -523,85 +506,41 @@ PRICING_HTML = r"""
     function fmt(n){ return new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(n); }
     function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
-    // PAYG packs — updated sizes/costs (unchanged)
     function bestPayg(volume){
-      const packs = [
-        {name:'Bulk (200 CVs)', size:200, cost:260},
-        {name:'Standard (100 CVs)', size:100, cost:140},
-        {name:'Mini (50 CVs)', size:50, cost:75},
-      ];
-      let best = {name:'PAYG packs', cost:Infinity, percv:Infinity, credits:0, breakdown:''};
-      for(let b=0; b<=Math.ceil(volume/200)+1; b++){
-        for(let s=0; s<=Math.ceil(Math.max(0,volume-200*b)/100)+1; s++){
-          const used = 200*b + 100*s;
-          const rem = Math.max(0, volume - used);
-          const m = Math.ceil(rem/50);
-          const credits = used + 50*m;
-          const cost = 260*b + 140*s + 75*m;
-          if(cost < best.cost){
-            const detail = [ b?`${b}×Bulk`:null, s?`${s}×Standard`:null, m?`${m}×Mini`:null ].filter(Boolean).join(' + ');
-            best = {name:'PAYG packs', cost, percv:(volume? cost/volume:0), credits, breakdown:detail};
-          }
+      const packs=[{name:'Bulk (200 CVs)',size:200,cost:260},{name:'Standard (100 CVs)',size:100,cost:140},{name:'Mini (50 CVs)',size:50,cost:75}];
+      let best={name:'PAYG packs',cost:Infinity,percv:Infinity,credits:0,breakdown:''};
+      for(let b=0;b<=Math.ceil(volume/200)+1;b++){
+        for(let s=0;s<=Math.ceil(Math.max(0,volume-200*b)/100)+1;s++){
+          const used=200*b+100*s; const rem=Math.max(0,volume-used); const m=Math.ceil(rem/50);
+          const credits=used+50*m; const cost=260*b+140*s+75*m;
+          if(cost<best.cost){ const detail=[b?`${b}×Bulk`:null,s?`${s}×Standard`:null,m?`${m}×Mini`:null].filter(Boolean).join(' + ');
+            best={name:'PAYG packs',cost,percv:(volume?cost/volume:0),credits,breakdown:detail};}
         }
-      }
-      return best;
+      } return best;
     }
-
-    // Monthly plans (unchanged math)
     function planOptions(volume){
-      const plans = [
-        {name:'Team (250 CVs/mo)',  credits:250,  cost:300, overRate:1.15},
-        {name:'Pro (500 CVs/mo)',   credits:500,  cost:550, overRate:1.05},
-        {name:'Scale (750 CVs/mo)', credits:750,  cost:750, overRate:0.95},
-        {name:'High Volume (1000 CVs/mo)', credits:1000, cost:900, overRate:0.85},
-        {name:'Enterprise (2000+ CVs/mo)', credits:2000, cost:1500, overRate:0.60}
-      ];
-      return plans.map(p=>{
-        const over = Math.max(0, volume - p.credits);
-        const overCost = over * p.overRate;
-        const total = p.cost + overCost;
-        return {name:p.name, cost:total, percv:(volume? total/volume:0), credits:p.credits, over, overRate:p.overRate};
-      });
+      const plans=[{name:'Team (250 CVs/mo)',credits:250,cost:300,overRate:1.15},{name:'Pro (500 CVs/mo)',credits:500,cost:550,overRate:1.05},{name:'Scale (750 CVs/mo)',credits:750,cost:750,overRate:0.95},{name:'High Volume (1000 CVs/mo)',credits:1000,cost:900,overRate:0.85},{name:'Enterprise (2000+ CVs/mo)',credits:2000,cost:1500,overRate:0.60}];
+      return plans.map(p=>{const over=Math.max(0,volume-p.credits); const overCost=over*p.overRate; const total=p.cost+overCost; return {name:p.name,cost:total,percv:(volume?total/volume:0),credits:p.credits,over,overRate:p.overRate};});
     }
-
     function calc(){
-      const cvs = parseFloat(document.getElementById('cvs').value) || 0;
-      const mManual = parseFloat(document.getElementById('minManual').value) || 0;
-      const rate = parseFloat(document.getElementById('hourRate').value) || 0;
-
-      const timeSavedMin = Math.max(0, mManual) * cvs;
-      const timeSavedHours = timeSavedMin / 60;
-      const moneySaved = timeSavedHours * rate;
-
-      document.getElementById('outHours').textContent = (Math.round(timeSavedHours*10)/10).toFixed(1);
-      document.getElementById('outMoney').textContent = fmt(Math.round(moneySaved));
-
-      const pickEl = document.getElementById('planPick');
-      if(!cvs){ pickEl.textContent = ''; return; }
-
-      const payg = bestPayg(cvs);
-      const monthly = planOptions(cvs);
-      const all = [
-        {kind:'PAYG', name:payg.name, cost:payg.cost, percv:payg.percv, meta:payg},
-        ...monthly.map(x=>({kind:'Monthly', name:x.name, cost:x.cost, percv:x.percv, meta:x}))
-      ].sort((a,b)=>a.cost - b.cost);
-
-      const best = all[0];
-      const percv = best.percv ? ` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)` : '';
-      let extra = '';
-      if(best.kind==='PAYG' && best.meta.breakdown){ extra = ` · ${best.meta.breakdown}`; }
-      if(best.kind==='Monthly' && best.meta.over>0){ extra = ` · includes ${best.meta.over} overage @ £${best.meta.overRate.toFixed(2)}`; }
-
-      const suffix = best.kind==='Monthly' ? '/mo' : ' total';
-      const hvHint = (cvs >= 900)
-        ? `<br><span class="subline">Around 1,000+ CVs/mo? High Volume or Enterprise may be cheaper.</span>`
-        : '';
-
-      pickEl.innerHTML = `Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>${suffix}${percv}${extra}${hvHint}`;
+      const cvs=parseFloat(document.getElementById('cvs').value)||0;
+      const mManual=parseFloat(document.getElementById('minManual').value)||0;
+      const rate=parseFloat(document.getElementById('hourRate').value)||0;
+      const timeSavedHours=(Math.max(0,mManual)*cvs)/60;
+      const moneySaved=timeSavedHours*rate;
+      document.getElementById('outHours').textContent=(Math.round(timeSavedHours*10)/10).toFixed(1);
+      document.getElementById('outMoney').textContent=fmt(Math.round(moneySaved));
+      const pickEl=document.getElementById('planPick'); if(!cvs){ pickEl.textContent=''; return; }
+      const payg=bestPayg(cvs); const monthly=planOptions(cvs);
+      const all=[{kind:'PAYG',name:payg.name,cost:payg.cost,percv:payg.percv,meta:payg},...monthly.map(x=>({kind:'Monthly',name:x.name,cost:x.cost,percv:x.percv,meta:x}))].sort((a,b)=>a.cost-b.cost);
+      const best=all[0]; const percv=best.percv?` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)`:''; let extra='';
+      if(best.kind==='PAYG'&&best.meta.breakdown){ extra=` · ${best.meta.breakdown}`; }
+      if(best.kind==='Monthly'&&best.meta.over>0){ extra=` · includes ${best.meta.over} overage @ £${best.meta.overRate.toFixed(2)}`; }
+      const suffix=best.kind==='Monthly'?'/mo':' total';
+      const hvHint=(cvs>=900)?`<br><span class="sub">Around 1,000+ CVs/mo? High Volume or Enterprise may be cheaper.</span>`:'';
+      pickEl.innerHTML=`Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>${suffix}${percv}${extra}${hvHint}`;
     }
-
-    document.addEventListener('input', calc);
-    document.addEventListener('DOMContentLoaded', calc);
+    document.addEventListener('input',calc); document.addEventListener('DOMContentLoaded',calc);
   </script>
 </body>
 </html>
@@ -2240,6 +2179,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

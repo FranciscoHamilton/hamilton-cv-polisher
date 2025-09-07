@@ -311,28 +311,41 @@ PRICING_HTML = r"""
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
     .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
 
+.grid3, .grid5 { margin-bottom:16px }
+.calc { display:block; width:100%; margin-top:12px }
+
     /* top nav (match homepage) */
-    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .nav{display:flex;align-items:center;justify-content:flex-end;margin-bottom:8px}
     .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
     .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
 
     h1{margin:6px 0 10px;font-size:32px;color:var(--blue)}
     p.sub{margin:0 0 16px;color:var(--muted)}
 
-    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
-    @media(max-width:1000px){ .grid5{grid-template-columns:1fr 1fr} .grid3{grid-template-columns:1fr 1fr} }
-    @media(max-width:620px){ .grid5,.grid3{grid-template-columns:1fr} }
+    .grid3{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+  gap:14px;
+  margin-bottom:14px;
+}
+.grid5{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+  gap:14px;
+  margin-bottom:14px;
+}
+@media(max-width:1024px){ .grid5{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))} }
+@media(max-width:640px){ .grid5,.grid3{grid-template-columns:1fr} }
 
     .section{margin-top:18px;margin-bottom:8px;font-weight:900;color:var(--blue);font-size:20px}
     .note{margin:6px 0 14px;color:var(--muted);font-size:13px}
 
     .card{
-      background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)
-    }
-    .name{font-weight:900;color:var(--blue);margin-bottom:8px;font-size:18px}
-    .price{font-size:24px;font-weight:900;margin:2px 0 4px}
-    .small{color:var(--muted);font-size:12px}
+  background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px 16px;box-shadow:var(--shadow)
+}
+    .name{font-weight:900;color:var(--ink);margin-bottom:6px;font-size:17px;letter-spacing:.1px}
+.price{font-size:28px;font-weight:900;margin:2px 0 2px;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.small{color:var(--muted);font-size:12.5px}
     .btn{display:inline-block;margin-top:12px;padding:10px 14px;border-radius:12px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--blue)}
     .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none}
 
@@ -343,9 +356,7 @@ PRICING_HTML = r"""
   display:flex; align-items:center; justify-content:space-between;
   font-weight:800; margin-bottom:6px; gap:8px;
 }
-.hint{
-  color:var(--muted); font-size:12px; margin:0; white-space:nowrap;
-}
+.hint{ color:var(--muted); font-size:12px; margin:0; white-space:nowrap }
     .calc input[type=number]{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px}
     .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px}
     .calc-out .n{font-weight:900;color:var(--blue);font-size:20px}
@@ -1129,10 +1140,10 @@ LOGIN_HTML = r"""
     <div class="nav">
       <a class="brand" href="/">CVStudio</a>
       <div>
-        <a href="/pricing">Pricing</a>
-        <a href="/about" style="margin-left:18px">About</a>
-        <a href="/" style="margin-left:18px">Home</a>
-      </div>
+  <a href="/">Home</a>
+  <a href="/about" style="margin-left:18px">About</a>
+  <a href="/login" style="margin-left:18px">Sign in</a>
+</div>
     </div>
 
     <div class="auth">
@@ -2184,6 +2195,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

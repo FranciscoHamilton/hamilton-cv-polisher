@@ -108,7 +108,7 @@ HOMEPAGE_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>CVStudio</title>
+  <title>Lustra</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -159,7 +159,7 @@ HOMEPAGE_HTML = r"""
 <body>
   <div class="wrap">
     <div class="nav">
-      <a class="brand" href="/">CVStudio</a>
+      <a class="brand" href="/">Lustra</a>
       <div>
         <a href="/pricing">Pricing</a>
         <a href="/about" style="margin-left:18px">About</a>
@@ -209,7 +209,7 @@ ABOUT_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>About — CVStudio</title>
+  <title>About — Lustra</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -239,7 +239,7 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:15px;line-height:1.7}
 <body>
   <div class="wrap">
     <div class="nav">
-      <a class="brand" href="/">CVStudio</a>
+      <a class="brand" href="/">Lustra</a>
       <div>
         <a href="/pricing">Pricing</a>
         <a href="/about" style="margin-left:18px">About</a>
@@ -298,7 +298,7 @@ PRICING_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Pricing — CVStudio</title>
+  <title>Pricing — Lustra</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -520,7 +520,7 @@ PRICING_HTML = r"""
     <div class="card calc" style="margin-top:10px">
       <div class="inner">
         <div class="name">Savings calculator</div>
-        <div class="sub">Estimate monthly time and payroll savings with CVStudio.</div>
+        <div class="sub">Estimate monthly time and payroll savings with Lustra.</div>
 
         <div class="calc-grid" style="margin-top:10px">
           <div><label>CVs per month</label><input id="cvs" type="number" min="0" value="50"></div>
@@ -1168,7 +1168,7 @@ LOGIN_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>CVStudio — Sign in</title>
+  <title>Lustra — Sign in</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
@@ -1197,7 +1197,7 @@ LOGIN_HTML = r"""
 <body>
   <div class="wrap">
     <div class="nav">
-      <a class="brand" href="/">CVStudio</a>
+      <a class="brand" href="/">Lustra</a>
       <div>
   <a href="/">Home</a>
   <a href="/about" style="margin-left:18px">About</a>
@@ -2254,6 +2254,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -112,10 +112,11 @@ HOMEPAGE_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --blue:#0d3b66; --blue-2:#2f6fde;
-      --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
-      --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
-    }
+  --blue:#2563eb;      /* vivid indigo */
+  --blue-2:#22d3ee;    /* bright cyan  */
+  --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+  --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
+}
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
 
@@ -212,10 +213,11 @@ ABOUT_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --blue:#0d3b66; --blue-2:#2f6fde;
-      --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
-      --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
-    }
+  --blue:#2563eb;      /* vivid indigo */
+  --blue-2:#22d3ee;    /* bright cyan  */
+  --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+  --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
+}
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
     .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
@@ -227,10 +229,10 @@ ABOUT_HTML = r"""
 
     .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:0;box-shadow:var(--shadow)}
     .inner{max-width:780px;padding:24px}
-    h1{margin:6px 0 14px;font-size:32px;color:var(--blue)}
-    h2{margin:22px 0 10px;font-size:20px;color:var(--blue)}
-    p{margin:8px 0;color:var(--ink);font-size:16px;line-height:1.6}
-    ul{margin:8px 0 16px 20px;color:var(--ink);font-size:16px;line-height:1.6}
+    h1{margin:6px 0 12px;font-size:28px;color:var(--blue)}
+h2{margin:18px 0 10px;font-size:18px;color:var(--blue)}
+p{margin:8px 0;color:var(--ink);font-size:15px;line-height:1.7}
+ul{margin:8px 0 16px 20px;color:var(--ink);font-size:15px;line-height:1.7}
     .btn{display:inline-block;margin-top:14px;padding:12px 16px;border-radius:12px;background:linear-gradient(90deg,var(--blue),var(--blue-2));border:none;text-decoration:none;font-weight:800;color:#fff}
   </style>
 </head>
@@ -300,10 +302,11 @@ PRICING_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --blue:#0d3b66; --blue-2:#2f6fde;
-      --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
-      --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
-    }
+  --blue:#2563eb;      /* vivid indigo */
+  --blue-2:#22d3ee;    /* bright cyan  */
+  --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+  --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
+}
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
     .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
@@ -336,8 +339,13 @@ PRICING_HTML = r"""
     /* Calculator */
     .calc{margin-top:12px}
     .calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    .calc label{display:block;font-weight:800;margin-bottom:6px}
-    .hint{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+    .calc label{
+  display:flex; align-items:center; justify-content:space-between;
+  font-weight:800; margin-bottom:6px; gap:8px;
+}
+.hint{
+  color:var(--muted); font-size:12px; margin:0; white-space:nowrap;
+}
     .calc input[type=number]{width:100%;padding:10px;border:1px solid var(--line);border-radius:12px}
     .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px}
     .calc-out .n{font-weight:900;color:var(--blue);font-size:20px}
@@ -347,12 +355,11 @@ PRICING_HTML = r"""
 <body>
   <div class="wrap">
     <div class="nav">
-      <a class="brand" href="/">CVStudio</a>
       <div>
-        <a href="/pricing">Pricing</a>
-        <a href="/about" style="margin-left:18px">About</a>
-        <a href="/login" style="margin-left:18px">Sign in</a>
-      </div>
+  <a href="/pricing">Pricing</a>
+  <a href="/about" style="margin-left:18px">About</a>
+  <a href="/login" style="margin-left:18px">Sign in</a>
+</div>
     </div>
 
     <h1>Pricing</h1>
@@ -385,10 +392,8 @@ PRICING_HTML = r"""
     <!-- Monthly -->
     <div class="section">Monthly plans</div>
     <p class="note">
-      CVs reset monthly. Overage varies by plan:
-      Team £1.15/CV · Pro £1.05/CV · Scale £0.95/CV · High Volume £0.85/CV · Enterprise £0.60/CV.
-      You can also buy a PAYG pack at any time.
-    </p>
+  CVs reset monthly. Overage is cheaper than PAYG and varies by plan.
+</p>
     <div class="grid5">
       <div class="card">
         <div class="name">Team</div>
@@ -409,17 +414,14 @@ PRICING_HTML = r"""
         <a class="btn primary" href="/trial">Join plan</a>
       </div>
       <div class="card">
-        <div class="name">High Volume</div>
-        <div class="price">1,000 CVs<span class="small">/mo</span></div>
-        <div class="small">£0.90 per CV</div>
-        <a class="btn" href="/contact">Contact us</a>
-      </div>
-      <div class="card">
-        <div class="name">Enterprise (2,000+)</div>
-        <div class="price">Let’s talk</div>
-        <div class="small">£0.75 per CV · custom terms</div>
-        <a class="btn" href="/contact">Contact us</a>
-      </div>
+  <div class="name">High Volume</div>
+  <div class="price">1,000 CVs<span class="small">/mo</span></div>
+  <div class="small">£0.90 per CV</div>
+<div class="card">
+  <div class="name">Enterprise</div>
+  <div class="price">2,000+ CVs<span class="small">/mo</span></div>
+  <div class="small">£0.75 per CV · custom terms</div>
+</div>
     </div>
 
     <!-- Calculator -->
@@ -1100,13 +1102,14 @@ LOGIN_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --blue:#0d3b66; --blue-2:#2f6fde;
-      --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
-      --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
-    }
+  --blue:#2563eb;      /* vivid indigo */
+  --blue-2:#22d3ee;    /* bright cyan  */
+  --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+  --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
+}
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
+    .wrap{max-width:1100px;margin:12px auto 56px;padding:0 20px}
     .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
     .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
     .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
@@ -2181,6 +2184,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -293,7 +293,7 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:15px;line-height:1.7}
 # For brevity here, keep the exact ABOUT_HTML, PRICING_HTML, HTML, LOGIN_HTML strings from your script.
 
 # ------------------------ Pricing (NEW) ------------------------
-PRICINPRICING_HTML = r"""
+PRICING_HTML = r"""
 <!doctype html>
 <html lang="en">
 <head>
@@ -2240,6 +2240,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

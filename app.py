@@ -309,9 +309,6 @@ PRICING_HTML = r"""
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
     .wrap{max-width:980px;margin:28px auto 64px;padding:0 24px}
-    /* Nav wrapper = match Home/About alignment */
-.wrap-nav{max-width:1100px;margin:28px auto 0;padding:0 20px}
-
 
     /* top nav (match Home/About pages) */
     .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
@@ -369,16 +366,15 @@ PRICING_HTML = r"""
   </style>
 </head>
 <body>
-  <div class="wrap-nav">
-  <div class="nav">
-    <a class="brand" href="/">Lustra</a>
-    <div>
-      <a href="/">Home</a>
-      <a href="/about">About</a>
-      <a href="/login">Sign in</a>
+  <div class="wrap">
+    <div class="nav">
+      <a class="brand" href="/">Lustra</a>
+      <div>
+        <a href="/">Home</a>
+        <a href="/about">About</a>
+        <a href="/login">Sign in</a>
+      </div>
     </div>
-  </div>
-</div>
 
     <h1>Monthly plans</h1>
     <p class="sub">Flexible plans for every team and budget.</p>
@@ -2450,6 +2446,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

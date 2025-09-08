@@ -231,8 +231,8 @@ ABOUT_HTML = r"""
     .inner{max-width:780px;padding:24px}
     h1{margin:6px 0 12px;font-size:28px;color:var(--blue)}
 h2{margin:18px 0 10px;font-size:18px;color:var(--blue)}
-p{margin:8px 0;color:var(--ink);font-size:15px;line-height:1.7}
-ul{margin:8px 0 16px 20px;color:var(--ink);font-size:15px;line-height:1.7}
+p{margin:8px 0;color:var(--ink);font-size:13.5px;line-height:1.65}
+ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
     .btn{display:inline-block;margin-top:14px;padding:12px 16px;border-radius:12px;background:linear-gradient(90deg,var(--blue),var(--blue-2));border:none;text-decoration:none;font-weight:800;color:#fff}
   </style>
 </head>
@@ -2456,6 +2456,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

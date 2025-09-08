@@ -338,7 +338,42 @@ PRICING_HTML = r"""
     .name{font-weight:900;color:#0b1220;font-size:16px;margin:4px 0 10px}
     .qty{font-size:28px;font-weight:900;letter-spacing:-.01em}
     .per{font-size:14px;color:var(--muted);font-weight:700;margin-left:6px}
-    .chip{display:inline-block;align-self:flex-start;margin-top:10px;padding:8px 12px;border-radius:999px;background:#eef4ff;border:1px solid #dbeafe;color:#132a63;font-weight:800;font-size:12.5px}
+    .chip{
+  /* container (the blue capsule) */
+  display:inline-flex;
+  align-items:baseline;
+  gap:6px;
+  align-self:flex-start;
+  margin-top:10px;
+  padding:8px 12px;
+  border-radius:999px;
+  background:#eef4ff;
+  border:1px solid #dbeafe;
+  color:#132a63;
+  font-weight:600;     /* slightly softer default */
+  font-size:12.5px;    /* base size for the capsule */
+}
+
+.chip .price-month{
+  /* big, primary: £360/mo */
+  font-size:1.25em;    /* larger than the base */
+  color:#0b1220;       /* darker */
+  font-weight:800;     /* bold for emphasis */
+}
+
+.chip .dot{
+  /* the little separator dot */
+  color:#8aa0c4;
+  font-weight:700;
+  line-height:1;
+}
+
+.chip .price-cv{
+  /* small, secondary: £1.20 per CV */
+  font-size:.85em;     /* smaller */
+  color:#667792;       /* lighter */
+  font-weight:600;
+}
     .btn{margin-top:auto;display:inline-block;padding:12px 16px;border-radius:999px;text-align:center;font-weight:900;text-decoration:none;border:1px solid var(--line);color:#0b1220;background:#fff}
     .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none}
     .btn:hover{transform:translateY(-1px)}
@@ -2509,6 +2544,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

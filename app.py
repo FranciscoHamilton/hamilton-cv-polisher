@@ -837,35 +837,30 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 /* stats */
 .statsgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
 .stat{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--card)}
-/* smaller typography per your request */
-.stat .k{font-size:11px;color:var(--muted);font-weight:700}
-.stat .v{font-size:16px;font-weight:900;margin-top:4px;color:var(--blue)}
+.stat .k{font-size:12px;color:var(--muted);font-weight:700}
+.stat .v{font-size:18px;font-weight:900;margin-top:4px;color:var(--blue)}
 .kicker{color:var(--muted);font-size:12.5px;margin:8px 0 6px}
 .history{border:1px solid var(--line);border-radius:14px;max-height:300px;overflow:auto;background:var(--card)}
 .row{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:none}
-.candidate{font-weight:700;font-size:12.5px}  /* smaller */
-.tsm{color:var(--muted);font-size:12px}        /* smaller */
+.candidate{font-weight:700;font-size:13.5px}
+.tsm{color:var(--muted);font-size:12px}
 
 /* credits chip in stats */
 .chip{
   display:inline-block;border:1px dashed var(--line);border-radius:12px;padding:6px 10px;font-weight:800;
   color:var(--blue);background:#fff
 }
-
-/* compact skills chips */
 .pill{
   display:inline-flex;align-items:center;gap:6px;
-  padding:4px 8px;border:1px solid var(--line);border-radius:999px;
-  margin:3px 5px 0 0;font-weight:800;font-size:11px;background:#fff
+  padding:6px 10px;border:1px solid var(--line);border-radius:999px;
+  margin:4px 6px 0 0;font-weight:800;font-size:12px;background:#fff
 }
 .pill.base{opacity:.85}
 .pill.off{opacity:.55;text-decoration:line-through}
-.pill .x{cursor:pointer;border:none;background:transparent;font-weight:900;line-height:1}
-
-.pill .x:hover{ color:var(--blue); }
+.pill .x{cursor:pointer;border:none;background:transparent;font-weight:900}
   </style>
-    <script>
+  <script>
     let timer=null, pct=0;
     function setProgress(p){
       pct = Math.max(0, Math.min(100, p));
@@ -912,102 +907,100 @@ button[disabled]{opacity:.6;cursor:not-allowed}
       const nameEl = document.getElementById('filenamePreview');
       if(nameEl){ nameEl.textContent = "—"; }
     }
-
     async function refreshStats(){
-      try{
-        const r = await fetch('/stats', {cache:'no-store'});
-        if(!r.ok) return;
-        const s = await r.json();
+  try{
+    const r = await fetch('/stats', {cache:'no-store'});
+    if(!r.ok) return;
+    const s = await r.json();
 
-        // Trial banner
-        const tb = document.getElementById('trialBanner');
-        if (tb) {
-          const left = s.trial_credits_left || 0;
-          if (left > 0) {
-            tb.style.display = 'block';
-            tb.querySelector('.left').textContent = left;
-          } else {
-            tb.style.display = 'none';
-          }
-        }
-
-        // Top stats
-        const dm = document.getElementById('downloadsMonth');
-        if (dm) dm.textContent = (s.downloads_this_month ?? s.downloads);
-        const lc = document.getElementById('lastCandidate');
-        if (lc) lc.textContent = s.last_candidate || '—';
-        const lt = document.getElementById('lastTime');
-        if (lt) lt.textContent = s.last_time || '—';
-
-        // Credits (paid + trial)
-        const clEl = document.getElementById('creditsLeft');
-        if (clEl) {
-          const creditsLeft = (((s.credits || {}).balance) || 0) + (s.trial_credits_left || 0);
-          clEl.textContent = creditsLeft;
-        }
-
-        // History list
-        const list = document.getElementById('history');
-        if (list) {
-          list.innerHTML = '';
-          (s.history || []).slice().reverse().forEach(item => {
-            const row = document.createElement('div'); row.className = 'row';
-            const left = document.createElement('div');
-            left.innerHTML = '<div class="candidate">' + (item.candidate || item.filename || '—') + '</div><div class="ts">' + (item.filename || '') + '</div>';
-            const right = document.createElement('div'); right.className = 'ts';
-            right.textContent = item.ts || '';
-            row.appendChild(left); row.appendChild(right); list.appendChild(row);
-          });
-        }
-      }catch(e){}
-    }
-
-    async function loadSkills(){
-      const r = await fetch('/skills', {cache:'no-store'}); if(!r.ok) return;
-      const s = await r.json(); renderSkills(s);
-    }
-    function makePill(label, actionLabel, onClick, extraClass){
-      const span = document.createElement('span'); span.className='pill' + (extraClass?(' '+extraClass):'');
-      span.append(document.createTextNode(label+' '));
-      const b = document.createElement('button'); b.type='button'; b.className='x'; b.textContent = actionLabel;
-      b.addEventListener('click', onClick); span.appendChild(b); return span;
-    }
-    function renderSkills(s){
-      const custom = document.getElementById('customSkills');
-      const base = document.getElementById('baseSkills');
-      const sortAZ = arr => (arr||[]).slice().sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
-      if(custom){
-        custom.innerHTML='';
-        sortAZ(s.custom).forEach(k=>{
-          custom.appendChild(makePill(k,'×',()=> removeCustom(k)));
-        });
-      }
-      if(base){
-        base.innerHTML='';
-        const disabled = new Set(sortAZ(s.base_disabled).map(x=>x.toLowerCase()));
-        sortAZ(s.base).forEach(k=>{
-          const off = disabled.has(k.toLowerCase());
-          base.appendChild(
-            makePill(k, off?'Enable':'Disable', ()=> toggleBase(k, off?'enable':'disable'), 'base'+(off?' off':'')));
-        });
+    // Trial banner
+    const tb = document.getElementById('trialBanner');
+    if (tb) {
+      const left = s.trial_credits_left || 0;
+      if (left > 0) {
+        tb.style.display = 'block';
+        tb.querySelector('.left').textContent = left;
+      } else {
+        tb.style.display = 'none';
       }
     }
-    async function addCustom(skill){
-      const fd = new FormData(); fd.append('skill', skill);
-      const r = await fetch('/skills/custom/add', {method:'POST', body: fd});
-      if(r.ok){ renderSkills(await r.json()); }
-    }
-    async function removeCustom(skill){
-      const fd = new FormData(); fd.append('skill', skill);
-      const r = await fetch('/skills/custom/remove', {method:'POST', body: fd});
-      if(r.ok){ renderSkills(await r.json()); }
-    }
-    async function toggleBase(skill, action){
-      const fd = new FormData(); fd.append('skill', skill); fd.append('action', action);
-      const r = await fetch('/skills/base/toggle', {method:'POST', body: fd});
-      if(r.ok){ renderSkills(await r.json()); }
+
+    // Top stats
+    const dm = document.getElementById('downloadsMonth');
+    if (dm) dm.textContent = (s.downloads_this_month ?? s.downloads);
+    const lc = document.getElementById('lastCandidate');
+    if (lc) lc.textContent = s.last_candidate || '—';
+    const lt = document.getElementById('lastTime');
+    if (lt) lt.textContent = s.last_time || '—';
+
+    // Credits (paid + trial)
+    const clEl = document.getElementById('creditsLeft');
+    if (clEl) {
+      const creditsLeft = (((s.credits || {}).balance) || 0) + (s.trial_credits_left || 0);
+      clEl.textContent = creditsLeft;
     }
 
+    // History list
+    const list = document.getElementById('history');
+    if (list) {
+      list.innerHTML = '';
+      (s.history || []).slice().reverse().forEach(item => {
+        const row = document.createElement('div'); row.className = 'row';
+        const left = document.createElement('div');
+        left.innerHTML = '<div class="candidate">' + (item.candidate || item.filename || '—') + '</div><div class="ts">' + (item.filename || '') + '</div>';
+        const right = document.createElement('div'); right.className = 'ts';
+        right.textContent = item.ts || '';
+        row.appendChild(left); row.appendChild(right); list.appendChild(row);
+      });
+    }
+  }catch(e){}
+}
+async function loadSkills(){
+  const r = await fetch('/skills', {cache:'no-store'}); if(!r.ok) return;
+  const s = await r.json(); renderSkills(s);
+}
+function makePill(label, actionLabel, onClick, extraClass){
+  const span = document.createElement('span'); span.className='pill' + (extraClass?(' '+extraClass):'');
+  span.append(document.createTextNode(label+' '));
+  const b = document.createElement('button'); b.type='button'; b.className='x'; b.textContent = actionLabel;
+  b.addEventListener('click', onClick); span.appendChild(b); return span;
+}
+function renderSkills(s){
+  const custom = document.getElementById('customSkills');
+  const base = document.getElementById('baseSkills');
+  // sort defensively A–Z client-side too
+  const sortAZ = arr => (arr||[]).slice().sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+  if(custom){
+    custom.innerHTML='';
+    sortAZ(s.custom).forEach(k=>{
+      custom.appendChild(makePill(k,'×',()=> removeCustom(k)));
+    });
+  }
+  if(base){
+    base.innerHTML='';
+    const disabled = new Set(sortAZ(s.base_disabled).map(x=>x.toLowerCase()));
+    sortAZ(s.base).forEach(k=>{
+      const off = disabled.has(k.toLowerCase());
+      base.appendChild(
+        makePill(k, off?'Enable':'Disable', ()=> toggleBase(k, off?'enable':'disable'), 'base'+(off?' off':'')));
+    });
+  }
+}
+async function addCustom(skill){
+  const fd = new FormData(); fd.append('skill', skill);
+  const r = await fetch('/skills/custom/add', {method:'POST', body: fd});
+  if(r.ok){ renderSkills(await r.json()); }
+}
+async function removeCustom(skill){
+  const fd = new FormData(); fd.append('skill', skill);
+  const r = await fetch('/skills/custom/remove', {method:'POST', body: fd});
+  if(r.ok){ renderSkills(await r.json()); }
+}
+async function toggleBase(skill, action){
+  const fd = new FormData(); fd.append('skill', skill); fd.append('action', action);
+  const r = await fetch('/skills/base/toggle', {method:'POST', body: fd});
+  if(r.ok){ renderSkills(await r.json()); }
+}
     document.addEventListener('DOMContentLoaded',()=>{
       refreshStats();
       setInterval(refreshStats, 5000);
@@ -1046,27 +1039,35 @@ button[disabled]{opacity:.6;cursor:not-allowed}
         const name=v.replace(/[_-]/g,' ').replace(/\.(pdf|docx|txt)$/i,'');
         if(name){document.getElementById('filenamePreview').textContent=name;}
       });
+      fileInput.addEventListener('change',()=>{
+  const v=fileInput.files?.[0]?.name||'';
+  const name=v.replace(/[_-]/g,' ').replace(/\.(pdf|docx|txt)$/i,'');
+  if(name){document.getElementById('filenamePreview').textContent=name;}
+});
 
-      // Skills manager toggle + events
-      const skillsToggle = document.getElementById('skillsToggle');
-      const skillsCard = document.getElementById('skillsCard');
-      if (skillsToggle && skillsCard){
-        skillsToggle.addEventListener('click', ()=>{
-          const show = skillsCard.style.display === 'none' || skillsCard.style.display === '';
-          skillsCard.style.display = show ? 'block' : 'none';
-          skillsToggle.textContent = show ? 'Hide' : 'Show';
-          if (show) loadSkills();
-        });
-      }
-      const skillForm = document.getElementById('skillAddForm');
-      if (skillForm){
-        skillForm.addEventListener('submit', (e)=>{
-          e.preventDefault();
-          const inp = document.getElementById('skillInput');
-          const val = (inp.value||'').trim();
-          if (val){ addCustom(val); inp.value=''; }
-        });
-      }
+// Skills manager toggle + events
+const skillsToggle = document.getElementById('skillsToggle');
+const skillsCard = document.getElementById('skillsCard');
+if (skillsToggle && skillsCard){
+  skillsToggle.addEventListener('click', ()=>{
+    const show = skillsCard.style.display === 'none' || skillsCard.style.display === '';
+    skillsCard.style.display = show ? 'block' : 'none';
+    skillsToggle.textContent = show ? 'Hide' : 'Show';
+    if (show) loadSkills();
+  });
+}
+const skillForm = document.getElementById('skillAddForm');
+if (skillForm){
+  skillForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    const inp = document.getElementById('skillInput');
+    const val = (inp.value||'').trim();
+    if (val){ addCustom(val); inp.value=''; }
+  });
+}
+
+});
+</script>
     });
   </script>
 </head>
@@ -1085,7 +1086,7 @@ button[disabled]{opacity:.6;cursor:not-allowed}
       </div>
     </div>
 
-    <!-- Free-trial banner -->
+    <!-- NEW: free-trial banner -->
     <div id="trialBanner" class="card" style="display:none; margin-bottom:12px">
       <strong>Free trial:</strong> <span class="left">5</span> CVs left.
       <span class="ts">Need more? <a href="/pricing">See plans</a></span>
@@ -1118,32 +1119,132 @@ button[disabled]{opacity:.6;cursor:not-allowed}
       <div class="card">
         <h3>Session Stats</h3>
         <div class="statsgrid">
-          <div class="stat"><div class="k">Downloads this month</div><div class="v" id="downloadsMonth">0</div></div>
-          <div class="stat"><div class="k">Last Candidate</div><div class="v" id="lastCandidate">—</div></div>
-          <div class="stat"><div class="k">Last Polished</div><div class="v" id="lastTime">—</div></div>
-          <div class="stat"><div class="k">Credits left</div><div class="v" id="creditsLeft">0</div></div>
-        </div>
-        <div class="ts" style="margin:6px 0 10px 2px;">Low on credits? <a href="/pricing">Buy more</a></div>
+  <div class="stat"><div class="k">Downloads this month</div><div class="v" id="downloadsMonth">0</div></div>
+  <div class="stat"><div class="k">Last Candidate</div><div class="v" id="lastCandidate">—</div></div>
+  <div class="stat"><div class="k">Last Polished</div><div class="v" id="lastTime">—</div></div>
+  <div class="stat"><div class="k">Credits left</div><div class="v" id="creditsLeft">0</div></div>
+</div>
+<div class="ts" style="margin:6px 0 10px 2px;">Low on credits? <a href="/pricing">Buy more</a></div>
 
         <div class="ts" style="margin:8px 0 6px 2px;">Full History</div>
         <div id="history" class="history"></div>
+        <!-- Skills manager (hide/show) -->
+<div class="kicker" style="margin:10px 0 6px 2px; display:flex; align-items:center; justify-content:space-between">
+  <span>Skills dictionary (matching keywords)</span>
+  <button id="skillsToggle" type="button" class="chip">Show</button>
+</div>
+<div id="skillsCard" class="ts" style="display:none; border:1px dashed var(--line); border-radius:12px; padding:10px; background:#fff">
+  <div class="ts" style="margin-bottom:8px">
+    These keywords are used to surface <strong>Skills</strong> when polishing. Add your own, remove yours, or disable built-ins.
+  </div>
+  <form id="skillAddForm" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px">
+    <input id="skillInput" placeholder="Add a skill (e.g., ACCA)" style="flex:1; min-width:220px; padding:10px; border:1px solid var(--line); border-radius:10px"/>
+    <button type="submit">Add</button>
+  </form>
+  <div class="ts" style="margin:6px 0 2px">Custom skills (A–Z)</div>
+  <div id="customSkills"></div>
+  <div class="ts" style="margin:10px 0 2px">Built-in skills (A–Z)</div>
+  <div id="baseSkills"></div>
+</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+"""
 
-        <!-- Skills manager (unified list) -->
-        <div class="kicker" style="margin:10px 0 6px 2px; display:flex; align-items:center; justify-content:space-between">
-          <span>Skills (matching keywords)</span>
-          <button id="skillsToggle" type="button" class="chip">Show</button>
-        </div>
-        <div id="skillsCard" class="ts" style="display:none; border:1px dashed var(--line); border-radius:12px; padding:10px; background:#fff">
-          <div class="ts" style="margin-bottom:8px">
-            These keywords are used to surface <strong>Skills</strong> when polishing. Add new ones or remove any you don’t need.
-          </div>
-          <form id="skillAddForm" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px">
-            <input id="skillInput" placeholder="Add a skill (e.g., ACCA)" style="flex:1; min-width:220px; padding:10px; border:1px solid var(--line); border-radius:10px"/>
-            <button type="submit">Add</button>
-          </form>
-          <div class="ts" style="margin:6px 0 2px">Skills (A–Z)</div>
-          <div id="skillsList"></div>
-        </div>
+# ------------------------ Login page HTML (unchanged, plus a small "Forgot password?" link) ------------------------
+LOGIN_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Lustra — Sign in</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+  --blue:#2563eb;      /* vivid indigo */
+  --blue-2:#22d3ee;    /* bright cyan  */
+  --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+  --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
+}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:1100px;margin:12px auto 56px;padding:0 20px}
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+
+    .auth{max-width:520px;margin:28px auto 0;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;box-shadow:var(--shadow)}
+    h1{margin:0 0 12px;font-size:28px;color:var(--blue)}
+    label{font-weight:600;font-size:13px}
+    input[type=text],input[type=password]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;margin-top:6px}
+    button{width:100%;margin-top:14px;background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
+    .muted{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
+    .err{margin-top:8px;color:#b91c1c;font-weight:800;font-size:12px}
+    a{color:var(--blue);text-decoration:none}
+    /* === Compact Sign-in Card (only affects login page) === */
+#signinCard{
+  max-width: 680px;     /* <- make it narrower (try 640–720 to taste) */
+  width: 100%;
+  margin: 40px auto;    /* centers the card with comfortable vertical space */
+  padding: 22px 26px;   /* <- reduce padding to make the card shorter */
+  border-radius: 16px;  /* slightly tighter corners (optional) */
+}
+
+#signinCard h1{
+  font-size: 36px;      /* was larger; this helps reduce height */
+  margin: 6px 0 12px;
+}
+
+#signinCard .field,
+#signinCard label{
+  margin-bottom: 6px;
+}
+
+#signinCard input{
+  padding: 12px 14px;   /* slightly smaller inputs = less height */
+}
+
+#signinCard .btn{
+  padding: 14px 16px;   /* slightly smaller button = less height */
+  border-radius: 12px;
+}
+
+@media (max-width: 640px){
+  #signinCard{ 
+    max-width: 94vw;    /* keep it tidy on mobile */
+    margin: 24px auto;
+    padding: 18px 18px;
+  }
+  #signinCard h1{ font-size: 30px; }
+}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <a class="brand" href="/">Lustra</a>
+      <div>
+  <a href="/">Home</a>
+  <a href="/about" style="margin-left:18px">About</a>
+  <a href="/login" style="margin-left:18px">Sign in</a>
+</div>
+    </div>
+
+    <div class="auth">
+      <h1>Sign in</h1>
+      <!--ERROR-->
+      <form method="post" action="/login" autocomplete="off">
+        <label for="username">Username</label>
+        <input id="username" type="text" name="username" autofocus required />
+        <div style="height:10px"></div>
+        <label for="password">Password</label>
+        <input id="password" type="password" name="password" required />
+        <button type="submit">Continue</button>
+      </form>
+      <div class="muted">
+        Default demo: admin / hamilton • <a href="/forgot">Forgot password?</a> • <a href="/">Home</a>
       </div>
     </div>
   </div>
@@ -2328,6 +2429,11 @@ def polish():
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
+@app.get("/app")
+def app_page_dup():  # keep route name unique in this file
+    resp = make_response(render_template_string(HTML))
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 @app.get("/health")
 def health():
@@ -2335,6 +2441,8 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
+
 
 
 

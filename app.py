@@ -309,7 +309,7 @@ PRICING_HTML = r"""
     }
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    /* NARROWER PAGE MARGINS (like your second screenshot) */
+    /* narrower page margins */
     .wrap{max-width:980px;margin:28px auto 64px;padding:0 24px}
 
     /* top-right nav */
@@ -320,14 +320,13 @@ PRICING_HTML = r"""
     h1{margin:6px 0 10px;font-size:40px;letter-spacing:-.01em;color:#122033}
     .sub{margin:0 0 18px;color:var(--muted)}
     .section{margin:24px 0 8px;font-weight:900;color:var(--brand);font-size:22px}
-    .note{margin:6px 0 18px;color:var(--muted);font-size:13.5px}
 
     /* compact, neat grids */
     .grid3{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
     .grid5{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
     @media(max-width:640px){ .grid3,.grid5{grid-template-columns:1fr} }
 
-    /* CARD STYLE — clean Mailchimp-like */
+    /* CARD STYLE — clean, compact */
     .card{
       background:var(--card);
       border:1px solid var(--line);
@@ -335,15 +334,14 @@ PRICING_HTML = r"""
       box-shadow:var(--shadow);
       overflow:hidden;
       display:flex;flex-direction:column;
-      min-height:210px;            /* shorter boxes per your request */
+      min-height:210px;            /* shorter boxes */
     }
     .inner{padding:18px 18px 20px;display:flex;flex-direction:column;height:100%}
     .name{font-weight:900;color:#0b1220;font-size:16px;margin:4px 0 10px}
-
     .qty{font-size:28px;font-weight:900;letter-spacing:-.01em}
     .per{font-size:14px;color:var(--muted);font-weight:700;margin-left:6px}
 
-    /* PRICE CHIP now holds the money (and per-CV) */
+    /* PRICE CHIP holds the money (and per-CV) */
     .chip{
       display:inline-block;align-self:flex-start;
       margin-top:10px;padding:8px 12px;border-radius:999px;
@@ -358,23 +356,23 @@ PRICING_HTML = r"""
     .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none}
     .btn:hover{transform:translateY(-1px)}
 
-    /* small feature list (kept) */
+    /* small feature list */
     .feat{margin:10px 0 0 0;padding:0;list-style:none;color:var(--muted);font-size:12.5px}
     .feat li{display:flex;align-items:center;gap:6px;margin-top:6px}
     .tick{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;
           background:rgba(34,211,238,.15);color:#0891b2;font-weight:900;font-size:11px}
 
-    /* “Recommended” ribbon (kept but brand colored) */
+    /* “Recommended” ribbon */
     .badge{
       position:absolute;left:0;right:0;top:0;height:32px;display:flex;align-items:center;justify-content:center;
       background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;font-weight:900;font-size:12px;letter-spacing:.06em
     }
     .card.has-badge{padding-top:32px}
 
-    /* Center toggle button row */
+    /* toggle row just under the first trio */
     .moreRow{display:flex;justify-content:center;margin:6px 0 4px}
 
-    /* CALCULATOR — keep “old” tidy style */
+    /* calculator (kept) */
     .card.calc .inner{align-items:stretch;text-align:left}
     .card.calc .name{font-size:18px;color:var(--brand);text-align:left}
     .card.calc .sub{text-align:left}
@@ -384,8 +382,6 @@ PRICING_HTML = r"""
     .calc input[type=number]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:inset 0 1px 2px rgba(2,6,23,.03)}
     .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px;justify-content:flex-start}
     .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
-
-    /* Template setup tighter */
     .card.tight .inner{padding:16px 18px}
   </style>
 </head>
@@ -396,12 +392,12 @@ PRICING_HTML = r"""
     </div>
 
     <h1>Pricing</h1>
-    <p class="sub">Start with a free trial (5 CVs). Upgrade any time.</p>
+    <p class="sub">Upgrade any time.</p>
 
-    <!-- PAYG -->
-    <div class="section">Pay-as-you-go packs</div>
-    <p class="note">For occasional use. No commitment. Overage: £1.50/CV.</p>
+    <!-- Single section: Monthly plans -->
+    <div class="section">Monthly plans</div>
 
+    <!-- Default visible (3): Mini, Standard, Bulk -->
     <div class="grid3">
       <div class="card">
         <div class="inner">
@@ -431,12 +427,13 @@ PRICING_HTML = r"""
       </div>
     </div>
 
-    <!-- Monthly -->
-    <div class="section">Monthly plans</div>
-    <p class="note">CVs reset monthly. Overage is cheaper than PAYG and varies by plan.</p>
+    <!-- Toggle just under the first row -->
+    <div class="moreRow">
+      <button id="togglePlans" class="btn">Show more plans</button>
+    </div>
 
-    <!-- Visible (3) -->
-    <div class="grid5">
+    <!-- Hidden block (6): Team, Pro, Scale, High Volume, Enterprise, Enterprise+ -->
+    <div id="plansMore" class="grid5" style="display:none">
       <div class="card">
         <div class="inner">
           <div class="name">Team</div>
@@ -476,15 +473,7 @@ PRICING_HTML = r"""
           <a class="btn primary" href="/trial">Join plan</a>
         </div>
       </div>
-    </div>
 
-    <!-- Toggle -->
-    <div class="moreRow">
-      <button id="togglePlans" class="btn">Show more plans</button>
-    </div>
-
-    <!-- Hidden (3): High Volume, Enterprise, Enterprise+ -->
-    <div id="plansMore" class="grid5" style="display:none">
       <div class="card">
         <div class="inner">
           <div class="name">High Volume</div>
@@ -499,7 +488,7 @@ PRICING_HTML = r"""
         <div class="inner">
           <div class="name">Enterprise</div>
           <div class="qty">2,000+ CVs<span class="per">/mo</span></div>
-        <span class="chip">£1,500/mo — £0.75 per CV · custom terms</span>
+          <span class="chip">£1,500/mo — £0.75 per CV · custom terms</span>
           <ul class="feat"><li><span class="tick">✓</span><span>Custom SLAs</span></li></ul>
           <a class="btn primary" href="/trial">Join plan</a>
         </div>
@@ -516,7 +505,7 @@ PRICING_HTML = r"""
       </div>
     </div>
 
-    <!-- Calculator -->
+    <!-- Calculator (unchanged) -->
     <div class="card calc" style="margin-top:10px">
       <div class="inner">
         <div class="name">Savings calculator</div>
@@ -537,7 +526,7 @@ PRICING_HTML = r"""
       </div>
     </div>
 
-    <!-- Template setup -->
+    <!-- Template setup (unchanged) -->
     <div class="card tight" style="margin-top:14px">
       <div class="inner">
         <div class="name">Template setup</div>
@@ -2290,6 +2279,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

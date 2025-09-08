@@ -855,16 +855,14 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 
 /* compact skills chips */
 .pill{
-  display:inline-flex; align-items:center; gap:6px;
-  padding:4px 8px; border:1px solid var(--line); border-radius:999px;
-  margin:4px 6px 0 0; font-weight:800; font-size:11px; background:#fff;
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 8px;border:1px solid var(--line);border-radius:999px;
+  margin:3px 5px 0 0;font-weight:800;font-size:11px;background:#fff
 }
 .pill.base{opacity:.85}
 .pill.off{opacity:.55;text-decoration:line-through}
-.pill .x{
-  font-size:12px; line-height:1; padding:0 4px;
-  cursor:pointer; border:none; background:transparent; color:var(--muted);
-}
+.pill .x{cursor:pointer;border:none;background:transparent;font-weight:900;line-height:1}
+
 .pill .x:hover{ color:var(--blue); }
   </style>
     <script>
@@ -2337,6 +2335,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

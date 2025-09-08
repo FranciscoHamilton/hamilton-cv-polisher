@@ -299,8 +299,7 @@ PRICING_HTML = r"""
 <head>
   <meta charset="utf-8" />
   <title>Pricing — Lustra</title>
-  <meta name="viewport" content="widt
-  h=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
       --brand:#2563eb; --brand-2:#22d3ee;
@@ -428,7 +427,6 @@ PRICING_HTML = r"""
     </div>
 
     <!-- Hidden block (6): Core, Pro, Scale, Max, Prime, Prime+ -->
-    <div id="plansMore" class="grid5" style="display:none">
       <div class="card">
         <!-- Core -->
 <div class="card">
@@ -2516,6 +2514,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

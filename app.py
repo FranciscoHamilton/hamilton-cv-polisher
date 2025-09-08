@@ -299,7 +299,8 @@ PRICING_HTML = r"""
 <head>
   <meta charset="utf-8" />
   <title>Pricing — Lustra</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="widt
+  h=device-width, initial-scale=1" />
   <style>
     :root{
       --brand:#2563eb; --brand-2:#22d3ee;
@@ -326,14 +327,14 @@ PRICING_HTML = r"""
 
     /* Card style */
     .card{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:16px;
-      box-shadow:var(--shadow);
-      overflow:hidden;
+       background:var(--card);
+       border:1px solid var(--line);
+       border-radius:16px;
+       box-shadow:var(--shadow);
+       overflow:hidden;
       display:flex;flex-direction:column;
-      min-height:210px;
-    }
+      min-height:300px; /* match Core visual height across all cards */
+     }
     .inner{padding:18px 18px 20px;display:flex;flex-direction:column;height:100%}
     .name{font-weight:900;color:#0b1220;font-size:16px;margin:4px 0 10px}
     .qty{font-size:28px;font-weight:900;letter-spacing:-.01em}
@@ -382,31 +383,43 @@ PRICING_HTML = r"""
      <!-- Default visible (3): Mini, Standard, Plus -->
     <div class="grid3">
       <div class="card">
-        <div class="inner">
-          <div class="name">Mini</div>
-          <div class="qty">50 CVs</div>
-          <span class="chip">£75 — £1.50 per CV</span>
-          <a class="btn primary" href="/trial">Buy pack</a>
-        </div>
-      </div>
+  <div class="inner">
+    <div class="name">Mini</div>
+    <div class="qty">50 CVs</div>
+    <span class="chip">£75 — £1.50 per CV</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Buy pack</a>
+  </div>
+</div>
 
-      <div class="card">
-        <div class="inner">
-          <div class="name">Standard</div>
-          <div class="qty">100 CVs</div>
-          <span class="chip">£140 — £1.40 per CV</span>
-          <a class="btn primary" href="/trial">Buy pack</a>
-        </div>
-      </div>
+<div class="card">
+  <div class="inner">
+    <div class="name">Standard</div>
+    <div class="qty">100 CVs</div>
+    <span class="chip">£140 — £1.40 per CV</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Buy pack</a>
+  </div>
+</div>
 
-      <div class="card">
-        <div class="inner">
-          <div class="name">Plus</div>
-          <div class="qty">200 CVs</div>
-          <span class="chip">£260 — £1.30 per CV</span>
-          <a class="btn primary" href="/trial">Buy pack</a>
-        </div>
-      </div>
+<div class="card">
+  <div class="inner">
+    <div class="name">Plus</div>
+    <div class="qty">200 CVs</div>
+    <span class="chip">£260 — £1.30 per CV</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Buy pack</a>
+  </div>
+</div>
     </div>
 
     <!-- Toggle just under the first row -->
@@ -417,76 +430,90 @@ PRICING_HTML = r"""
     <!-- Hidden block (6): Core, Pro, Scale, Max, Prime, Prime+ -->
     <div id="plansMore" class="grid5" style="display:none">
       <div class="card">
-        <div class="inner">
-          <div class="name">Core</div>
-          <div class="qty">300 CVs<span class="per">/mo</span></div>
-          <span class="chip">£360/mo — £1.20 per CV</span>
-          <ul class="feat">
-            <li><span class="tick">✓</span><span>1 CV Template</span></li>
-            <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
-          </ul>
-          <a class="btn primary" href="/trial">Join plan</a>
-        </div>
-      </div>
+        <!-- Core -->
+<div class="card">
+  <div class="inner">
+    <div class="name">Core</div>
+    <div class="qty">300 CVs<span class="per">/mo</span></div>
+    <span class="chip">£360/mo — £1.20 per CV</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Join plan</a>
+  </div>
+</div>
 
-      <div class="card has-badge" style="position:relative">
-        <div class="badge">RECOMMENDED</div>
-        <div class="inner">
-          <div class="name">Pro</div>
-          <div class="qty">500 CVs<span class="per">/mo</span></div>
-          <span class="chip">£575/mo — £1.15 per CV</span>
-          <ul class="feat">
-            <li><span class="tick">✓</span><span>1 CV Template</span></li>
-            <li><span class="tick">✓</span><span>Up to 5 Users</span></li>
-          </ul>
-          <a class="btn primary" href="/trial">Join plan</a>
-        </div>
-      </div>
+<!-- Pro -->
+<div class="card has-badge" style="position:relative">
+  <div class="badge">RECOMMENDED</div>
+  <div class="inner">
+    <div class="name">Pro</div>
+    <div class="qty">500 CVs<span class="per">/mo</span></div>
+    <span class="chip">£575/mo — £1.15 per CV</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Join plan</a>
+  </div>
+</div>
 
-      <div class="card">
-        <div class="inner">
-          <div class="name">Scale</div>
-          <div class="qty">750 CVs<span class="per">/mo</span></div>
-          <span class="chip">£799/mo — £1.07 per CV</span>
-          <ul class="feat">
-            <li><span class="tick">✓</span><span>2 CV Templates</span></li>
-            <li><span class="tick">✓</span><span>Up to 10 Users</span></li>
-          </ul>
-          <a class="btn primary" href="/trial">Join plan</a>
-        </div>
-      </div>
+<!-- Scale -->
+<div class="card">
+  <div class="inner">
+    <div class="name">Scale</div>
+    <div class="qty">750 CVs<span class="per">/mo</span></div>
+    <span class="chip">£799/mo — £1.07 per CV</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Join plan</a>
+  </div>
+</div>
 
-      <div class="card">
-        <div class="inner">
-          <div class="name">Max</div>
-          <div class="qty">1,000 CVs<span class="per">/mo</span></div>
-          <span class="chip">£950/mo — £0.95 per CV</span>
-          <ul class="feat"><li><span class="tick">✓</span><span>3 Templates</span></li></ul>
-           <li><span class="tick">✓</span><span>Up to 15 Users</span></li>
-          </ul>
-          <a class="btn primary" href="/trial">Join plan</a>
-        </div>
-      </div>
+<!-- Max -->
+<div class="card">
+  <div class="inner">
+    <div class="name">Max</div>
+    <div class="qty">1,000 CVs<span class="per">/mo</span></div>
+    <span class="chip">£950/mo — £0.95 per CV</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Join plan</a>
+  </div>
+</div>
 
-      <div class="card">
-        <div class="inner">
-          <div class="name">Prime</div>
-          <div class="qty">2,000+ CVs<span class="per">/mo</span></div>
-          <span class="chip">£1,600/mo — £0.80 per CV · custom terms</span>
-          <ul class="feat"><li><span class="tick">✓</span><span>30 Users</span></li></ul>
-          <a class="btn primary" href="/trial">Join plan</a>
-        </div>
-      </div>
+<!-- Prime -->
+<div class="card">
+  <div class="inner">
+    <div class="name">Prime</div>
+    <div class="qty">2,000+ CVs<span class="per">/mo</span></div>
+    <span class="chip">£1,600/mo — £0.80 per CV · custom terms</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Join plan</a>
+  </div>
+</div>
 
-      <div class="card">
-        <div class="inner">
-          <div class="name">Prime+</div>
-          <div class="qty">5,000+ CVs<span class="per">/mo</span></div>
-          <span class="chip">£3,250/mo — £0.65 per CV · custom terms</span>
-          <ul class="feat"><li><span class="tick">✓</span><span>Volume pricing</span></li></ul>
-          <a class="btn" href="/trial">Contact sales</a>
-        </div>
-      </div>
+<!-- Prime+ -->
+<div class="card">
+  <div class="inner">
+    <div class="name">Prime+</div>
+    <div class="qty">5,000+ CVs<span class="per">/mo</span></div>
+    <span class="chip">£3,250/mo — £0.65 per CV · custom terms</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
+    </ul>
+    <a class="btn" href="/trial">Contact sales</a>
+  </div>
+</div>
     </div>
 
     <!-- Calculator (unchanged) -->
@@ -2489,6 +2516,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

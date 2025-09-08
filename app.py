@@ -379,7 +379,7 @@ PRICING_HTML = r"""
     <h1>Monthly plans</h1>
     <p class="sub">Flexible plans for every team and budget.</p>
 
-    <!-- Default visible (3): Mini, Standard, Plus -->
+     <!-- Default visible (3): Mini, Standard, Plus -->
     <div class="grid3">
       <div class="card">
         <div class="inner">
@@ -409,11 +409,12 @@ PRICING_HTML = r"""
       </div>
     </div>
 
+    <!-- Toggle just under the first row -->
     <div class="moreRow">
       <button id="togglePlans" class="btn">Show more plans</button>
     </div>
 
-    <!-- Hidden block (extra plans) -->
+    <!-- Hidden block (6): Core, Pro, Scale, Max, Prime, Prime+ -->
     <div id="plansMore" class="grid5" style="display:none">
       <div class="card">
         <div class="inner">
@@ -460,9 +461,8 @@ PRICING_HTML = r"""
           <div class="name">Max</div>
           <div class="qty">1,000 CVs<span class="per">/mo</span></div>
           <span class="chip">£950/mo — £0.95 per CV</span>
-          <ul class="feat">
-            <li><span class="tick">✓</span><span>3 Templates</span></li>
-            <li><span class="tick">✓</span><span>Up to 15 Users</span></li>
+          <ul class="feat"><li><span class="tick">✓</span><span>3 Templates</span></li></ul>
+           <li><span class="tick">✓</span><span>Up to 15 Users</span></li>
           </ul>
           <a class="btn primary" href="/trial">Join plan</a>
         </div>
@@ -475,6 +475,16 @@ PRICING_HTML = r"""
           <span class="chip">£1,600/mo — £0.80 per CV · custom terms</span>
           <ul class="feat"><li><span class="tick">✓</span><span>30 Users</span></li></ul>
           <a class="btn primary" href="/trial">Join plan</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="inner">
+          <div class="name">Prime+</div>
+          <div class="qty">5,000+ CVs<span class="per">/mo</span></div>
+          <span class="chip">£3,250/mo — £0.65 per CV · custom terms</span>
+          <ul class="feat"><li><span class="tick">✓</span><span>Volume pricing</span></li></ul>
+          <a class="btn" href="/trial">Contact sales</a>
         </div>
       </div>
     </div>
@@ -2446,6 +2456,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

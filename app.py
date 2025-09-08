@@ -867,7 +867,7 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 }
 .pill .x:hover{ color:var(--blue); }
   </style>
-  <script>
+    <script>
     let timer=null, pct=0;
     function setProgress(p){
       pct = Math.max(0, Math.min(100, p));
@@ -914,114 +914,101 @@ button[disabled]{opacity:.6;cursor:not-allowed}
       const nameEl = document.getElementById('filenamePreview');
       if(nameEl){ nameEl.textContent = "—"; }
     }
+
     async function refreshStats(){
-  try{
-    const r = await fetch('/stats', {cache:'no-store'});
-    if(!r.ok) return;
-    const s = await r.json();
+      try{
+        const r = await fetch('/stats', {cache:'no-store'});
+        if(!r.ok) return;
+        const s = await r.json();
 
-    // Trial banner
-    const tb = document.getElementById('trialBanner');
-    if (tb) {
-      const left = s.trial_credits_left || 0;
-      if (left > 0) {
-        tb.style.display = 'block';
-        tb.querySelector('.left').textContent = left;
-      } else {
-        tb.style.display = 'none';
+        // Trial banner
+        const tb = document.getElementById('trialBanner');
+        if (tb) {
+          const left = s.trial_credits_left || 0;
+          if (left > 0) {
+            tb.style.display = 'block';
+            tb.querySelector('.left').textContent = left;
+          } else {
+            tb.style.display = 'none';
+          }
+        }
+
+        // Top stats
+        const dm = document.getElementById('downloadsMonth');
+        if (dm) dm.textContent = (s.downloads_this_month ?? s.downloads);
+        const lc = document.getElementById('lastCandidate');
+        if (lc) lc.textContent = s.last_candidate || '—';
+        const lt = document.getElementById('lastTime');
+        if (lt) lt.textContent = s.last_time || '—';
+
+        // Credits (paid + trial)
+        const clEl = document.getElementById('creditsLeft');
+        if (clEl) {
+          const creditsLeft = (((s.credits || {}).balance) || 0) + (s.trial_credits_left || 0);
+          clEl.textContent = creditsLeft;
+        }
+
+        // History list
+        const list = document.getElementById('history');
+        if (list) {
+          list.innerHTML = '';
+          (s.history || []).slice().reverse().forEach(item => {
+            const row = document.createElement('div'); row.className = 'row';
+            const left = document.createElement('div');
+            left.innerHTML = '<div class="candidate">' + (item.candidate || item.filename || '—') + '</div><div class="ts">' + (item.filename || '') + '</div>';
+            const right = document.createElement('div'); right.className = 'ts';
+            right.textContent = item.ts || '';
+            row.appendChild(left); row.appendChild(right); list.appendChild(row);
+          });
+        }
+      }catch(e){}
+    }
+
+    async function loadSkills(){
+      const r = await fetch('/skills', {cache:'no-store'}); if(!r.ok) return;
+      const s = await r.json(); renderSkills(s);
+    }
+    function makePill(label, actionLabel, onClick, extraClass){
+      const span = document.createElement('span'); span.className='pill' + (extraClass?(' '+extraClass):'');
+      span.append(document.createTextNode(label+' '));
+      const b = document.createElement('button'); b.type='button'; b.className='x'; b.textContent = actionLabel;
+      b.addEventListener('click', onClick); span.appendChild(b); return span;
+    }
+    function renderSkills(s){
+      const custom = document.getElementById('customSkills');
+      const base = document.getElementById('baseSkills');
+      const sortAZ = arr => (arr||[]).slice().sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+      if(custom){
+        custom.innerHTML='';
+        sortAZ(s.custom).forEach(k=>{
+          custom.appendChild(makePill(k,'×',()=> removeCustom(k)));
+        });
+      }
+      if(base){
+        base.innerHTML='';
+        const disabled = new Set(sortAZ(s.base_disabled).map(x=>x.toLowerCase()));
+        sortAZ(s.base).forEach(k=>{
+          const off = disabled.has(k.toLowerCase());
+          base.appendChild(
+            makePill(k, off?'Enable':'Disable', ()=> toggleBase(k, off?'enable':'disable'), 'base'+(off?' off':'')));
+        });
       }
     }
-
-    // Top stats
-    const dm = document.getElementById('downloadsMonth');
-    if (dm) dm.textContent = (s.downloads_this_month ?? s.downloads);
-    const lc = document.getElementById('lastCandidate');
-    if (lc) lc.textContent = s.last_candidate || '—';
-    const lt = document.getElementById('lastTime');
-    if (lt) lt.textContent = s.last_time || '—';
-
-    // Credits (paid + trial)
-    const clEl = document.getElementById('creditsLeft');
-    if (clEl) {
-      const creditsLeft = (((s.credits || {}).balance) || 0) + (s.trial_credits_left || 0);
-      clEl.textContent = creditsLeft;
+    async function addCustom(skill){
+      const fd = new FormData(); fd.append('skill', skill);
+      const r = await fetch('/skills/custom/add', {method:'POST', body: fd});
+      if(r.ok){ renderSkills(await r.json()); }
     }
-
-    // History list
-    const list = document.getElementById('history');
-    if (list) {
-      list.innerHTML = '';
-      (s.history || []).slice().reverse().forEach(item => {
-        const row = document.createElement('div'); row.className = 'row';
-        const left = document.createElement('div');
-        left.innerHTML = '<div class="candidate">' + (item.candidate || item.filename || '—') + '</div><div class="ts">' + (item.filename || '') + '</div>';
-        const right = document.createElement('div'); right.className = 'ts';
-        right.textContent = item.ts || '';
-        row.appendChild(left); row.appendChild(right); list.appendChild(row);
-      });
+    async function removeCustom(skill){
+      const fd = new FormData(); fd.append('skill', skill);
+      const r = await fetch('/skills/custom/remove', {method:'POST', body: fd});
+      if(r.ok){ renderSkills(await r.json()); }
     }
-  }catch(e){}
-}
-
-// ==== Unified Skills Manager (single list) ====
-async function loadSkills(){
-  const r = await fetch('/skills', {cache:'no-store'});
-  if (!r.ok) return;
-  const s = await r.json();
-  renderSkills(s);
-}
-
-function makePill(label, onRemove, extraClass){
-  const span = document.createElement('span');
-  span.className = 'pill' + (extraClass ? (' ' + extraClass) : '');
-  span.append(document.createTextNode(label + ' '));
-  const b = document.createElement('button');
-  b.type = 'button'; b.className = 'x'; b.title = 'Remove';
-  b.textContent = '×';
-  b.addEventListener('click', onRemove);
-  span.appendChild(b);
-  return span;
-}
-
-function renderSkills(s){
-  const list = document.getElementById('skillsList');
-  if (!list) return;
-  list.innerHTML = '';
-
-  // effective = (built-ins minus disabled) + custom
-  const customs = new Set((s.custom || []).map(x => x.toLowerCase()));
-  const items = (s.effective || []).slice()
-    .sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
-
-  items.forEach(k => {
-    const isCustom = customs.has(k.toLowerCase());
-    const pill = makePill(k, () => {
-      if (isCustom) {
-        removeCustom(k);          // delete custom
-      } else {
-        toggleBase(k, 'disable'); // hide built-in
-      }
-    }, isCustom ? '' : 'base');
-    list.appendChild(pill);
-  });
-}
-
-// endpoints as before
-async function addCustom(skill){
-  const fd = new FormData(); fd.append('skill', skill);
-  const r = await fetch('/skills/custom/add', {method:'POST', body: fd});
-  if(r.ok){ renderSkills(await r.json()); }
-}
-async function removeCustom(skill){
-  const fd = new FormData(); fd.append('skill', skill);
-  const r = await fetch('/skills/custom/remove', {method:'POST', body: fd});
-  if(r.ok){ renderSkills(await r.json()); }
-}
-async function toggleBase(skill, action){
-  const fd = new FormData(); fd.append('skill', skill); fd.append('action', action);
-  const r = await fetch('/skills/base/toggle', {method:'POST', body: fd});
-  if(r.ok){ renderSkills(await r.json()); }
-}
+    async function toggleBase(skill, action){
+      const fd = new FormData(); fd.append('skill', skill); fd.append('action', action);
+      const r = await fetch('/skills/base/toggle', {method:'POST', body: fd});
+      if(r.ok){ renderSkills(await r.json()); }
+    }
 
     document.addEventListener('DOMContentLoaded',()=>{
       refreshStats();
@@ -1082,7 +1069,6 @@ async function toggleBase(skill, action){
           if (val){ addCustom(val); inp.value=''; }
         });
       }
-
     });
   </script>
 </head>
@@ -2344,11 +2330,6 @@ def polish():
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
-@app.get("/app")
-def app_page_dup():  # keep route name unique in this file
-    resp = make_response(render_template_string(HTML))
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
 
 @app.get("/health")
 def health():
@@ -2356,6 +2337,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

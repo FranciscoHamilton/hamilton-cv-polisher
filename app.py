@@ -454,7 +454,11 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">Plus</div>
     <div class="qty">200 CVs</div>
-    <span class="chip">£260 — £1.30 per CV</span>
+    <span class="chip">
+  <span class="price-month">£260</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£1.30 per CV</span>
+</span>
     <ul class="feat">
       <li><span class="tick">✓</span><span>1 CV Template</span></li>
       <li><span class="tick">✓</span><span>Up to 8 Users</span></li>
@@ -476,7 +480,11 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">Core</div>
     <div class="qty">300 CVs<span class="per">/mo</span></div>
-    <span class="chip">£360/mo — £1.20 per CV</span>
+    <span class="chip">
+  <span class="price-month">£360/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£1.20 per CV</span>
+</span>
     <ul class="feat">
       <li><span class="tick">✓</span><span>1 CV Template</span></li>
       <li><span class="tick">✓</span><span>Up to 12 Users</span></li>
@@ -491,7 +499,11 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">Pro</div>
     <div class="qty">500 CVs<span class="per">/mo</span></div>
-    <span class="chip">£575/mo — £1.15 per CV</span>
+    <span class="chip">
+  <span class="price-month">£575/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£1.15 per CV</span>
+</span>
     <ul class="feat">
       <li><span class="tick">✓</span><span>1 CV Template</span></li>
       <li><span class="tick">✓</span><span>Up to 15 Users</span></li>
@@ -505,7 +517,11 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">Scale</div>
     <div class="qty">750 CVs<span class="per">/mo</span></div>
-    <span class="chip">£799/mo — £1.07 per CV</span>
+    <span class="chip">
+  <span class="price-month">£799/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£1.07 per CV</span>
+</span>
     <ul class="feat">
       <li><span class="tick">✓</span><span>1 CV Template</span></li>
       <li><span class="tick">✓</span><span>Up to 20 Users</span></li>
@@ -519,7 +535,11 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">Max</div>
     <div class="qty">1,000 CVs<span class="per">/mo</span></div>
-    <span class="chip">£950/mo — £0.95 per CV</span>
+    <span class="chip">
+  <span class="price-month">£950/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£0.95 per CV</span>
+</span>
     <ul class="feat">
       <li><span class="tick">✓</span><span>1 CV Template</span></li>
       <li><span class="tick">✓</span><span>Up to 35 Users</span></li>
@@ -533,7 +553,11 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">Prime</div>
     <div class="qty">2,000+ CVs<span class="per">/mo</span></div>
-    <span class="chip">£1,600/mo — £0.80 per CV · custom terms</span>
+    <span class="chip">
+  <span class="price-month">£1,600/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£0.80 per CV</span>
+</span>
     <ul class="feat">
       <li><span class="tick">✓</span><span>1 CV Template</span></li>
       <li><span class="tick">✓</span><span>Up to 80 Users</span></li>
@@ -547,7 +571,11 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">Prime+</div>
     <div class="qty">5,000+ CVs<span class="per">/mo</span></div>
-    <span class="chip">£3,250/mo — £0.65 per CV · custom terms</span>
+    <span class="chip">
+  <span class="price-month">£3,250/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£0.65 per CV</span>
+</span>
     <ul class="feat">
       <li><span class="tick">✓</span><span>1 CV Template</span></li>
       <li><span class="tick">✓</span><span>Unlimited Users</span></li>
@@ -2552,6 +2580,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

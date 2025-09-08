@@ -392,7 +392,7 @@ PRICING_HTML = r"""
     </div>
 
     <h1>Pricing</h1>
-    <p class="sub">Upgrade any time.</p>
+    <p class="sub">Flexible plans for every team and budget.</p>
 
     <!-- Single section: Monthly plans -->
     <div class="section">Monthly plans</div>
@@ -2485,6 +2485,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

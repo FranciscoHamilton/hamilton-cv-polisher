@@ -1103,7 +1103,7 @@ if (skillForm){
     e.preventDefault();
     const inp = document.getElementById('skillInput');
     const val = (inp.value||'').trim();
-    if (val){ addCustom(val); inp.value=''; }
+    if (val){ addSkill(val); inp.value=''; }
   });
 }
 
@@ -2486,6 +2486,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

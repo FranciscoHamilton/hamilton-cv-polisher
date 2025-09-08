@@ -1143,6 +1143,10 @@ if (skillForm){
     <input id="skillInput" placeholder="Add a skill (e.g., ACCA)" style="flex:1; min-width:220px; padding:10px; border:1px solid var(--line); border-radius:10px"/>
     <button type="submit">Add</button>
   </form>
+    <!-- Unified list (hidden for now; we’ll enable in the next step) -->
+  <div class="ts" id="skillsAllHeader" style="margin:6px 0 2px; display:none">Skills (A–Z)</div>
+  <div id="skillsAll" style="display:none"></div>
+  
   <div class="ts" style="margin:6px 0 2px">Custom skills (A–Z)</div>
   <div id="customSkills"></div>
   <div class="ts" style="margin:10px 0 2px">Built-in skills (A–Z)</div>
@@ -2443,6 +2447,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

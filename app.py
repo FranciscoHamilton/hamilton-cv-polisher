@@ -852,13 +852,15 @@ button[disabled]{opacity:.6;cursor:not-allowed}
   color:var(--blue);background:#fff
 }
 .pill{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:6px 10px;border:1px solid var(--line);border-radius:999px;
-  margin:4px 6px 0 0;font-weight:800;font-size:12px;background:#fff
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 8px;border:1px solid var(--line);border-radius:999px;
+  margin:3px 6px 0 0;font-weight:700;font-size:11px;background:#fff;line-height:1.1
 }
-.pill.base{opacity:.85}
-.pill.off{opacity:.55;text-decoration:line-through}
-.pill .x{cursor:pointer;border:none;background:transparent;font-weight:900}
+.pill .x{
+  cursor:pointer;border:none;background:transparent;font-weight:900;
+  font-size:12px;padding:0 2px;line-height:1
+}
+/* (Optional cleanup) You can delete .pill.base and .pill.off if present */
   </style>
   <script>
     let timer=null, pct=0;
@@ -2441,6 +2443,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

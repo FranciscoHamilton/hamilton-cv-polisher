@@ -516,33 +516,66 @@ PRICING_HTML = r"""
     function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
     function bestPayg(volume){
-      const packs=[{name:'Bulk (200 CVs)',size:200,cost:260},{name:'Standard (100 CVs)',size:100,cost:140},{name:'Mini (50 CVs)',size:50,cost:75}];
-      let best={name:'PAYG packs',cost:Infinity,percv:Infinity,credits:0,breakdown:''};
-      for(let b=0;b<=Math.ceil(volume/200)+1;b++){
-        for(let s=0;s<=Math.ceil(Math.max(0,volume-200*b)/100)+1;s++){
-          const used=200*b+100*s; const rem=Math.max(0,volume-used); const m=Math.ceil(rem/50);
-          const credits=used+50*m; const cost=260*b+140*s+75*m;
-          if(cost<best.cost){ const detail=[b?`${b}×Bulk`:null,s?`${s}×Standard`:null,m?`${m}×Mini`:null].filter(Boolean).join(' + ');
-            best={name:'PAYG packs',cost,percv:(volume?cost/volume:0),credits,breakdown:detail};}
-        }
-      } return best;
-    }
+  // Match the visible PAYG packs + names
+  const packs = [
+    { name: 'Plus (200 CVs)',    size: 200, cost: 260 }, // £1.30/CV
+    { name: 'Standard (100 CVs)',size: 100, cost: 140 }, // £1.40/CV
+    { name: 'Mini (50 CVs)',     size:  50, cost:  75 }  // £1.50/CV
+  ];
+  let best = { name:'PAYG packs', cost: Infinity, percv: Infinity, credits: 0, breakdown: '' };
 
-    function planOptions(volume){
-      const plans=[
-        {name:'Team (250 CVs/mo)',credits:250,cost:300,overRate:1.15},
-        {name:'Pro (500 CVs/mo)',credits:500,cost:550,overRate:1.05},
-        {name:'Scale (750 CVs/mo)',credits:750,cost:750,overRate:0.95},
-        {name:'High Volume (1000 CVs/mo)',credits:1000,cost:900,overRate:0.85},
-        {name:'Enterprise (2000+ CVs/mo)',credits:2000,cost:1500,overRate:0.60}
-      ];
-      return plans.map(p=>{
-        const over=Math.max(0,volume-p.credits);
-        const overCost=over*p.overRate;
-        const total=p.cost+overCost;
-        return {name:p.name,cost:total,percv:(volume?total/volume:0),credits:p.credits,over,overRate:p.overRate};
-      });
+  // Greedy-ish search across combinations of 200/100/50 to meet/cover "volume"
+  for(let p=0; p<=Math.ceil(volume/200)+1; p++){
+    for(let s=0; s<=Math.ceil(Math.max(0, volume-200*p)/100)+1; s++){
+      const used = 200*p + 100*s;
+      const rem  = Math.max(0, volume - used);
+      const m    = Math.ceil(rem/50);
+      const credits = used + 50*m;
+      const cost = 260*p + 140*s + 75*m;
+      if(cost < best.cost){
+        const detail = [
+          p ? `${p}×Plus`     : null,
+          s ? `${s}×Standard` : null,
+          m ? `${m}×Mini`     : null
+        ].filter(Boolean).join(' + ');
+        best = {
+          name: 'PAYG packs',
+          cost,
+          percv: (volume ? cost/volume : 0),
+          credits,
+          breakdown: detail
+        };
+      }
     }
+  }
+  return best;
+}
+
+function planOptions(volume){
+  // True monthly plans + list price + per-CV rate
+  const plans = [
+    { name: 'Core (300 CVs/mo)',   credits:  300, cost:  360, percv: 1.20 },
+    { name: 'Pro (500 CVs/mo)',    credits:  500, cost:  575, percv: 1.15 },
+    { name: 'Scale (750 CVs/mo)',  credits:  750, cost:  799, percv: 1.07 },
+    { name: 'Max (1000 CVs/mo)',   credits: 1000, cost:  950, percv: 0.95 },
+    { name: 'Prime (2000 CVs/mo)', credits: 2000, cost: 1600, percv: 0.80 },
+    { name: 'Prime+ (5000 CVs/mo)',credits: 5000, cost: 3250, percv: 0.65 },
+  ];
+
+  return plans.map(p => {
+    const over  = Math.max(0, volume - p.credits);
+    // IMPORTANT: overage billed at the SAME per-CV price as the plan
+    const total = p.cost + over * p.percv;
+    return {
+      name: p.name,
+      cost: total,
+      percv: (volume ? total/volume : 0),
+      credits: p.credits,
+      over,
+      overRate: p.percv // used by existing UI line; keep the name
+    };
+  });
+}
 
     function calc(){
       const cvs=parseFloat(document.getElementById('cvs').value)||0;
@@ -2456,6 +2489,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

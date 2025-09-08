@@ -170,7 +170,7 @@ HOMEPAGE_HTML = r"""
     <div class="hero">
       <div class="kicker">BUILT BY RECRUITERS, FOR RECRUITERS</div>
       <h1>Client-ready CVs.<br/>On your brand.<br/>In seconds.</h1>
-      <p class="lead">This tool turns that 10–20 minute task into seconds!</p>
+      <p class="lead">Lustra turns that 10–20 minute task into seconds!</p>
       <div class="actions">
         <a class="btn primary" href="/start">Contact Us</a>
         <a class="btn secondary" href="/login">Sign in</a>
@@ -2456,6 +2456,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

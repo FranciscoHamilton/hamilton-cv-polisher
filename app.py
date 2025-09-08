@@ -420,7 +420,11 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">Mini</div>
     <div class="qty">50 CVs</div>
-    <span class="chip">£75 — £1.50 per CV</span>
+    <span class="chip">
+  <span class="price-month">£75</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£1.50 per CV</span>
+</span>
     <ul class="feat">
       <li><span class="tick">✓</span><span>1 CV Template</span></li>
       <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
@@ -433,7 +437,11 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">Standard</div>
     <div class="qty">100 CVs</div>
-    <span class="chip">£140 — £1.40 per CV</span>
+    <span class="chip">
+  <span class="price-month">£140</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£1.40 per CV</span>
+</span>
     <ul class="feat">
       <li><span class="tick">✓</span><span>1 CV Template</span></li>
       <li><span class="tick">✓</span><span>Up to 5 Users</span></li>
@@ -2544,6 +2552,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

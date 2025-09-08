@@ -852,23 +852,17 @@ button[disabled]{opacity:.6;cursor:not-allowed}
   color:var(--blue);background:#fff
 }
 .pill{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:6px 10px;border:1px solid var(--line);border-radius:999px;
-  margin:4px 6px 0 0;font-weight:800;font-size:12px;background:#fff
+  display:inline-flex; align-items:center; gap:4px;
+  padding:3px 6px; border:1px solid var(--line); border-radius:999px;
+  margin:2px 4px 0 0; font-weight:700; font-size:11px; background:#fff;
 }
 .pill.base{opacity:.85}
-.pill.off{opacity:.55;text-decoration:line-through}
-.pill .x{cursor:pointer;border:none;background:transparent;font-weight:900}
-  </style>
-  <script>
-    let timer=null, pct=0;
-    function setProgress(p){
-      pct = Math.max(0, Math.min(100, p));
-      const bar = document.getElementById('barfill');
-      const pctEl = document.getElementById('pct');
-      if(bar){ bar.style.width = pct + '%'; }
-      if(pctEl){ pctEl.textContent = Math.round(pct) + '%'; }
-    }
+.pill.off{opacity:.55; text-decoration:line-through}
+.pill .x{
+  cursor:pointer; border:none; background:transparent; font-weight:900;
+  font-size:12px; line-height:1; padding-left:4px; opacity:.7;
+}
+.pill .x:hover{ opacity:1 }
     function setStage(i, total){
       const items = document.querySelectorAll('.stage');
       items.forEach((el,idx)=>{
@@ -959,32 +953,45 @@ async function loadSkills(){
   const r = await fetch('/skills', {cache:'no-store'}); if(!r.ok) return;
   const s = await r.json(); renderSkills(s);
 }
-function makePill(label, actionLabel, onClick, extraClass){
-  const span = document.createElement('span'); span.className='pill' + (extraClass?(' '+extraClass):'');
-  span.append(document.createTextNode(label+' '));
-  const b = document.createElement('button'); b.type='button'; b.className='x'; b.textContent = actionLabel;
-  b.addEventListener('click', onClick); span.appendChild(b); return span;
+function makePill(label, actionLabel, onClick, extraClass, titleText){
+  const span = document.createElement('span');
+  span.className = 'pill' + (extraClass ? (' ' + extraClass) : '');
+  span.append(document.createTextNode(label + ' '));
+
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'x';
+  b.textContent = actionLabel;   // '×' or '↺'
+  if (titleText) b.title = titleText;
+  b.addEventListener('click', onClick);
+
+  span.appendChild(b);
+  return span;
 }
 function renderSkills(s){
   const custom = document.getElementById('customSkills');
   const base = document.getElementById('baseSkills');
   // sort defensively A–Z client-side too
   const sortAZ = arr => (arr||[]).slice().sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
-  if(custom){
-    custom.innerHTML='';
-    sortAZ(s.custom).forEach(k=>{
-      custom.appendChild(makePill(k,'×',()=> removeCustom(k)));
-    });
-  }
-  if(base){
-    base.innerHTML='';
-    const disabled = new Set(sortAZ(s.base_disabled).map(x=>x.toLowerCase()));
-    sortAZ(s.base).forEach(k=>{
-      const off = disabled.has(k.toLowerCase());
-      base.appendChild(
-        makePill(k, off?'Enable':'Disable', ()=> toggleBase(k, off?'enable':'disable'), 'base'+(off?' off':'')));
-    });
-  }
+  // CUSTOM skills — show × to delete
+custom.innerHTML = '';
+sortAZ(s.custom).forEach(k=>{
+  custom.appendChild(
+    makePill(k, '×', ()=> removeCustom(k), '', 'Remove skill')
+  );
+});
+
+// BUILT-IN skills — show × to disable, ↺ to re-enable
+base.innerHTML = '';
+const disabled = new Set(sortAZ(s.base_disabled).map(x=>x.toLowerCase()));
+sortAZ(s.base).forEach(k=>{
+  const off = disabled.has(k.toLowerCase());
+  const label = off ? '↺' : '×';
+  const title = off ? 'Enable skill' : 'Disable skill';
+  base.appendChild(
+    makePill(k, label, ()=> toggleBase(k, off ? 'enable' : 'disable'), 'base' + (off ? ' off' : ''), title)
+  );
+});
 }
 async function addCustom(skill){
   const fd = new FormData(); fd.append('skill', skill);
@@ -2441,6 +2448,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

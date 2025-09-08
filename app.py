@@ -175,7 +175,7 @@ HOMEPAGE_HTML = r"""
         <a class="btn primary" href="/start">Contact Us</a>
         <a class="btn secondary" href="/login">Sign in</a>
       </div>
-      <div class="meta">No card needed · Keep your headers/footers · Works with PDFs</div>
+      <div class="meta">Custom build per client · Keep your look · Fully tailored CVs</div>
     </div>
 
     <div class="grid3">
@@ -2485,6 +2485,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

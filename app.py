@@ -427,7 +427,7 @@ PRICING_HTML = r"""
     </div>
 
     <!-- Hidden block (6): Core, Pro, Scale, Max, Prime, Prime+ -->
-    
+    <div id="plansMore" class="grid3" style="display:none">
         <!-- Core -->
 <div class="card">
   <div class="inner">
@@ -2502,11 +2502,6 @@ def polish():
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
-@app.get("/app")
-def app_page_dup():  # keep route name unique in this file
-    resp = make_response(render_template_string(HTML))
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
 
 @app.get("/health")
 def health():
@@ -2514,6 +2509,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

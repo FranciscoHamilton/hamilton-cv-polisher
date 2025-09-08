@@ -1329,11 +1329,11 @@ LOGIN_HTML = r"""
     a{color:var(--blue);text-decoration:none}
     /* === Compact Sign-in Card (only affects login page) === */
 #signinCard{
-  max-width: 680px;     /* <- make it narrower (try 640–720 to taste) */
+  max-width: 400px;   /* <- much narrower */
   width: 100%;
-  margin: 40px auto;    /* centers the card with comfortable vertical space */
-  padding: 22px 26px;   /* <- reduce padding to make the card shorter */
-  border-radius: 16px;  /* slightly tighter corners (optional) */
+  margin: 40px auto;  /* keep centered */
+  padding: 22px 26px; /* keep padding */
+  border-radius: 16px;
 }
 
 #signinCard h1{
@@ -1376,7 +1376,7 @@ LOGIN_HTML = r"""
 </div>
     </div>
 
-    <div class="auth">
+    <div class="auth" id="signinCard">
       <h1>Sign in</h1>
       <!--ERROR-->
       <form method="post" action="/login" autocomplete="off">
@@ -2580,6 +2580,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

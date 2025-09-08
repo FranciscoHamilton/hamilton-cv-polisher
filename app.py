@@ -310,11 +310,12 @@ PRICING_HTML = r"""
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
     /* narrower page margins */
-    .wrap{max-width:980px;margin:28px auto 64px;padding:0 24px}
+    .wrap{max-width:1100px;margin:28px auto 64px;padding:0 20px}
 
-    /* top-right nav */
-    .nav{display:flex;justify-content:flex-end;gap:22px;margin:6px 0 8px}
-    .nav a{font-weight:900;text-decoration:none;color:var(--ink)}
+    /* top nav — match Home/About */ 
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px} 
+.brand{font-weight:900;color:var(--brand);text-decoration:none;font-size:22px;letter-spacing:.2px} 
+.nav a{color:var(--ink);text-decoration:none;font-weight:900;margin-left:22px}
 
     /* headings */
     h1{margin:6px 0 10px;font-size:40px;letter-spacing:-.01em;color:#122033}
@@ -388,14 +389,16 @@ PRICING_HTML = r"""
 <body>
   <div class="wrap">
     <div class="nav">
-      <a href="/">Home</a><a href="/about">About</a><a href="/login">Sign in</a>
-    </div>
+   <a class="brand" href="/">Lustra</a> 
+   <div> 
+     <a href="/">Home</a> 
+     <a href="/about" style="margin-left:18px">About</a> 
+     <a href="/login" style="margin-left:18px">Sign in</a> 
+   </div> 
+ </div>
 
-    <h1>Pricing</h1>
-    <p class="sub">Flexible plans for every team and budget.</p>
-
-    <!-- Single section: Monthly plans -->
-    <div class="section">Monthly plans</div>
+    + <h1>Monthly plans</h1>
++ <p class="sub">Flexible plans for every team and budget.</p>
 
     <!-- Default visible (3): Mini, Standard, Plus -->
     <div class="grid3">
@@ -2485,6 +2488,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

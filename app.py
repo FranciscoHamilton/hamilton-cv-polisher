@@ -1192,6 +1192,42 @@ LOGIN_HTML = r"""
     .muted{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
     .err{margin-top:8px;color:#b91c1c;font-weight:800;font-size:12px}
     a{color:var(--blue);text-decoration:none}
+    /* === Compact Sign-in Card (only affects login page) === */
+#signinCard{
+  max-width: 680px;     /* <- make it narrower (try 640–720 to taste) */
+  width: 100%;
+  margin: 40px auto;    /* centers the card with comfortable vertical space */
+  padding: 22px 26px;   /* <- reduce padding to make the card shorter */
+  border-radius: 16px;  /* slightly tighter corners (optional) */
+}
+
+#signinCard h1{
+  font-size: 36px;      /* was larger; this helps reduce height */
+  margin: 6px 0 12px;
+}
+
+#signinCard .field,
+#signinCard label{
+  margin-bottom: 6px;
+}
+
+#signinCard input{
+  padding: 12px 14px;   /* slightly smaller inputs = less height */
+}
+
+#signinCard .btn{
+  padding: 14px 16px;   /* slightly smaller button = less height */
+  border-radius: 12px;
+}
+
+@media (max-width: 640px){
+  #signinCard{ 
+    max-width: 94vw;    /* keep it tidy on mobile */
+    margin: 24px auto;
+    padding: 18px 18px;
+  }
+  #signinCard h1{ font-size: 30px; }
+}
   </style>
 </head>
 <body>
@@ -2254,6 +2290,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

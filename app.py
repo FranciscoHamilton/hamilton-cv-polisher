@@ -957,51 +957,90 @@ button[disabled]{opacity:.6;cursor:not-allowed}
     }
   }catch(e){}
 }
+// === Unified Skills rendering (single list) ===
+let skillsState = null;
+
 async function loadSkills(){
-  const r = await fetch('/skills', {cache:'no-store'}); if(!r.ok) return;
-  const s = await r.json(); renderSkills(s);
-}
-function makePill(label, actionLabel, onClick, extraClass){
-  const span = document.createElement('span'); span.className='pill' + (extraClass?(' '+extraClass):'');
-  span.append(document.createTextNode(label+' '));
-  const b = document.createElement('button'); b.type='button'; b.className='x'; b.textContent = actionLabel;
-  b.addEventListener('click', onClick); span.appendChild(b); return span;
-}
-function renderSkills(s){
+  const r = await fetch('/skills', {cache:'no-store'});
+  if(!r.ok) return;
+  skillsState = await r.json();
+  renderSkillsUnified();
+
+  // Hide old sections; show unified one
   const custom = document.getElementById('customSkills');
   const base = document.getElementById('baseSkills');
-  // sort defensively A–Z client-side too
-  const sortAZ = arr => (arr||[]).slice().sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
-  if(custom){
-    custom.innerHTML='';
-    sortAZ(s.custom).forEach(k=>{
-      custom.appendChild(makePill(k,'×',()=> removeCustom(k)));
-    });
+  const allH = document.getElementById('skillsAllHeader');
+  const allC = document.getElementById('skillsAll');
+
+  if (custom){
+    if (custom.previousElementSibling) custom.previousElementSibling.style.display = 'none'; // "Custom skills (A–Z)"
+    custom.style.display = 'none';
   }
-  if(base){
-    base.innerHTML='';
-    const disabled = new Set(sortAZ(s.base_disabled).map(x=>x.toLowerCase()));
-    sortAZ(s.base).forEach(k=>{
-      const off = disabled.has(k.toLowerCase());
-      base.appendChild(
-        makePill(k, off?'Enable':'Disable', ()=> toggleBase(k, off?'enable':'disable'), 'base'+(off?' off':'')));
-    });
+  if (base){
+    if (base.previousElementSibling) base.previousElementSibling.style.display = 'none';     // "Built-in skills (A–Z)"
+    base.style.display = 'none';
   }
+  if (allH) allH.style.display = 'block';
+  if (allC) allC.style.display = 'block';
 }
-async function addCustom(skill){
-  const fd = new FormData(); fd.append('skill', skill);
+
+function makePill(label, actionLabel, onClick, extraClass){
+  const span = document.createElement('span');
+  span.className = 'pill' + (extraClass?(' '+extraClass):'');
+  span.append(document.createTextNode(label+' '));
+  const b = document.createElement('button');
+  b.type='button'; b.className='x'; b.textContent = actionLabel;
+  b.addEventListener('click', onClick);
+  span.appendChild(b);
+  return span;
+}
+
+function renderSkillsUnified(){
+  const container = document.getElementById('skillsAll');
+  if(!container || !skillsState) return;
+  container.innerHTML = '';
+
+  const list = (skillsState.effective || [])
+    .slice()
+    .sort((a,b)=>a.localeCompare(b, undefined, {sensitivity:'base'}));
+
+  list.forEach(label=>{
+    container.appendChild(
+      makePill(label, '×', ()=> removeSkill(label), '')
+    );
+  });
+}
+
+// Add a skill -> always added as "custom"; unified list shows it with the rest
+async function addSkill(label){
+  if(!label) return;
+  const fd = new FormData(); fd.append('skill', label);
   const r = await fetch('/skills/custom/add', {method:'POST', body: fd});
-  if(r.ok){ renderSkills(await r.json()); }
+  if(r.ok){ await loadSkills(); }
 }
-async function removeCustom(skill){
-  const fd = new FormData(); fd.append('skill', skill);
-  const r = await fetch('/skills/custom/remove', {method:'POST', body: fd});
-  if(r.ok){ renderSkills(await r.json()); }
+
+// Remove from unified list:
+// - if it’s custom: delete it
+// - if it’s a built-in: disable it so it disappears from "effective"
+async function removeSkill(label){
+  if(!skillsState) return;
+  const isCustom = new Set((skillsState.custom || []).map(s=>s.toLowerCase()));
+  if(isCustom.has(label.toLowerCase())){
+    const fd = new FormData(); fd.append('skill', label);
+    const r = await fetch('/skills/custom/remove', {method:'POST', body: fd});
+    if(r.ok){ await loadSkills(); }
+  }else{
+    await toggleBase(label, 'disable');
+  }
 }
+
+/* Keep compatibility with existing calls (delegates) */
+async function addCustom(skill){ return addSkill(skill); }
+async function removeCustom(skill){ return removeSkill(skill); }
 async function toggleBase(skill, action){
   const fd = new FormData(); fd.append('skill', skill); fd.append('action', action);
   const r = await fetch('/skills/base/toggle', {method:'POST', body: fd});
-  if(r.ok){ renderSkills(await r.json()); }
+  if(r.ok){ skillsState = await r.json(); renderSkillsUnified(); }
 }
     document.addEventListener('DOMContentLoaded',()=>{
       refreshStats();
@@ -2447,6 +2486,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

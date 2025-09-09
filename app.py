@@ -2867,6 +2867,7 @@ def polish():
     f = request.files.get("cv")
     if not f:
         abort(400, "No file uploaded")
+
     with tempfile.TemporaryDirectory() as td:
         p = Path(td) / f.filename
         f.save(str(p))
@@ -2874,17 +2875,22 @@ def polish():
         text = extract_text_any(p)
         if not text or len(text.strip()) < 30:
             abort(400, "Couldn't read enough text. If it's a scanned PDF, please use a DOCX or an OCRed PDF.")
+
+        # ---- Your existing polishing logic (unchanged in behavior) ----
         data = ai_or_heuristic_structuring(text)
-
-        # Skills = keywords only
-        data["skills"] = extract_top_skills(text)
-
+        data["skills"] = extract_top_skills(text)  # keywords-only list as before
         out = build_cv_document(data)
 
-        # update stats
+        # ---- Update legacy JSON stats (for continuity) ----
         candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                # NEW: per-user usage log in Postgres (safe no-op if DB/user missing)
+        STATS["downloads"] += 1
+        STATS["last_candidate"] = candidate_name
+        STATS["last_time"] = now
+        STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
+        _save_stats()
+
+        # ---- Postgres per-user usage (no-op if no DB / no user) ----
         try:
             uid = int(session.get("user_id") or 0)
         except Exception:
@@ -2893,33 +2899,9 @@ def polish():
             try:
                 log_usage_event(uid, f.filename, candidate_name)
             except Exception as e:
-                print("log_usage_event error:", e)
-        STATS["downloads"] += 1
-        STATS["last_candidate"] = candidate_name
-        STATS["last_time"] = now
-        STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
-        _save_stats()
-        # NEW: also record this usage in Postgres for the logged-in user
-try:
-    uid = int(session.get("user_id") or 0)
-except Exception:
-    uid = 0
-if uid:
-    try:
-        log_usage_event(uid, f.filename, candidate_name)
-    except Exception as e:
-        # don't break the flow if DB insert fails
-        print("log_usage_event failed:", e)
-        # NEW: also log usage to Postgres per user (if logged-in user has DB id)
-        try:
-            uid = session.get("user_id")
-            if uid:
-                log_usage_event(uid, f.filename, candidate_name)
-        except Exception as e:
-            # non-fatal; keep the flow even if DB write fails
-            print("log_usage_event error:", e)
+                print("log_usage_event failed:", e)
 
-        # NEW: decrement trial credits if present (kept from your script)
+        # ---- Decrement trial credits (if present) ----
         try:
             left = int(session.get("trial_credits", 0))
             if left > 0:
@@ -2927,37 +2909,10 @@ if uid:
         except Exception:
             pass
 
+        # ---- Return the polished file ----
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
-
-@app.get("/me/usage")
-def me_usage():
-    uid = session.get("user_id")
-    if not uid:
-        return jsonify({"ok": False, "reason": "not logged in"}), 401
-    try:
-        n = get_user_month_usage(int(uid))
-    except Exception as e:
-        print("me_usage error:", e)
-        n = 0
-    resp = jsonify({"ok": True, "user_id": uid, "month_usage": n})
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
-
-@app.get("/me/last-event")
-def me_last_event():
-    uid = session.get("user_id")
-    if not uid:
-        return jsonify({"ok": False, "reason": "not logged in"}), 401
-    try:
-        cand, ts = last_event_for_user(int(uid))
-    except Exception as e:
-        print("me_last_event error:", e)
-        cand, ts = (None, None)
-    resp = jsonify({"ok": True, "candidate": cand, "ts": ts})
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
 
 @app.get("/health")
 def health():
@@ -2965,6 +2920,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

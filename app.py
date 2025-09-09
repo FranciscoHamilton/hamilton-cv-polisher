@@ -218,19 +218,6 @@ def get_user_month_usage(user_id: int) -> int:
     except Exception:
         return 0
 
-def log_usage_event(user_id, filename, candidate):
-    """
-    Insert one usage row. Safe no-op if DB is not configured or user_id missing.
-    """
-    if not DB_POOL or not user_id:
-        return
-    try:
-        db_execute(
-            "INSERT INTO usage_events (user_id, filename, candidate) VALUES (%s,%s,%s)",
-            (user_id, (filename or "")[:255], (candidate or "")[:255])
-        )
-    except Exception as e:
-        print("log_usage_event failed:", e)
 
 def count_usage_this_month(user_id):
     """
@@ -684,6 +671,31 @@ DIRECTOR_HTML = r"""
       </table>
       {% else %}
         <div class="muted">No events yet (or DB offline).</div>
+      {% endif %}
+    </div>
+        <div class="card">
+      <h2>Legacy JSON history <span class="pill">{{ legacy|length }}</span></h2>
+      {% if legacy and legacy|length > 0 %}
+      <table>
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>Candidate</th>
+            <th class="muted">File</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for h in legacy|reverse %}
+          <tr>
+            <td>{{ h.ts }}</td>
+            <td>{{ h.candidate }}</td>
+            <td class="muted">{{ h.filename }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="muted">No legacy entries.</div>
       {% endif %}
     </div>
   </div>
@@ -3042,6 +3054,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

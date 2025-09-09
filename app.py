@@ -1105,7 +1105,11 @@ if (skillForm){
   <div class="stat"><div class="k">Downloads this month</div><div class="v" id="downloadsMonth">0</div></div>
   <div class="stat"><div class="k">Last Candidate</div><div class="v" id="lastCandidate">—</div></div>
   <div class="stat"><div class="k">Last Polished</div><div class="v" id="lastTime">—</div></div>
-  <div class="stat"><div class="k">Credits left</div><div class="v" id="creditsLeft">0</div></div>
+  <div class="stat">
+  <div class="stat-title">Credits Used</div>
+  <div class="stat-value small-result">{{credits_used}} / {{plan_credits}}</div>
+
+
 </div>
 <div class="ts" style="margin:6px 0 10px 2px;">Low on credits? <a href="/pricing">Buy more</a></div>
 
@@ -2182,10 +2186,45 @@ def app_page():
 
 @app.get("/stats")
 def stats():
-    data = dict(STATS)
-    data["downloads_this_month"] = _downloads_this_month()
-    # NEW: include trial credits left for the banner
-    data["trial_credits_left"] = int(session.get("trial_credits", 0))
+    # Base stats
+    downloads_month = _downloads_this_month()
+    last_candidate = STATS.get("last_candidate", "")
+    last_time = STATS.get("last_time", "")
+
+    # Credits buckets you already track
+    paid_left = int((STATS.get("credits", {}) or {}).get("balance", 0))
+    trial_left = int(session.get("trial_credits", 0))
+    total_left = paid_left + trial_left  # total credits left across paid + trial
+
+    # Plan info (cap per month)
+    plan = STATS.get("plan") or {}
+    plan_name = (plan.get("name") or "").strip()
+    plan_credits = int(plan.get("credits") or 0)
+
+    # Usage math:
+    # - "used" = downloads counted this calendar month
+    # - in-plan used = min(used, plan cap)
+    # - overage = max(0, used - cap)
+    used_this_month = int(downloads_month)
+    in_plan_used = min(used_this_month, plan_credits)
+    overage_used = max(0, used_this_month - plan_credits)
+    in_plan_left = max(0, plan_credits - in_plan_used)
+
+    data = dict(STATS)  # keep your existing payload for backwards compatibility
+    data["downloads_this_month"] = used_this_month
+    data["last_candidate"] = last_candidate
+    data["last_time"] = last_time
+
+    # Old field you used in UI; keep if something still expects it
+    data["trial_credits_left"] = trial_left
+
+    # New fields for the UI
+    data["plan"] = {"name": plan_name, "credits": plan_credits}
+    data["credits_used"] = in_plan_used                # used within plan cap
+    data["credits_left_in_plan"] = in_plan_left        # remaining within plan cap
+    data["overage_used"] = overage_used                # how many beyond the cap
+    data["credits_left_total"] = total_left            # paid + trial remaining (unchanged meaning)
+
     resp = jsonify(data)
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -2423,6 +2462,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

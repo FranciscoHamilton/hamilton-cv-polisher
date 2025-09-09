@@ -2738,6 +2738,19 @@ def polish():
         resp.headers["Cache-Control"] = "no-store"
         return resp
 
+@app.get("/me/usage")
+def me_usage():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"ok": False, "reason": "not logged in"}), 401
+    try:
+        n = count_usage_month_db(int(uid))
+    except Exception as e:
+        print("me_usage error:", e)
+        n = 0
+    resp = jsonify({"ok": True, "user_id": uid, "month_usage": n})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 @app.get("/health")
 def health():
@@ -2745,6 +2758,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

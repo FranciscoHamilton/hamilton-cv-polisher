@@ -2899,6 +2899,17 @@ def polish():
         STATS["last_time"] = now
         STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
         _save_stats()
+        # NEW: also record this usage in Postgres for the logged-in user
+try:
+    uid = int(session.get("user_id") or 0)
+except Exception:
+    uid = 0
+if uid:
+    try:
+        log_usage_event(uid, f.filename, candidate_name)
+    except Exception as e:
+        # don't break the flow if DB insert fails
+        print("log_usage_event failed:", e)
         # NEW: also log usage to Postgres per user (if logged-in user has DB id)
         try:
             uid = session.get("user_id")
@@ -2954,6 +2965,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

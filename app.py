@@ -1230,31 +1230,7 @@ button[disabled]{opacity:.6;cursor:not-allowed}
     const r = await fetch('/stats', {cache:'no-store'});
     if(!r.ok) return;
     const s = await r.json();
-    // === NEW: override with per-user DB usage ===
-    try {
-      const mu = await fetch('/me/usage', {cache:'no-store'});
-      if (mu.ok) {
-        const j = await mu.json();
-        if (j && j.ok) {
-          const dm = document.getElementById('downloadsMonth');
-          if (dm) dm.textContent = j.month_usage ?? 0;
-        }
-      }
-    } catch(e) {}
 
-    // Optionally also refresh last candidate/time from DB
-    try {
-      const le = await fetch('/me/last-event', {cache:'no-store'});
-      if (le.ok) {
-        const j = await le.json();
-        if (j && j.ok) {
-          const lc = document.getElementById('lastCandidate');
-          const lt = document.getElementById('lastTime');
-          if (lc) lc.textContent = j.candidate || (s.last_candidate || '—');
-          if (lt) lt.textContent = j.ts || (s.last_time || '—');
-        }
-      }
-    } catch(e) {}
 
     // Trial banner
     const tb = document.getElementById('trialBanner');
@@ -1297,7 +1273,37 @@ if (cu) {
         row.appendChild(left); row.appendChild(right); list.appendChild(row);
       });
     }
-  }catch(e){}
+    } catch(e) {}
+
+  // === NEW: override with per-user DB usage ===
+  try {
+    const mu = await fetch('/me/usage', {cache:'no-store'});
+    if (mu.ok) {
+      const j = await mu.json();
+      if (j && j.ok) {
+        const dm = document.getElementById('downloadsMonth');
+        if (dm) dm.textContent = j.month_usage ?? 0;
+      }
+    }
+  } catch(e) {}
+
+  // Optionally also refresh last candidate/time from DB
+  try {
+    const le = await fetch('/me/last-event', {cache:'no-store'});
+    if (le.ok) {
+      const j = await le.json();
+      if (j && j.ok) {
+        const lc = document.getElementById('lastCandidate');
+        const lt = document.getElementById('lastTime');
+        if (lc) lc.textContent = j.candidate || (s.last_candidate || '—');
+        if (lt) lt.textContent = j.ts || (s.last_time || '—');
+      }
+    }
+  } catch(e) {}
+
+} // end refreshStats
+
+} // final closing brace of refreshStats
 }
 // === Unified Skills rendering (single list) ===
 let skillsState = null;
@@ -1509,8 +1515,12 @@ if (skillForm){
   <div class="v small-result" id="creditsUsed">0 / 0</div>
 </div>
 
-
+<!-- Me (Postgres) usage -->
+<div class="ts" style="margin:6px 0 4px 2px;">
+  Me this month: <strong id="meUsage">—</strong>
 </div>
+<div class="ts" style="margin:0 0 10px 2px;">My last polish: <span id="meLast">—</span></div>
+
 <div class="ts" style="margin:6px 0 10px 2px;">Low on credits? <a href="/pricing">Buy more</a></div>
 
         <div class="ts" style="margin:8px 0 6px 2px;">Full History</div>
@@ -2947,6 +2957,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

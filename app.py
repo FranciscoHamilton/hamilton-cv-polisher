@@ -2852,6 +2852,16 @@ def polish():
         # update stats
         candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                # NEW: per-user usage log in Postgres (safe no-op if DB/user missing)
+        try:
+            uid = int(session.get("user_id") or 0)
+        except Exception:
+            uid = 0
+        if uid:
+            try:
+                log_usage_event(uid, f.filename, candidate_name)
+            except Exception as e:
+                print("log_usage_event error:", e)
         STATS["downloads"] += 1
         STATS["last_candidate"] = candidate_name
         STATS["last_time"] = now
@@ -2898,6 +2908,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

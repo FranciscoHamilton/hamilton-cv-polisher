@@ -780,14 +780,31 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 .success{display:none;margin-top:10px;color:var(--ok);font-weight:800}
 
 /* stats */
-.statsgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
-.stat{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--card)}
-.stat .k{font-size:12px;color:var(--muted);font-weight:700}
-.stat .v{
-  font-size:16px;
-  font-weight:800;
-  margin-top:4px;
-  color:var(--ink);
+.statsgrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;                  /* slightly smaller gap */
+  margin-bottom: 10px;
+}
+
+.stat {
+  border: 1px solid var(--line);
+  border-radius: 8px;         /* less rounded */
+  padding: 8px 10px;          /* slimmer boxes */
+  background: var(--card);
+}
+
+.stat .k {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.stat .v {
+  font-size: 14px;            /* reduce size of numbers */
+  font-weight: 600;           /* softer weight */
+  margin-top: 2px;            /* tighter spacing */
+  color: #333;                /* softer than brand ink */
 }
 .kicker{color:var(--muted);font-size:12.5px;margin:8px 0 6px}
 .history{border:1px solid var(--line);border-radius:14px;max-height:300px;overflow:auto;background:var(--card)}
@@ -2461,6 +2478,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

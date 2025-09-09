@@ -2847,26 +2847,13 @@ def skills_base_toggle():
 # ---------- Director routes ----------
 @app.get("/director")
 def director_home():
+    # If not logged in as “director”, show the existing login page
     if not session.get("director"):
-        html = DIRECTOR_LOGIN_HTML
-        return render_template_string(html)
-    # Render dashboard
-    ctx = {
-        "m1": _count_since(1),
-        "m3": _count_since(3),
-        "m6": _count_since(6),
-        "m12": _count_since(12),
-        "tot": len(STATS.get("history", [])),
-        "last_candidate": STATS.get("last_candidate","—"),
-        "last_time": STATS.get("last_time","—"),
-        "credits_balance": STATS.get("credits",{}).get("balance",0),
-        "credits_purchased": STATS.get("credits",{}).get("purchased",0),
-        "trial_left": int(session.get("trial_credits",0)),
-        "users": USERS_DB.get("users", []),
-        "users_usage": list_users_usage_month(),
-        "history": (STATS.get("history", []) or [])[-50:][::-1],
-    }
-    return render_template_string(DIRECTOR_HTML, **ctx)
+        return render_template_string(DIRECTOR_LOGIN_HTML)
+
+    # Already authenticated as director → go straight to the new usage view
+    return redirect("/director/usage")
+
 
 @app.post("/director/login")
 def director_login():
@@ -2908,10 +2895,11 @@ def director_export():
         fn = (it.get("filename","") or "").replace(","," ")
         rows.append(f"{ts},{cand},{fn}")
     csv_data = "\n".join(rows)
-    resp = make_response(csv_data)
+      resp = make_response(csv_data)
     resp.headers["Content-Type"] = "text/csv"
-    resp.headers["Content-Disposition"] = "attachment; filename=export.csv"
+    resp.headers["Content-Disposition"] = 'attachment; filename="usage-history.csv"'
     return resp
+
 
 @app.post("/director/users/create")
 def director_user_create():
@@ -3054,6 +3042,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

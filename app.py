@@ -249,6 +249,52 @@ def count_usage_month_db(user_id: int) -> int:
         return int(row[0]) if row and row[0] is not None else 0
     except Exception:
         return 0
+def list_users_usage_month():
+    """
+    Return a list of dicts:
+      {'id', 'username', 'active', 'month_usage', 'total_usage'}
+    Reads from Postgres. Returns [] if DB is missing or on error.
+    """
+    sql = """
+      SELECT
+        u.id,
+        u.username,
+        COALESCE(u.active, TRUE) AS active,
+        COALESCE(SUM(CASE
+          WHEN date_trunc('month', e.ts) = date_trunc('month', now()) THEN 1
+          ELSE 0
+        END), 0) AS month_usage,
+        COALESCE(COUNT(e.id), 0) AS total_usage
+      FROM users u
+      LEFT JOIN usage_events e
+        ON e.user_id = u.id
+      GROUP BY u.id, u.username, u.active
+      ORDER BY LOWER(u.username)
+    """
+    conn = db_conn()
+    if not conn:
+        return []
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+                rows = cur.fetchall()
+        # rows: [(id, username, active, month_usage, total_usage), ...]
+        out = []
+        for r in rows:
+            out.append({
+                "id": r[0],
+                "username": r[1],
+                "active": bool(r[2]),
+                "month_usage": int(r[3] or 0),
+                "total_usage": int(r[4] or 0),
+            })
+        return out
+    except Exception as e:
+        print("list_users_usage_month error:", e)
+        return []
+    finally:
+        db_put(conn)
 
 # Try fast PDF extraction first (PyMuPDF)
 try:
@@ -1607,32 +1653,67 @@ DIRECTOR_HTML = r"""
       </div>
 
       <div class="card" style="grid-column:1 / -1">
-        <h3>Users</h3>
-        <table>
-          <thead><tr><th>Username</th><th>Status</th><th>Actions</th></tr></thead>
-          <tbody>
-          {% for u in users %}
-            <tr>
-              <td>{{u.username}}</td>
-              <td>{{'active' if u.active else 'disabled'}}</td>
-              <td>
-                <form method="post" action="/director/users/toggle" style="display:inline">
-                  <input type="hidden" name="username" value="{{u.username}}"/>
-                  <input type="hidden" name="action" value="{{'disable' if u.active else 'enable'}}"/>
-                  <button type="submit">{{'Disable' if u.active else 'Enable'}}</button>
-                </form>
-              </td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-        <h3 style="margin-top:14px">Create user</h3>
-        <form class="inline" method="post" action="/director/users/create">
-          <input name="username" placeholder="username" required />
-          <input name="password" placeholder="password" required />
-          <button type="submit">Create</button>
-        </form>
-      </div>
+  <h3>Users (Postgres)</h3>
+  <div class="k" style="margin-bottom:8px">These are users stored in Postgres and tracked in <code>usage_events</code>.</div>
+  <table>
+    <thead>
+      <tr>
+        <th>User ID</th>
+        <th>Username</th>
+        <th>Status</th>
+        <th>Month usage</th>
+        <th>Total usage</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for u in users_usage %}
+      <tr>
+        <td>{{u.id}}</td>
+        <td>{{u.username}}</td>
+        <td>{{'active' if u.active else 'disabled'}}</td>
+        <td>{{u.month_usage}}</td>
+        <td>{{u.total_usage}}</td>
+      </tr>
+    {% endfor %}
+    {% if not users_usage %}
+      <tr><td colspan="5" class="k">No Postgres users found yet.</td></tr>
+    {% endif %}
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:16px">Legacy users.json (optional)</h3>
+  <div class="k" style="margin-bottom:8px">
+    These are the older file-based users (not tracked in Postgres). You can still toggle or create them here.
+  </div>
+  <table>
+    <thead><tr><th>Username</th><th>Status</th><th>Actions</th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr>
+        <td>{{u.username}}</td>
+        <td>{{'active' if u.active else 'disabled'}}</td>
+        <td>
+          <form method="post" action="/director/users/toggle" style="display:inline">
+            <input type="hidden" name="username" value="{{u.username}}"/>
+            <input type="hidden" name="action" value="{{'disable' if u.active else 'enable'}}"/>
+            <button type="submit">{{'Disable' if u.active else 'Enable'}}</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    {% if not users %}
+      <tr><td colspan="3" class="k">No legacy users.</td></tr>
+    {% endif %}
+    </tbody>
+  </table>
+
+  <h3 style="margin-top:14px">Create legacy user</h3>
+  <form class="inline" method="post" action="/director/users/create">
+    <input name="username" placeholder="username" required />
+    <input name="password" placeholder="password" required />
+    <button type="submit">Create</button>
+  </form>
+</div>
 
       <div class="card" style="grid-column:1 / -1">
         <h3>Recent activity</h3>
@@ -2585,6 +2666,7 @@ def director_home():
         "credits_purchased": STATS.get("credits",{}).get("purchased",0),
         "trial_left": int(session.get("trial_credits",0)),
         "users": USERS_DB.get("users", []),
+        "users_usage": list_users_usage_month(),
         "history": (STATS.get("history", []) or [])[-50:][::-1],
     }
     return render_template_string(DIRECTOR_HTML, **ctx)
@@ -2758,6 +2840,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

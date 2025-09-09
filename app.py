@@ -1293,17 +1293,13 @@ if (cu) {
     if (le.ok) {
       const j = await le.json();
       if (j && j.ok) {
-        const lc = document.getElementById('lastCandidate');
-        const lt = document.getElementById('lastTime');
-        if (lc) lc.textContent = j.candidate || (s.last_candidate || '—');
-        if (lt) lt.textContent = j.ts || (s.last_time || '—');
+        const lcEl = document.getElementById('lastCandidate');
+const ltEl = document.getElementById('lastTime');
+if (lcEl) lcEl.textContent = j.candidate || (s.last_candidate || '—');
+if (ltEl) ltEl.textContent = j.ts || (s.last_time || '—');
       }
     }
   } catch(e) {}
-
-} // end refreshStats
-
-} // final closing brace of refreshStats
 }
 // === Unified Skills rendering (single list) ===
 let skillsState = null;
@@ -2957,6 +2953,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from flask import Flask, request, send_file, render_template_string, abort, jsonify, make_response
 from flask import session, redirect, url_for  # <-- ADDED earlier
+from werkzeug.security import generate_password_hash, check_password_hash
 # --- Database (Postgres via psycopg2) ---
 import psycopg2
 from psycopg2.pool import SimpleConnectionPool
@@ -51,6 +52,21 @@ CREATE TABLE IF NOT EXISTS usage_events (
 """
 
 def init_db():
+    
+    """Create tables if they don't exist. Safe to run on every boot."""
+    if not DB_POOL:
+        print("No DATABASE_URL set; skipping DB init.")
+        return
+    conn = DB_POOL.getconn()
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(INIT_SQL)
+        print("DB init OK")
+    except Exception as e:
+        print("DB init failed:", e)
+    finally:
+        def init_db():
     """Create tables if they don't exist. Safe to run on every boot."""
     if not DB_POOL:
         print("No DATABASE_URL set; skipping DB init.")
@@ -65,6 +81,92 @@ def init_db():
         print("DB init failed:", e)
     finally:
         DB_POOL.putconn(conn)
+
+
+# --- Small DB helpers ---
+def db_conn():
+    """Get a DB connection from the pool (or None if DB unused)."""
+    if not DB_POOL:
+        return None
+    return DB_POOL.getconn()
+
+def db_put(conn):
+    """Return a DB connection to the pool safely."""
+    if DB_POOL and conn:
+        DB_POOL.putconn(conn)
+
+def db_query_one(sql, params=()):
+    """Run a SELECT that returns one row (as a tuple) or None."""
+    conn = db_conn()
+    if not conn:
+        return None
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                row = cur.fetchone()
+                return row
+    except Exception as e:
+        print("db_query_one error:", e)
+        return None
+    finally:
+        db_put(conn)
+
+def db_execute(sql, params=()):
+    """Run an INSERT/UPDATE/DELETE. Returns True/False."""
+    conn = db_conn()
+    if not conn:
+        return False
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+        return True
+    except Exception as e:
+        print("db_execute error:", e)
+        return False
+    finally:
+        db_put(conn)
+
+def seed_admin_user():
+    """
+    Ensure the env admin exists in Postgres with a hashed password.
+    Uses APP_ADMIN_USER / APP_ADMIN_PASS for initial seed.
+    Safe to run on every boot.
+    """
+    usr = os.getenv("APP_ADMIN_USER", "admin").strip()
+    pw  = os.getenv("APP_ADMIN_PASS", "hamilton")
+    if not usr or not pw:
+        return
+    # already exists?
+    row = db_query_one("SELECT id FROM users WHERE username=%s", (usr,))
+    if row:
+        return
+    # create it
+    pw_hash = generate_password_hash(pw)
+    ok = db_execute(
+        "INSERT INTO users (username, password_hash, email, company, active) VALUES (%s,%s,%s,%s,%s)",
+        (usr, pw_hash, None, "Hamilton Recruitment", True)
+    )
+    if ok:
+        print(f"Seeded admin user in DB: {usr}")
+    else:
+        print("Failed to seed admin user in DB")
+
+def get_user_db(username: str):
+    """Return a dict for the DB user or None."""
+    row = db_query_one(
+        "SELECT id, username, password_hash, active FROM users WHERE username=%s",
+        (username.strip(),)
+    )
+    if not row:
+        return None
+    return {
+        "id": row[0],
+        "username": row[1],
+        "password_hash": row[2],
+        "active": bool(row[3]),
+    }
 
 # Try fast PDF extraction first (PyMuPDF)
 try:
@@ -1548,6 +1650,9 @@ FORGOT_HTML = r"""
 app = Flask(__name__)
 # Create DB tables on boot (no-op if DATABASE_URL is missing)
 init_db()
+# Ensure env admin exists in DB (idempotent)
+seed_admin_user()
+
 
 # ------------------------ session secret + default creds (unchanged) ------------------------
 app.secret_key = os.getenv("APP_SECRET_KEY", "dev-secret-change-me")
@@ -1637,17 +1742,33 @@ def login():
 def do_login():
     user = (request.form.get("username") or "").strip()
     pw = (request.form.get("password") or "").strip()
-    # Keep env-admin working
+
+    # 1) Try Postgres first (preferred)
+    try:
+        rec = get_user_db(user)
+        if rec and rec["active"] and check_password_hash(rec["password_hash"], pw):
+            session["authed"] = True
+            session["user"] = rec["username"]
+            session["user_id"] = rec["id"]           # <-- store DB user id
+            return redirect(url_for("app_page"))
+    except Exception as e:
+        # non-fatal: fall through to legacy methods
+        print("DB login check failed:", e)
+
+    # 2) Legacy env-admin fallback (kept for compatibility)
     if user == APP_ADMIN_USER and pw == APP_ADMIN_PASS:
         session["authed"] = True
         session["user"] = user
         return redirect(url_for("app_page"))
-    # Recruiter users from users.json
+
+    # 3) Legacy users.json fallback (until we migrate)
     u = _get_user(user)
     if u and u.get("active", True) and pw == u.get("password", ""):
         session["authed"] = True
         session["user"] = user
         return redirect(url_for("app_page"))
+
+    # Fail
     html = LOGIN_HTML.replace("<!--ERROR-->", "<div class='err'>Invalid credentials</div>")
     resp = make_response(render_template_string(html))
     resp.headers["Cache-Control"] = "no-store"
@@ -2541,6 +2662,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

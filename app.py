@@ -1280,10 +1280,10 @@ if (cu) {
     const mu = await fetch('/me/usage', {cache:'no-store'});
     if (mu.ok) {
       const j = await mu.json();
-      if (j && j.ok) {
-        const dm = document.getElementById('downloadsMonth');
-        if (dm) dm.textContent = j.month_usage ?? 0;
-      }
+          if (j && j.ok) {
+      const dmEl = document.getElementById('downloadsMonth');
+      if (dmEl) dmEl.textContent = j.month_usage ?? 0;
+    }
     }
   } catch(e) {}
 
@@ -2957,6 +2957,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

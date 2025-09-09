@@ -1394,30 +1394,35 @@ async function toggleBase(skill, action){
       const fileInput = document.getElementById('cv');
 
       // fetch + Blob download
-      form.addEventListener('submit', async (e)=>{
-        e.preventDefault();
-        startProgress();
-        try{
-          const fd = new FormData(form);
-          const r = await fetch('/polish', { method:'POST', body: fd, cache:'no-store' });
-          if(!r.ok) throw new Error('Server error ('+r.status+')');
-          const blob = await r.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = 'polished_cv.docx';
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
-          stopProgressSuccess();
-          refreshStats();
-        }catch(err){
-          alert('Polishing failed: ' + (err?.message||'Unknown error'));
-          const btn = document.getElementById('btn'); if(btn) btn.disabled=false;
-          const prog = document.getElementById('progress'); if(prog) prog.style.display='none';
-        }
-      });
+form.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  startProgress();              // show progress UI + begin staged animation
+  try{
+    const fd = new FormData(form);
+    const r = await fetch('/polish', { method:'POST', body: fd, cache:'no-store' });
+    if(!r.ok) throw new Error('Server error ('+r.status+')');
+
+    // Download blob
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'polished_cv.docx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    stopProgressSuccess();      // mark all stages done, briefly show “Done”
+    refreshStats();             // refresh stats after a successful polish
+  }catch(err){
+    alert('Polishing failed: ' + (err?.message||'Unknown error'));
+    // clean up UI on error
+    const btn = document.getElementById('btn'); if(btn) btn.disabled=false;
+    const prog = document.getElementById('progress'); if(prog) prog.style.display='none';
+    setProgress(0);
+  }
+});
 
       fileInput.addEventListener('change',()=>{
         const v=fileInput.files?.[0]?.name||'';
@@ -2953,6 +2958,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -167,6 +167,52 @@ def get_user_db(username: str):
         "active": bool(row[3]),
     }
 
+# --- Per-user usage helpers (Postgres) ---
+def log_usage_event(user_id, filename, candidate):
+    """
+    Insert one usage row. Safe no-op if DB is not configured or user_id missing.
+    """
+    if not DB_POOL or not user_id:
+        return
+    try:
+        db_execute(
+            "INSERT INTO usage_events (user_id, filename, candidate) VALUES (%s,%s,%s)",
+            (user_id, (filename or "")[:255], (candidate or "")[:255])
+        )
+    except Exception as e:
+        print("log_usage_event failed:", e)
+
+def count_usage_this_month(user_id):
+    """
+    How many events this calendar month for this user.
+    """
+    if not DB_POOL or not user_id:
+        return 0
+    row = db_query_one("""
+        SELECT COUNT(*)
+        FROM usage_events
+        WHERE user_id=%s
+          AND date_trunc('month', ts) = date_trunc('month', now())
+    """, (user_id,))
+    return int(row[0]) if row and row[0] is not None else 0
+
+def last_event_for_user(user_id):
+    """
+    Return (candidate, ts_str) for the most recent event of this user, else (None, None).
+    """
+    if not DB_POOL or not user_id:
+        return (None, None)
+    row = db_query_one("""
+        SELECT candidate, to_char(ts, 'YYYY-MM-DD HH24:MI:SS')
+        FROM usage_events
+        WHERE user_id=%s
+        ORDER BY ts DESC
+        LIMIT 1
+    """, (user_id,))
+    if not row:
+        return (None, None)
+    return (row[0] or None, row[1] or None)
+
 # Try fast PDF extraction first (PyMuPDF)
 try:
     import fitz  # PyMuPDF
@@ -2395,38 +2441,31 @@ def app_page():
 
 @app.get("/stats")
 def stats():
+    # Default values (fallback if DB is not set)
     downloads_month = _downloads_this_month()
     last_candidate = STATS.get("last_candidate", "")
     last_time = STATS.get("last_time", "")
-
     paid_left = int((STATS.get("credits", {}) or {}).get("balance", 0))
     trial_left = int(session.get("trial_credits", 0))
     total_left = paid_left + trial_left
 
-    plan = STATS.get("plan") or {}
-    plan_name = (plan.get("name") or "").strip()
-    plan_credits = int(plan.get("credits") or 0)
+    # If DB is available, prefer DB usage counts
+    if DB_POOL:
+        row = db_query_one("SELECT COUNT(*) FROM usage_events WHERE ts >= (NOW() - interval '30 days')")
+        if row:
+            downloads_month = row[0]
+        row2 = db_query_one("SELECT candidate, ts FROM usage_events ORDER BY ts DESC LIMIT 1")
+        if row2:
+            last_candidate, last_time = row2[0], row2[1].strftime("%Y-%m-%d %H:%M:%S")
 
-    used_this_month = int(downloads_month)
-    in_plan_used = min(used_this_month, plan_credits)
-    overage_used = max(0, used_this_month - plan_credits)
-    in_plan_left = max(0, plan_credits - in_plan_used)
-
-    data = dict(STATS)  # keep old fields
-    data["downloads_this_month"] = used_this_month
-    data["last_candidate"] = last_candidate
-    data["last_time"] = last_time
-    data["trial_credits_left"] = trial_left
-
-    data["plan"] = {"name": plan_name, "credits": plan_credits}
-    data["credits_used"] = in_plan_used
-    data["credits_left_in_plan"] = in_plan_left
-    data["overage_used"] = overage_used
-    data["credits_left_total"] = total_left
-
-    resp = jsonify(data)
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
+    return jsonify({
+        "downloads_month": downloads_month,
+        "last_candidate": last_candidate,
+        "last_time": last_time,
+        "paid_left": paid_left,
+        "trial_left": trial_left,
+        "total_left": total_left,
+    })
     # ---------- Skills API (view/add/remove/toggle) ----------
 @app.get("/skills")
 def skills_get():
@@ -2641,6 +2680,14 @@ def polish():
         STATS["last_time"] = now
         STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
         _save_stats()
+        # NEW: also log usage to Postgres per user (if logged-in user has DB id)
+        try:
+            uid = session.get("user_id")
+            if uid:
+                log_usage_event(uid, f.filename, candidate_name)
+        except Exception as e:
+            # non-fatal; keep the flow even if DB write fails
+            print("log_usage_event error:", e)
 
         # NEW: decrement trial credits if present (kept from your script)
         try:
@@ -2661,6 +2708,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

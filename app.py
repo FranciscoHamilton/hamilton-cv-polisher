@@ -2727,9 +2727,9 @@ def _count_since(months: int) -> int:
 @app.get("/app")
 def app_page():
     html = render_template_string(
-        HTML,
-        show_director_link=bool(is_admin() or session.get("director"))
-    )
+    APP_HTML,
+    show_director_link=bool(is_admin() or session.get("director"))
+)
 
     # Inject a small Director button without touching template files
     if is_admin() or session.get("director"):
@@ -3000,7 +3000,7 @@ def polish():
         if not text or len(text.strip()) < 30:
             abort(400, "Couldn't read enough text. If it's a scanned PDF, please use a DOCX or an OCRed PDF.")
 
-        # ---- Your existing polishing logic (unchanged in behavior) ----
+        # ---- Polishing logic (unchanged) ----
         data = ai_or_heuristic_structuring(text)
         data["skills"] = extract_top_skills(text)  # keywords-only list as before
         out = build_cv_document(data)
@@ -3008,22 +3008,19 @@ def polish():
         # ---- Update legacy JSON stats (for continuity) ----
         candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        STATS["downloads"] += 1
+        STATS["downloads"] = int(STATS.get("downloads", 0)) + 1
         STATS["last_candidate"] = candidate_name
         STATS["last_time"] = now
+        STATS.setdefault("history", [])
         STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
         _save_stats()
 
-        # ---- Postgres per-user usage (no-op if no DB / no user) ----
+        # --- DB logging for Director usage (safe no-op if no DB / no user) ---
         try:
-            uid = int(session.get("user_id") or 0)
-        except Exception:
-            uid = 0
-        if uid:
-            try:
-                log_usage_event(uid, f.filename, candidate_name)
-            except Exception as e:
-                print("log_usage_event failed:", e)
+            uid = session.get("user_id")
+            log_usage_event(uid, f.filename, candidate_name)
+        except Exception as e:
+            print("DB usage log failed:", e)
 
         # ---- Decrement trial credits (if present) ----
         try:
@@ -3044,6 +3041,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

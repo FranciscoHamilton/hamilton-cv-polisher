@@ -414,69 +414,24 @@ PRICING_HTML = r"""
     <h1>Monthly plans</h1>
     <p class="sub">Flexible plans for every team and budget.</p>
 
-          <!-- Default visible (3): Starter, Growth, Scale -->
+     <!-- Default visible (3): Mini, Standard, Plus -->
     <div class="grid3">
-      <!-- Starter -->
       <div class="card">
-        <div class="inner">
-          <div class="name">Starter</div>
-          <div class="qty">100 CVs</div>
-          <span class="chip">
-            <span class="price-month">£150</span>
-            <span class="dot">·</span>
-            <span class="price-cv">£1.50 per CV</span>
-          </span>
-          <!-- Reserved area (fill later): Templates / Users / Overage -->
-          <ul class="feat" style="margin-top:10px">
-            <!-- <li><span class="tick">✓</span><span>1 template</span></li> -->
-            <!-- <li><span class="tick">✓</span><span>Up to 3 users</span></li> -->
-            <!-- <li><span class="tick">✓</span><span>Overage £1.60/CV</span></li> -->
-          </ul>
-          <a class="btn primary" href="/trial">Join plan</a>
-        </div>
-      </div>
-
-      <!-- Growth -->
-      <div class="card has-badge" style="position:relative">
-        <div class="badge">MOST POPULAR</div>
-        <div class="inner">
-          <div class="name">Growth</div>
-          <div class="qty">300 CVs</div>
-          <span class="chip">
-            <span class="price-month">£360</span>
-            <span class="dot">·</span>
-            <span class="price-cv">£1.20 per CV</span>
-          </span>
-          <!-- Reserved area (fill later): Templates / Users / Overage -->
-          <ul class="feat" style="margin-top:10px">
-            <!-- <li><span class="tick">✓</span><span>2 templates</span></li> -->
-            <!-- <li><span class="tick">✓</span><span>Up to 8 users</span></li> -->
-            <!-- <li><span class="tick">✓</span><span>Overage £1.30/CV</span></li> -->
-          </ul>
-          <a class="btn primary" href="/trial">Join plan</a>
-        </div>
-      </div>
-
-      <!-- Scale -->
-      <div class="card">
-        <div class="inner">
-          <div class="name">Scale</div>
-          <div class="qty">750 CVs</div>
-          <span class="chip">
-            <span class="price-month">£750</span>
-            <span class="dot">·</span>
-            <span class="price-cv">£1.00 per CV</span>
-          </span>
-          <!-- Reserved area (fill later): Templates / Users / Overage -->
-          <ul class="feat" style="margin-top:10px">
-            <!-- <li><span class="tick">✓</span><span>3 templates</span></li> -->
-            <!-- <li><span class="tick">✓</span><span>Up to 20 users</span></li> -->
-            <!-- <li><span class="tick">✓</span><span>Overage £0.95/CV</span></li> -->
-          </ul>
-          <a class="btn primary" href="/trial">Join plan</a>
-        </div>
-      </div>
-    </div>
+  <div class="inner">
+    <div class="name">Mini</div>
+    <div class="qty">50 CVs</div>
+    <span class="chip">
+  <span class="price-month">£75</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£1.50 per CV</span>
+</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 3 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Buy pack</a>
+  </div>
+</div>
 
 <div class="card">
   <div class="inner">
@@ -513,29 +468,121 @@ PRICING_HTML = r"""
 </div>
     </div>
 
-    
-    <!-- Enterprise (single card row) -->
-    <div class="grid3" style="margin-top:10px">
-      <div class="card">
-        <div class="inner">
-          <div class="name">Enterprise</div>
-          <div class="qty">2,000+ CVs</div>
-          <span class="chip">
-            <span class="price-month">Custom</span>
-            <span class="dot">·</span>
-            <span class="price-cv">from £0.80 per CV</span>
-          </span>
-          <!-- Reserved area (fill later): Templates / Users / Overage -->
-          <ul class="feat" style="margin-top:10px">
-            <!-- <li><span class="tick">✓</span><span>Custom templates</span></li> -->
-            <!-- <li><span class="tick">✓</span><span>Unlimited users (option)</span></li> -->
-            <!-- <li><span class="tick">✓</span><span>Overage from £0.75/CV</span></li> -->
-          </ul>
-          <a class="btn" href="/trial">Contact sales</a>
-        </div>
-      </div>
+    <!-- Toggle just under the first row -->
+    <div class="moreRow">
+      <button id="togglePlans" class="btn">Show more plans</button>
     </div>
 
+    <!-- Hidden block (6): Core, Pro, Scale, Max, Prime, Prime+ -->
+    <div id="plansMore" class="grid3" style="display:none">
+        <!-- Core -->
+<div class="card">
+  <div class="inner">
+    <div class="name">Core</div>
+    <div class="qty">300 CVs<span class="per">/mo</span></div>
+    <span class="chip">
+  <span class="price-month">£360/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£1.20 per CV</span>
+</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 12 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Join plan</a>
+  </div>
+</div>
+
+<!-- Pro -->
+<div class="card has-badge" style="position:relative">
+  <div class="badge">RECOMMENDED</div>
+  <div class="inner">
+    <div class="name">Pro</div>
+    <div class="qty">500 CVs<span class="per">/mo</span></div>
+    <span class="chip">
+  <span class="price-month">£575/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£1.15 per CV</span>
+</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 15 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Join plan</a>
+  </div>
+</div>
+
+<!-- Scale -->
+<div class="card">
+  <div class="inner">
+    <div class="name">Scale</div>
+    <div class="qty">750 CVs<span class="per">/mo</span></div>
+    <span class="chip">
+  <span class="price-month">£799/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£1.07 per CV</span>
+</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 20 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Join plan</a>
+  </div>
+</div>
+
+<!-- Max -->
+<div class="card">
+  <div class="inner">
+    <div class="name">Max</div>
+    <div class="qty">1,000 CVs<span class="per">/mo</span></div>
+    <span class="chip">
+  <span class="price-month">£950/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£0.95 per CV</span>
+</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 35 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Join plan</a>
+  </div>
+</div>
+
+<!-- Prime -->
+<div class="card">
+  <div class="inner">
+    <div class="name">Prime</div>
+    <div class="qty">2,000+ CVs<span class="per">/mo</span></div>
+    <span class="chip">
+  <span class="price-month">£1,600/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£0.80 per CV</span>
+</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Up to 80 Users</span></li>
+    </ul>
+    <a class="btn primary" href="/trial">Join plan</a>
+  </div>
+</div>
+
+<!-- Prime+ -->
+<div class="card">
+  <div class="inner">
+    <div class="name">Prime+</div>
+    <div class="qty">5,000+ CVs<span class="per">/mo</span></div>
+    <span class="chip">
+  <span class="price-month">£3,250/mo</span>
+  <span class="dot">·</span>
+  <span class="price-cv">£0.65 per CV</span>
+</span>
+    <ul class="feat">
+      <li><span class="tick">✓</span><span>1 CV Template</span></li>
+      <li><span class="tick">✓</span><span>Unlimited Users</span></li>
+    </ul>
+    <a class="btn" href="/trial">Contact sales</a>
+  </div>
+</div>
     </div>
 
     <!-- Calculator (unchanged) -->
@@ -1282,11 +1329,11 @@ LOGIN_HTML = r"""
     a{color:var(--blue);text-decoration:none}
     /* === Compact Sign-in Card (only affects login page) === */
 #signinCard{
-  max-width: 400px;   /* <- much narrower */
+  max-width: 680px;     /* <- make it narrower (try 640–720 to taste) */
   width: 100%;
-  margin: 40px auto;  /* keep centered */
-  padding: 22px 26px; /* keep padding */
-  border-radius: 16px;
+  margin: 40px auto;    /* centers the card with comfortable vertical space */
+  padding: 22px 26px;   /* <- reduce padding to make the card shorter */
+  border-radius: 16px;  /* slightly tighter corners (optional) */
 }
 
 #signinCard h1{
@@ -1329,7 +1376,7 @@ LOGIN_HTML = r"""
 </div>
     </div>
 
-    <div class="auth" id="signinCard">
+    <div class="auth">
       <h1>Sign in</h1>
       <!--ERROR-->
       <form method="post" action="/login" autocomplete="off">
@@ -2533,7 +2580,6 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
-
 
 
 

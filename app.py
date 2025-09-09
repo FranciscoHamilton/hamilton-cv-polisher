@@ -66,20 +66,6 @@ def init_db():
         print("DB init failed:", e)
     finally:
         DB_POOL.putconn(conn)
-    """Create tables if they don't exist. Safe to run on every boot."""
-    if not DB_POOL:
-        print("No DATABASE_URL set; skipping DB init.")
-        return
-    conn = DB_POOL.getconn()
-    try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(INIT_SQL)
-        print("DB init OK")
-    except Exception as e:
-        print("DB init failed:", e)
-    finally:
-        DB_POOL.putconn(conn)
 
 
 # --- Small DB helpers ---
@@ -2920,6 +2906,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

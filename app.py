@@ -1,4 +1,4 @@
-def init_db():# app.py
+# app.py
 import os, json, re, tempfile, traceback, zipfile, io
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -2661,6 +2661,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

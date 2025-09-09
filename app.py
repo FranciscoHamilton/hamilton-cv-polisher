@@ -1230,6 +1230,31 @@ button[disabled]{opacity:.6;cursor:not-allowed}
     const r = await fetch('/stats', {cache:'no-store'});
     if(!r.ok) return;
     const s = await r.json();
+    // === NEW: override with per-user DB usage ===
+    try {
+      const mu = await fetch('/me/usage', {cache:'no-store'});
+      if (mu.ok) {
+        const j = await mu.json();
+        if (j && j.ok) {
+          const dm = document.getElementById('downloadsMonth');
+          if (dm) dm.textContent = j.month_usage ?? 0;
+        }
+      }
+    } catch(e) {}
+
+    // Optionally also refresh last candidate/time from DB
+    try {
+      const le = await fetch('/me/last-event', {cache:'no-store'});
+      if (le.ok) {
+        const j = await le.json();
+        if (j && j.ok) {
+          const lc = document.getElementById('lastCandidate');
+          const lt = document.getElementById('lastTime');
+          if (lc) lc.textContent = j.candidate || (s.last_candidate || '—');
+          if (lt) lt.textContent = j.ts || (s.last_time || '—');
+        }
+      }
+    } catch(e) {}
 
     // Trial banner
     const tb = document.getElementById('trialBanner');
@@ -2902,12 +2927,27 @@ def me_usage():
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
+@app.get("/me/last-event")
+def me_last_event():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"ok": False, "reason": "not logged in"}), 401
+    try:
+        cand, ts = last_event_for_user(int(uid))
+    except Exception as e:
+        print("me_last_event error:", e)
+        cand, ts = (None, None)
+    resp = jsonify({"ok": True, "candidate": cand, "ts": ts})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
 @app.get("/health")
 def health():
     return "ok"
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

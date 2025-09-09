@@ -1429,11 +1429,7 @@ form.addEventListener('submit', async (e)=>{
         const name=v.replace(/[_-]/g,' ').replace(/\.(pdf|docx|txt)$/i,'');
         if(name){document.getElementById('filenamePreview').textContent=name;}
       });
-      fileInput.addEventListener('change',()=>{
-  const v=fileInput.files?.[0]?.name||'';
-  const name=v.replace(/[_-]/g,' ').replace(/\.(pdf|docx|txt)$/i,'');
-  if(name){document.getElementById('filenamePreview').textContent=name;}
-});
+     
 
 // Skills manager toggle + events
 const skillsToggle = document.getElementById('skillsToggle');
@@ -2958,6 +2954,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

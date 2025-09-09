@@ -2070,9 +2070,14 @@ def start_free_trial_submit():
 def login():
     if session.get("authed"):
         return redirect(url_for("app_page"))  # goes to /app
-    resp = make_response(render_template_string(LOGIN_HTML))
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
+    try:
+        resp = make_response(render_template_string(LOGIN_HTML))
+        resp.headers["Cache-Control"] = "no-store"
+        return resp
+    except Exception as e:
+        # This prints the real template error to your Render logs
+        print("LOGIN_HTML render failed:", repr(e))
+        return "Login template error. Check service logs for details.", 500
 
 @app.post("/login")
 def do_login():
@@ -3041,6 +3046,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

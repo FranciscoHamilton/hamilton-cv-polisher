@@ -1586,27 +1586,27 @@ if (skillForm){
 
       <div class="card">
         <h3>Session Stats</h3>
-        <div class="statsgrid">
+
+<!-- 4 compact tiles -->
+<div class="statsgrid">
   <div class="stat"><div class="k">Downloads this month</div><div class="v" id="downloadsMonth">0</div></div>
   <div class="stat"><div class="k">Last Candidate</div><div class="v" id="lastCandidate">—</div></div>
   <div class="stat"><div class="k">Last Polished</div><div class="v" id="lastTime">—</div></div>
   <div class="stat">
-  <div class="k">Credits Used</div>
-  <div class="v small-result" id="creditsUsed">0 / 0</div>
+    <div class="k">Credits Used</div>
+    <div class="v" id="creditsUsed">0 / 0</div>
+  </div>
 </div>
 
-<!-- Me (Postgres) usage -->
-<div class="ts" style="margin:6px 0 4px 2px;">
-  Me this month: <strong id="meUsage">—</strong>
-</div>
-<div class="ts" style="margin:0 0 10px 2px;">My last polish: <span id="meLast">—</span></div>
-
-<div class="ts" style="margin:6px 0 10px 2px;">Low on credits? <a href="/pricing">Buy more</a></div>
-
-        <div class="ts" style="margin:8px 0 6px 2px;">Full History</div>
-        <div id="history" class="history"></div>
-        <!-- Skills manager (hide/show) -->
+<!-- Full history: now collapsible (default hidden) -->
 <div class="kicker" style="margin:10px 0 6px 2px; display:flex; align-items:center; justify-content:space-between">
+  <span>Full history</span>
+  <button id="historyToggle" type="button" class="chip">Show</button>
+</div>
+<div id="history" class="history" style="display:none"></div>
+
+<!-- Skills manager: keep as collapsible (unchanged) -->
+<div class="kicker" style="margin:12px 0 6px 2px; display:flex; align-items:center; justify-content:space-between">
   <span>Skills dictionary (matching keywords)</span>
   <button id="skillsToggle" type="button" class="chip">Show</button>
 </div>
@@ -1614,14 +1614,17 @@ if (skillForm){
   <div class="ts" style="margin-bottom:8px">
     These keywords are used to surface <strong>Skills</strong> when polishing. Add your own, remove yours, or disable built-ins.
   </div>
+
   <form id="skillAddForm" style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px">
     <input id="skillInput" placeholder="Add a skill (e.g., ACCA)" style="flex:1; min-width:220px; padding:10px; border:1px solid var(--line); border-radius:10px"/>
     <button type="submit">Add</button>
   </form>
-    <!-- Unified list (hidden for now; we’ll enable in the next step) -->
+
+  <!-- Unified list will render here -->
   <div class="ts" id="skillsAllHeader" style="margin:6px 0 2px; display:none">Skills (A–Z)</div>
   <div id="skillsAll" style="display:none"></div>
-  
+
+  <!-- (Legacy lists are fine to keep; they’ll be hidden by JS when unified list is shown) -->
   <div class="ts" style="margin:6px 0 2px">Custom skills (A–Z)</div>
   <div id="customSkills"></div>
   <div class="ts" style="margin:10px 0 2px">Built-in skills (A–Z)</div>
@@ -2757,6 +2760,26 @@ def app_page():
 </body>
             """
         )
+    # Inject Full History toggle script (no template edits)
+    html = html.replace(
+        "</body>",
+        """
+<script>
+  (function(){
+    var historyToggle = document.getElementById('historyToggle');
+    var historyEl = document.getElementById('history');
+    if (!historyToggle || !historyEl) return;
+    historyToggle.addEventListener('click', function(){
+      var show = (historyEl.style.display === 'none' || historyEl.style.display === '');
+      historyEl.style.display = show ? 'block' : 'none';
+      historyToggle.textContent = show ? 'Hide' : 'Show';
+      if (show && typeof window.refreshStats === 'function') window.refreshStats();
+    });
+  })();
+</script>
+</body>
+        """
+    )
 
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store"
@@ -3048,6 +3071,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

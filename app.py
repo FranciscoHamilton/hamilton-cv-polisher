@@ -2729,6 +2729,8 @@ def _count_since(months: int) -> int:
         return 0
 
 # ---------- App + API ----------
+APP_HTML = HTML
+
 @app.get("/app")
 def app_page():
     html = render_template_string(
@@ -3046,6 +3048,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -2888,14 +2888,16 @@ def director_add_credits():
 def director_export():
     if not session.get("director"):
         abort(403)
-    rows = ["ts, candidate, filename"]
+
+    rows = ["ts,candidate,filename"]
     for it in STATS.get("history", []):
-        ts = it.get("ts","")
-        cand = (it.get("candidate","") or "").replace(","," ")
-        fn = (it.get("filename","") or "").replace(","," ")
+        ts = it.get("ts", "")
+        cand = (it.get("candidate", "") or "").replace(",", " ")
+        fn = (it.get("filename", "") or "").replace(",", " ")
         rows.append(f"{ts},{cand},{fn}")
+
     csv_data = "\n".join(rows)
-      resp = make_response(csv_data)
+    resp = make_response(csv_data)
     resp.headers["Content-Type"] = "text/csv"
     resp.headers["Content-Disposition"] = 'attachment; filename="usage-history.csv"'
     return resp
@@ -3042,6 +3044,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

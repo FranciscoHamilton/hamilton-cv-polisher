@@ -340,6 +340,61 @@ def list_users_usage_month():
     finally:
         db_put(conn)
 
+def get_recent_usage_events(limit: int = 50):
+    """
+    Return the most recent usage events joined with usernames.
+    Shape: [{"ts": "YYYY-MM-DD HH:MM:SS", "user_id": int, "username": str, "filename": str, "candidate": str}, ...]
+    Safe no-op: returns [] if DB is missing or on error.
+    """
+    # Normalize and clamp the limit
+    try:
+        limit = int(limit)
+    except Exception:
+        limit = 50
+    limit = max(1, min(limit, 500))
+
+    conn = db_conn()
+    if not conn:
+        return []
+
+    sql = """
+        SELECT
+            e.ts,
+            e.user_id,
+            COALESCE(u.username, '(unknown)') AS username,
+            e.filename,
+            e.candidate
+        FROM usage_events e
+        LEFT JOIN users u ON u.id = e.user_id
+        ORDER BY e.ts DESC
+        LIMIT %s
+    """
+
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (limit,))
+                rows = cur.fetchall()
+        out = []
+        for ts, user_id, username, filename, candidate in rows:
+            # Make ts a consistent string
+            ts_str = ts.isoformat(sep=" ", timespec="seconds") if hasattr(ts, "isoformat") else str(ts)
+            out.append({
+                "ts": ts_str,
+                "user_id": int(user_id) if user_id is not None else None,
+                "username": username,
+                "filename": filename or "",
+                "candidate": candidate or "",
+            })
+        return out
+    except Exception as e:
+        print("get_recent_usage_events error:", e)
+        return []
+    finally:
+        try:
+            db_put(conn)
+        except Exception:
+            pass
 # Try fast PDF extraction first (PyMuPDF)
 try:
     import fitz  # PyMuPDF
@@ -2839,6 +2894,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -208,6 +208,24 @@ def get_user_plan_credits_and_overage(user_id: int):
         return (0, 0.0)
 
 # --- Per-user usage helpers (Postgres) ---
+def get_user_month_usage(user_id: int) -> int:
+    """
+    Count usage events for this user in the current calendar month.
+    Falls back to 0 if query fails.
+    """
+    row = db_query_one(
+        """
+        SELECT COUNT(*) FROM usage_events
+         WHERE user_id = %s
+           AND date_trunc('month', ts) = date_trunc('month', now())
+        """,
+        (user_id,),
+    )
+    try:
+        return int(row[0]) if row and row[0] is not None else 0
+    except Exception:
+        return 0
+
 def log_usage_event(user_id, filename, candidate):
     """
     Insert one usage row. Safe no-op if DB is not configured or user_id missing.
@@ -2866,7 +2884,7 @@ def me_usage():
     if not uid:
         return jsonify({"ok": False, "reason": "not logged in"}), 401
     try:
-        n = count_usage_month_db(int(uid))
+        n = get_user_month_usage(int(uid))
     except Exception as e:
         print("me_usage error:", e)
         n = 0
@@ -2880,6 +2898,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

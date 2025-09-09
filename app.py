@@ -2587,13 +2587,12 @@ def stats():
             last_candidate, last_time = row2[0], row2[1].strftime("%Y-%m-%d %H:%M:%S")
 
     return jsonify({
-        "downloads_month": downloads_month,
-        "last_candidate": last_candidate,
-        "last_time": last_time,
-        "paid_left": paid_left,
-        "trial_left": trial_left,
-        "total_left": total_left,
-    })
+    "ok": True,
+    # your other fields…
+    "downloads_this_month": downloads_month,   # NEW: what the front-end expects
+    "downloads_month": downloads_month,        # OLD: kept for backward compatibility
+    # if you previously had "downloads": … and other fields, keep them as they were
+})
     # ---------- Skills API (view/add/remove/toggle) ----------
 @app.get("/skills")
 def skills_get():
@@ -2840,6 +2839,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

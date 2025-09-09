@@ -2976,7 +2976,12 @@ def director_usage():
         print("director events error:", e)
         events = []
 
-    return render_template_string(DIRECTOR_HTML, users=users, events=events)
+    return render_template_string(
+    DIRECTOR_HTML,
+    users=users,
+    events=events,
+    legacy=STATS.get("history", [])[-50:]  # last 50 legacy entries
+)
 # ---------- App polishing + API (unchanged) ----------
 @app.post("/polish")
 def polish():
@@ -3037,6 +3042,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -34,6 +34,8 @@ else:
 STATS.setdefault("history", [])
 # NEW: credits bucket for director view (does not change polish behavior)
 STATS.setdefault("credits", {"balance": 0, "purchased": 0})
+STATS.setdefault("plan", {"name": "", "credits": 0})
+
 
 def _save_stats():
     if len(STATS.get("history", [])) > 1000:
@@ -781,7 +783,12 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 .statsgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:10px}
 .stat{border:1px solid var(--line);border-radius:14px;padding:12px;background:var(--card)}
 .stat .k{font-size:12px;color:var(--muted);font-weight:700}
-.stat .v{font-size:18px;font-weight:900;margin-top:4px;color:var(--blue)}
+.stat .v{
+  font-size:16px;
+  font-weight:800;
+  margin-top:4px;
+  color:var(--ink);
+}
 .kicker{color:var(--muted);font-size:12.5px;margin:8px 0 6px}
 .history{border:1px solid var(--line);border-radius:14px;max-height:300px;overflow:auto;background:var(--card)}
 .row{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line)}
@@ -878,12 +885,13 @@ button[disabled]{opacity:.6;cursor:not-allowed}
     const lt = document.getElementById('lastTime');
     if (lt) lt.textContent = s.last_time || '—';
 
-    // Credits (paid + trial)
-    const clEl = document.getElementById('creditsLeft');
-    if (clEl) {
-      const creditsLeft = (((s.credits || {}).balance) || 0) + (s.trial_credits_left || 0);
-      clEl.textContent = creditsLeft;
-    }
+    // Credits used (in-plan) — show "X / Y"
+const cu = document.getElementById('creditsUsed');
+if (cu) {
+  const planCap = (s.plan && s.plan.credits) ? s.plan.credits : 0;
+  const used = s.credits_used ?? 0;
+  cu.textContent = `${used} / ${planCap}`;
+}
 
     // History list
     const list = document.getElementById('history');
@@ -1106,8 +1114,9 @@ if (skillForm){
   <div class="stat"><div class="k">Last Candidate</div><div class="v" id="lastCandidate">—</div></div>
   <div class="stat"><div class="k">Last Polished</div><div class="v" id="lastTime">—</div></div>
   <div class="stat">
-  <div class="stat-title">Credits Used</div>
-  <div class="stat-value small-result">{{credits_used}} / {{plan_credits}}</div>
+  <div class="k">Credits Used</div>
+  <div class="v small-result" id="creditsUsed">0 / 0</div>
+</div>
 
 
 </div>
@@ -2186,44 +2195,34 @@ def app_page():
 
 @app.get("/stats")
 def stats():
-    # Base stats
     downloads_month = _downloads_this_month()
     last_candidate = STATS.get("last_candidate", "")
     last_time = STATS.get("last_time", "")
 
-    # Credits buckets you already track
     paid_left = int((STATS.get("credits", {}) or {}).get("balance", 0))
     trial_left = int(session.get("trial_credits", 0))
-    total_left = paid_left + trial_left  # total credits left across paid + trial
+    total_left = paid_left + trial_left
 
-    # Plan info (cap per month)
     plan = STATS.get("plan") or {}
     plan_name = (plan.get("name") or "").strip()
     plan_credits = int(plan.get("credits") or 0)
 
-    # Usage math:
-    # - "used" = downloads counted this calendar month
-    # - in-plan used = min(used, plan cap)
-    # - overage = max(0, used - cap)
     used_this_month = int(downloads_month)
     in_plan_used = min(used_this_month, plan_credits)
     overage_used = max(0, used_this_month - plan_credits)
     in_plan_left = max(0, plan_credits - in_plan_used)
 
-    data = dict(STATS)  # keep your existing payload for backwards compatibility
+    data = dict(STATS)  # keep old fields
     data["downloads_this_month"] = used_this_month
     data["last_candidate"] = last_candidate
     data["last_time"] = last_time
-
-    # Old field you used in UI; keep if something still expects it
     data["trial_credits_left"] = trial_left
 
-    # New fields for the UI
     data["plan"] = {"name": plan_name, "credits": plan_credits}
-    data["credits_used"] = in_plan_used                # used within plan cap
-    data["credits_left_in_plan"] = in_plan_left        # remaining within plan cap
-    data["overage_used"] = overage_used                # how many beyond the cap
-    data["credits_left_total"] = total_left            # paid + trial remaining (unchanged meaning)
+    data["credits_used"] = in_plan_used
+    data["credits_left_in_plan"] = in_plan_left
+    data["overage_used"] = overage_used
+    data["credits_left_total"] = total_left
 
     resp = jsonify(data)
     resp.headers["Cache-Control"] = "no-store"
@@ -2462,6 +2461,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

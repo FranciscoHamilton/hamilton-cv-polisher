@@ -1,4 +1,4 @@
-# app.py
+def init_db():# app.py
 import os, json, re, tempfile, traceback, zipfile, io
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -52,7 +52,6 @@ CREATE TABLE IF NOT EXISTS usage_events (
 """
 
 def init_db():
-    
     """Create tables if they don't exist. Safe to run on every boot."""
     if not DB_POOL:
         print("No DATABASE_URL set; skipping DB init.")
@@ -66,7 +65,7 @@ def init_db():
     except Exception as e:
         print("DB init failed:", e)
     finally:
-        def init_db():
+        DB_POOL.putconn(conn)
     """Create tables if they don't exist. Safe to run on every boot."""
     if not DB_POOL:
         print("No DATABASE_URL set; skipping DB init.")
@@ -2662,6 +2661,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

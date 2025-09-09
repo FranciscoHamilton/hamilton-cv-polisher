@@ -110,7 +110,22 @@ def db_query_one(sql, params=()):
         return None
     finally:
         db_put(conn)
-
+def db_query_all(sql, params=()):
+    """Run a SELECT that returns many rows (list of tuples)."""
+    conn = db_conn()
+    if not conn:
+        return []
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, params)
+                rows = cur.fetchall()
+                return rows
+    except Exception as e:
+        print("db_query_all error:", e)
+        return []
+    finally:
+        db_put(conn)
 def db_execute(sql, params=()):
     """Run an INSERT/UPDATE/DELETE. Returns True/False."""
     conn = db_conn()
@@ -166,6 +181,31 @@ def get_user_db(username: str):
         "password_hash": row[2],
         "active": bool(row[3]),
     }
+def get_user_plan_credits_and_overage(user_id: int):
+    """
+    Return (plan_credits, overage_rate) for this user from Postgres.
+    If no plan is active or DB is unavailable, returns (0, 0.0).
+    """
+    if not user_id:
+        return (0, 0.0)
+    try:
+        row = db_query_one(
+            """
+            SELECT monthly_credits, overage_rate
+              FROM plans
+             WHERE user_id = %s
+               AND active = TRUE
+             ORDER BY created_at DESC
+             LIMIT 1
+            """,
+            (user_id,),
+        )
+        if not row:
+            return (0, 0.0)
+        return (int(row[0] or 0), float(row[1] or 0.0))
+    except Exception as e:
+        print("get_user_plan_credits_and_overage error:", e)
+        return (0, 0.0)
 
 # --- Per-user usage helpers (Postgres) ---
 def log_usage_event(user_id, filename, candidate):
@@ -2840,6 +2880,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -892,72 +892,6 @@ PRICING_HTML = r"""
 </html>
 """
 
-# ------------------------ Start Free Trial (page) ------------------------
-START_HTML = r"""
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Start free trial — CV Polisher</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#fff}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:560px;margin:36px auto;padding:0 18px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
-    h1{margin:0 0 12px;font-size:22px;color:var(--blue)}
-    label{display:block;margin-top:10px;font-weight:600;font-size:13px}
-    input,select,textarea{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
-    button{width:100%;margin-top:14px;background:linear-gradient(90deg,var(--blue),#0a4d8c);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
-    .muted{color:var(--muted);font-size:12px;margin-top:8px}
-    a{color:var(--blue);text-decoration:none}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <a href="/">← Home</a>
-    <div class="card">
-      <h1>Start your free trial</h1>
-      <div class="muted">Get <strong>5 free CVs</strong>. No credit card required. You’ll sign in after this.</div>
-
-      <form method="post" action="/start" autocomplete="off">
-        <label>Company</label>
-        <input type="text" name="company" required />
-
-        <label>Work email</label>
-        <input type="email" name="email" required />
-
-        <label>Your name</label>
-        <input type="text" name="name" required />
-
-        <label>Team size</label>
-        <select name="team_size">
-          <option value="">Select…</option>
-          <option>1</option>
-          <option>2–5</option>
-          <option>6–10</option>
-          <option>11–20</option>
-          <option>21+</option>
-        </select>
-
-        <label>Notes (optional)</label>
-        <textarea name="notes" rows="3" placeholder="Anything we should know?"></textarea>
-
-        <!-- Honeypot (anti-spam). Leave empty. -->
-        <input name="company_website" style="position:absolute;left:-9999px;top:-9999px" tabindex="-1" autocomplete="off"/>
-
-        <button type="submit">Get 5 free CVs</button>
-      </form>
-
-      <div class="muted" style="margin-top:10px">
-        By starting, you agree to fair use of the trial. See <a href="/about">About</a>.
-      </div>
-    </div>
-  </div>
-</body>
-</html>
-"""
-
 # ------------------------ Start Free Trial (new) ------------------------
 START_HTML = r"""
 <!doctype html>
@@ -2906,6 +2840,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

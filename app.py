@@ -4,6 +4,67 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from flask import Flask, request, send_file, render_template_string, abort, jsonify, make_response
 from flask import session, redirect, url_for  # <-- ADDED earlier
+# --- Database (Postgres via psycopg2) ---
+import psycopg2
+from psycopg2.pool import SimpleConnectionPool
+
+DATABASE_URL = os.getenv("DATABASE_URL", "").strip()
+DB_POOL = None
+if DATABASE_URL:
+    try:
+        DB_POOL = SimpleConnectionPool(minconn=1, maxconn=5, dsn=DATABASE_URL)
+        print("DB pool initialized")
+    except Exception as e:
+        print("DB pool init failed:", e)
+        DB_POOL = None
+
+INIT_SQL = """
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  username TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
+  email TEXT,
+  company TEXT,
+  stripe_customer_id TEXT,
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS plans (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan_name TEXT NOT NULL,
+  monthly_credits INTEGER NOT NULL,
+  overage_rate NUMERIC(6,2) NOT NULL,
+  renews_at DATE,
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS usage_events (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  filename TEXT,
+  candidate TEXT,
+  ts TIMESTAMP DEFAULT NOW()
+);
+"""
+
+def init_db():
+    """Create tables if they don't exist. Safe to run on every boot."""
+    if not DB_POOL:
+        print("No DATABASE_URL set; skipping DB init.")
+        return
+    conn = DB_POOL.getconn()
+    try:
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(INIT_SQL)
+        print("DB init OK")
+    except Exception as e:
+        print("DB init failed:", e)
+    finally:
+        DB_POOL.putconn(conn)
 
 # Try fast PDF extraction first (PyMuPDF)
 try:
@@ -1485,6 +1546,8 @@ FORGOT_HTML = r"""
 """
 
 app = Flask(__name__)
+# Create DB tables on boot (no-op if DATABASE_URL is missing)
+init_db()
 
 # ------------------------ session secret + default creds (unchanged) ------------------------
 app.secret_key = os.getenv("APP_SECRET_KEY", "dev-secret-change-me")
@@ -2478,6 +2541,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

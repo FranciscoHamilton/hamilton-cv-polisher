@@ -213,6 +213,43 @@ def last_event_for_user(user_id):
         return (None, None)
     return (row[0] or None, row[1] or None)
 
+def log_usage_event(user_id: int, filename: str, candidate: str):
+    """Record one polish in Postgres for this user (no-op if DB missing)."""
+    if not user_id:
+        return
+    try:
+        fn = (filename or "")[:200]
+        cand = (candidate or "")[:200]
+        db_execute(
+            """
+            INSERT INTO usage_events (user_id, filename, candidate)
+            VALUES (%s,%s,%s)
+            """,
+            (user_id, fn, cand),
+        )
+    except Exception as e:
+        # don't break the app if DB insert fails
+        print("log_usage_event failed:", e)
+
+
+def count_usage_month_db(user_id: int) -> int:
+    """
+    Count usage_events for this user in the current calendar month.
+    Returns 0 on any error.
+    """
+    row = db_query_one(
+        """
+        SELECT COUNT(*) FROM usage_events
+         WHERE user_id = %s
+           AND date_trunc('month', ts) = date_trunc('month', now())
+        """,
+        (user_id,),
+    )
+    try:
+        return int(row[0]) if row and row[0] is not None else 0
+    except Exception:
+        return 0
+
 # Try fast PDF extraction first (PyMuPDF)
 try:
     import fitz  # PyMuPDF
@@ -2708,6 +2745,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -5,6 +5,12 @@ from datetime import datetime, timedelta
 from flask import Flask, request, send_file, render_template_string, abort, jsonify, make_response
 from flask import session, redirect, url_for  # <-- ADDED earlier
 from werkzeug.security import generate_password_hash, check_password_hash
+def is_admin() -> bool:
+    """Return True if the logged-in session user matches APP_ADMIN_USER."""
+    try:
+        return (session.get("user") or "").lower() == (os.getenv("APP_ADMIN_USER") or "").lower()
+    except Exception:
+        return False
 # --- Database (Postgres via psycopg2) ---
 import psycopg2
 from psycopg2.pool import SimpleConnectionPool
@@ -589,6 +595,96 @@ HOMEPAGE_HTML = r"""
       <div class="step"><span class="b">1</span>Upload a CV</div>
       <div class="step"><span class="b">2</span>We extract &amp; structure</div>
       <div class="step"><span class="b">3</span>Download polished DOCX</div>
+    </div>
+  </div>
+</body>
+</html>
+"""
+DIRECTOR_HTML = r"""
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Director – Usage</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; margin: 20px; }
+    h1 { margin: 0 0 12px; }
+    .wrap { display: grid; grid-template-columns: 1fr; gap: 24px; }
+    @media (min-width: 1000px) { .wrap { grid-template-columns: 1fr 1fr; } }
+    .card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid #f1f5f9; }
+    th { background: #f8fafc; position: sticky; top: 0; }
+    .muted { color: #64748b; }
+    .pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; background: #f1f5f9; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    a.btn { text-decoration: none; border: 1px solid #e5e7eb; padding: 8px 10px; border-radius: 8px; color: #0f172a; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <h1>Director – Usage</h1>
+    <div>
+      <a class="btn" href="/app">← Back to App</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="card">
+      <h2>Per-user totals <span class="pill">{{ users|length }} users</span></h2>
+      {% if users and users|length > 0 %}
+      <table>
+        <thead>
+          <tr>
+            <th>User</th>
+            <th class="muted">Active</th>
+            <th>This month</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.username }}</td>
+            <td class="muted">{{ 'Yes' if u.active else 'No' }}</td>
+            <td>{{ u.month_usage }}</td>
+            <td>{{ u.total_usage }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="muted">No users found (DB offline or empty).</div>
+      {% endif %}
+    </div>
+
+    <div class="card">
+      <h2>Recent usage events <span class="pill">{{ events|length }}</span></h2>
+      {% if events and events|length > 0 %}
+      <table>
+        <thead>
+          <tr>
+            <th>When</th>
+            <th>User</th>
+            <th>Candidate</th>
+            <th class="muted">File</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in events %}
+          <tr>
+            <td>{{ e.ts }}</td>
+            <td>{{ e.username }}</td>
+            <td>{{ e.candidate }}</td>
+            <td class="muted">{{ e.filename }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+        <div class="muted">No events yet (or DB offline).</div>
+      {% endif %}
     </div>
   </div>
 </body>
@@ -2618,7 +2714,32 @@ def _count_since(months: int) -> int:
 # ---------- App + API ----------
 @app.get("/app")
 def app_page():
-    resp = make_response(render_template_string(HTML))
+    html = render_template_string(
+        HTML,
+        show_director_link=bool(is_admin() or session.get("director"))
+    )
+
+    # Inject a small Director button without touching template files
+    if is_admin() or session.get("director"):
+        html = html.replace(
+            "</body>",
+            """
+<a href="/director/usage" class="dir-link" title="Director usage">Director</a>
+<style>
+.dir-link {
+  position: fixed; right: 16px; bottom: 16px;
+  padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px;
+  background: #fff; color: #0f172a; text-decoration: none;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+  font: 14px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+}
+.dir-link:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
+</style>
+</body>
+            """
+        )
+
+    resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
@@ -2833,7 +2954,29 @@ def director_forgot_post():
     STATS["director_pass_override"] = newpass
     _save_stats()
     return redirect(url_for("director_home"))
+@app.get("/director/usage")
+def director_usage():
+    # must be logged in (either normal login or your director session)
+    if not (session.get("user_id") or session.get("director")):
+        return redirect("/login")
 
+    # must be admin or director
+    if not (is_admin() or session.get("director")):
+        abort(403)
+
+    try:
+        users = list_users_usage_month()  # [{id, username, active, month_usage, total_usage}, ...]
+    except Exception as e:
+        print("director users error:", e)
+        users = []
+
+    try:
+        events = get_recent_usage_events(100)  # latest 100
+    except Exception as e:
+        print("director events error:", e)
+        events = []
+
+    return render_template_string(DIRECTOR_HTML, users=users, events=events)
 # ---------- App polishing + API (unchanged) ----------
 @app.post("/polish")
 def polish():
@@ -2894,6 +3037,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

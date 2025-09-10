@@ -3141,7 +3141,7 @@ def me_history():
     # Delegate to the existing implementation
     return me_history_x()
     
-    @app.get("/me/credits")
+@app.get("/me/credits")
 def me_credits():
     """
     Placeholder credits API.
@@ -3158,7 +3158,11 @@ def me_credits():
     try:
         used = int(count_usage_month_db(uid)) if (DB_POOL and uid) else 0
     except Exception:
-        used = 0
+        # If that helper isn't available, fall back to the legacy helper or 0
+        try:
+            used = int(get_user_month_usage(uid)) if uid else 0
+        except Exception:
+            used = 0
 
     # trial credits balance from session (may be None if not used in your app)
     try:
@@ -3401,6 +3405,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

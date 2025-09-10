@@ -3448,6 +3448,17 @@ def admin_recent_usage():
 
     return jsonify({"ok": True, "rows": out, "source": "legacy"})
 
+{
+  "ok": true,
+  "source": "db",
+  "month_start": "2025-09-01T00:00:00+00:00",
+  "month": { "total": 3, "rows": [ { "user_id": 123, "count": 3 } ] },
+  "recent": [
+    { "id": 10, "user_id": 123, "ts": "...", "candidate": "Test User", "filename": "demo.docx" },
+    ...
+  ]
+}
+
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
@@ -3674,6 +3685,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -2866,36 +2866,36 @@ def app_page():
             '})();</script></body>'
         )
     )
-# Inject Full History data loader (fires on first click)
-html = html.replace(
-    "</body>",
-    (
-        '<script>(function(){'
-        'var t=document.getElementById("historyToggle");'
-        'var h=document.getElementById("history");'
-        'var loaded=false;'
-        'async function load(){'
-        '  try{'
-        '    const r=await fetch("/me/history",{cache:"no-store"});'
-        '    const j=await r.json();'
-        '    var rows=j.history||[];'
-        '    if(!h) return;'
-        '    h.innerHTML = rows.length'
-        '      ? rows.map(function(it){'
-        '          return "<div class=\\"row\\" style=\\"padding:6px 0;border-bottom:1px solid var(--line)\\">" +'
-        '                 "<span class=\\"muted\\">"+(it.ts||"-")+"</span> — " +'
-        '                 "<strong>"+(it.candidate||"-")+"</strong> " +'
-        '                 "<span class=\\"muted\\">("+(it.filename||"-")+")</span>" +'
-        '                 "</div>";'
-        '        }).join("")'
-        '      : "<div class=\\"muted\\">(no history yet)</div>";'
-        '    loaded=true;'
-        '  }catch(e){ if(h) h.innerHTML="<div class=\\"muted\\">Could not load history.</div>"; }'
-        '}'
-        'if(t){ t.addEventListener("click", function(){ if(!loaded) load(); }); }'
-        '})();</script></body>'
+    # Inject Full History data loader (fires on first click)
+    html = html.replace(
+        "</body>",
+        (
+            '<script>(function(){'
+            'var t=document.getElementById("historyToggle");'
+            'var h=document.getElementById("history");'
+            'var loaded=false;'
+            'async function load(){'
+            '  try{'
+            '    const r=await fetch("/me/history",{cache:"no-store"});'
+            '    const j=await r.json();'
+            '    var rows=j.history||[];'
+            '    if(!h) return;'
+            '    h.innerHTML = rows.length'
+            '      ? rows.map(function(it){'
+            '          return "<div class=\\"row\\" style=\\"padding:6px 0;border-bottom:1px solid var(--line)\\">" +'
+            '                 "<span class=\\"muted\\">"+(it.ts||"-")+"</span> — " +'
+            '                 "<strong>"+(it.candidate||"-")+"</strong> " +'
+            '                 "<span class=\\"muted\\">("+(it.filename||"-")+")</span>" +'
+            '                 "</div>";'
+            '        }).join("")'
+            '      : "<div class=\\"muted\\">(no history yet)</div>";'
+            '    loaded=true;'
+            '  }catch(e){ if(h) h.innerHTML="<div class=\\"muted\\">Could not load history.</div>"; }'
+            '}'
+            'if(t){ t.addEventListener("click", function(){ if(!loaded) load(); }); }'
+            '})();</script></body>'
+        )
     )
-)
 
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store"
@@ -3337,6 +3337,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

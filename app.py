@@ -3448,16 +3448,114 @@ def admin_recent_usage():
 
     return jsonify({"ok": True, "rows": out, "source": "legacy"})
 
-{
-  "ok": true,
-  "source": "db",
-  "month_start": "2025-09-01T00:00:00+00:00",
-  "month": { "total": 3, "rows": [ { "user_id": 123, "count": 3 } ] },
-  "recent": [
-    { "id": 10, "user_id": 123, "ts": "...", "candidate": "Test User", "filename": "demo.docx" },
-    ...
-  ]
-}
+    # --- Admin: combined dashboard payload (month summary + recent events) ---
+@app.get("/__admin/dashboard")
+def admin_dashboard():
+    """
+    One-call payload for Director view:
+      - month: per-user counts for current month + total
+      - recent: last N events (default 50, max 200)
+    Query params:
+      - limit (int, optional): number of recent events (default 50, max 200)
+    """
+    # Access guard: allow only director/admin sessions
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # Parse & clamp limit
+    try:
+        limit = int(request.args.get("limit", "50"))
+    except Exception:
+        limit = 50
+    limit = max(1, min(limit, 200))
+
+    # If DB not available, return legacy-only recent history
+    if not DB_POOL:
+        out = []
+        try:
+            for it in (STATS.get("history", []) or [])[::-1][:limit]:
+                out.append({
+                    "id": None, "user_id": None,
+                    "ts": it.get("ts", ""),
+                    "candidate": it.get("candidate", ""),
+                    "filename": it.get("filename", "")
+                })
+        except Exception:
+            out = []
+        return jsonify({
+            "ok": True,
+            "source": "legacy",
+            "month": {"total": len(out), "rows": []},
+            "recent": out
+        })
+
+    # DB path: gather month summary + recent
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        month_rows, month_total, month_start = [], 0, None
+        recent_rows = []
+        with conn:
+            with conn.cursor() as cur:
+                # Month start for reference
+                cur.execute("SELECT date_trunc('month', now())::timestamptz")
+                month_start = cur.fetchone()[0].isoformat()
+
+                # Per-user counts this month
+                cur.execute("""
+                    SELECT user_id, COUNT(*) AS cnt
+                    FROM usage_events
+                    WHERE ts >= date_trunc('month', now())
+                    GROUP BY user_id
+                    ORDER BY cnt DESC
+                """)
+                for uid, cnt in cur.fetchall():
+                    month_rows.append({"user_id": uid, "count": int(cnt)})
+
+                # Total this month
+                cur.execute("""
+                    SELECT COUNT(*) AS total
+                    FROM usage_events
+                    WHERE ts >= date_trunc('month', now())
+                """)
+                month_total = int(cur.fetchone()[0])
+
+                # Recent events
+                cur.execute("""
+                    SELECT id, user_id, ts, candidate, filename
+                    FROM usage_events
+                    ORDER BY ts DESC
+                    LIMIT %s
+                """, (limit,))
+                for _id, uid, ts, cand, fname in cur.fetchall():
+                    recent_rows.append({
+                        "id": int(_id),
+                        "user_id": uid,
+                        "ts": (ts.isoformat() if ts else None),
+                        "candidate": cand or "",
+                        "filename": fname or ""
+                    })
+
+        return jsonify({
+            "ok": True,
+            "source": "db",
+            "month_start": month_start,
+            "month": {"total": month_total, "rows": month_rows},
+            "recent": recent_rows
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            if conn:
+                DB_POOL.putconn(conn)
+        except Exception:
+            pass
 
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
@@ -3685,6 +3783,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

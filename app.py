@@ -3223,6 +3223,15 @@ def admin_mock_usage():
     Example:
       /__admin/mock-usage?candidate=John%20Doe&filename=demo.docx
     """
+        # Access guard: allow only director/admin sessions
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
     if not DB_POOL:
         return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
 
@@ -3638,6 +3647,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

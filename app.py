@@ -3182,6 +3182,15 @@ def me_credits():
 # --- Admin utility: ensure the usage_events table exists (safe to run anytime) ---
 @app.get("/__admin/ensure-usage-events")
 def ensure_usage_events():
+    # Access guard: allow only director/admin sessions
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+        
     if not DB_POOL:
         return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
 
@@ -3223,7 +3232,7 @@ def admin_mock_usage():
     Example:
       /__admin/mock-usage?candidate=John%20Doe&filename=demo.docx
     """
-        # Access guard: allow only director/admin sessions
+    # Access guard: allow only director/admin sessions
     try:
         uname = (session.get("user") or "").strip().lower()
         is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
@@ -3314,6 +3323,15 @@ def admin_usage_month():
     """
     Returns counts of usage_events for the current calendar month, grouped by user_id.
     """
+    # Access guard: allow only director/admin sessions
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    
     if not DB_POOL:
         return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
 
@@ -3365,6 +3383,15 @@ def admin_recent_usage():
     Query params:
       - limit (int, optional): number of rows to return, default 50, max 200.
     """
+    # Access guard: allow only director/admin sessions
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
     # Parse & clamp limit
     try:
         limit = int(request.args.get("limit", "50"))
@@ -3647,6 +3674,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

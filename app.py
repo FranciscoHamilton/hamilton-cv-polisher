@@ -1309,6 +1309,30 @@ button[disabled]{opacity:.6;cursor:not-allowed}
       if(nameEl){ nameEl.textContent = "—"; }
     }
     async function refreshStats(){
+      // --- Fast path: single call to /me/dashboard; fallback to legacy below ---
+  try {
+    const d = await fetch('/me/dashboard').then(r => r.ok ? r.json() : Promise.reject());
+    const setText = (sel, val) => { const el = document.querySelector(sel); if (el) el.textContent = (val ?? '').toString(); };
+
+    setText('#downloadsMonth', d.downloadsMonth);
+    setText('#lastCandidate', d.lastCandidate);
+
+    if (d.lastTime) {
+      const dt = new Date(d.lastTime);
+      setText('#lastTime', isNaN(dt.getTime()) ? d.lastTime : dt.toLocaleString());
+    } else {
+      setText('#lastTime', '');
+    }
+
+    // Credits (placeholder)
+    if (typeof d.creditsUsed !== 'undefined' && d.creditsUsed !== null) setText('#creditsUsed', d.creditsUsed);
+    else if (typeof d.creditsBalance !== 'undefined' && d.creditsBalance !== null) setText('#creditsUsed', d.creditsBalance);
+
+    return; // success -> stop here, skip legacy logic below
+  } catch (e) {
+    // Ignore and let the existing legacy fetches run
+  }
+
   try{
     const r = await fetch('/stats', {cache:'no-store'});
     if(!r.ok) return;
@@ -3783,6 +3807,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

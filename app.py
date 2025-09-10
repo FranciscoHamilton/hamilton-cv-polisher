@@ -2736,135 +2736,86 @@ APP_HTML = HTML
 
 @app.get("/app")
 def app_page():
+    # Render the page as usual
     html = render_template_string(
-    APP_HTML,
-    show_director_link=bool(is_admin() or session.get("director"))
-)
-
-    # Inject a small Director button without touching template files
-    if is_admin() or session.get("director"):
-        html = html.replace(
-            "</body>",
-            """
-<a href="/director/usage" class="dir-link" title="Director usage">Director</a>
-<style>
-.dir-link {
-  position: fixed; right: 16px; bottom: 16px;
-  padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px;
-  background: #fff; color: #0f172a; text-decoration: none;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.06);
-  font: 14px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-}
-.dir-link:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.12); }
-</style>
-</body>
-            """
-        )
-    # Inject Full History toggle script (no template edits)
-    html = html.replace(
-        "</body>",
-        """
-        
-<script>
-  (function(){
-    var historyToggle = document.getElementById('historyToggle');
-    var historyEl = document.getElementById('history');
-    if (!historyToggle || !historyEl) return;
-    historyToggle.addEventListener('click', function(){
-      var show = (historyEl.style.display === 'none' || historyEl.style.display === '');
-      historyEl.style.display = show ? 'block' : 'none';
-      historyToggle.textContent = show ? 'Hide' : 'Show';
-      if (show && typeof window.refreshStats === 'function') window.refreshStats();
-    });
-  })();
-</script>
-</body>
-        """
+        APP_HTML,
+        show_director_link=bool(is_admin() or session.get("director"))
     )
-    # Inject Skills toggle + loader (no template edits)
-    html = html.replace(
-        "</body>",
-        """
-<script>
-  (function(){
-    var btn   = document.getElementById('skillsToggle');
-    var panel = document.getElementById('skillsCard');
-    var loaded = false;
 
-    async function loadSkills(){
-      try {
-        const r = await fetch('/skills', {cache: 'no-store'});
-        const j = await r.json();
+    # Inject a small Director button (safe quoting)
+    if is_admin() or session.get("director"):
+        director_inject = (
+            '<a href="/director/usage" class="dir-link" title="Director usage">Director</a>'
+            '<style>'
+            '.dir-link { position: fixed; right: 16px; bottom: 16px;'
+            ' padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px;'
+            ' background: #fff; color: #0f172a; text-decoration: none;'
+            ' box-shadow: 0 1px 2px rgba(0,0,0,0.06);'
+            ' font: 14px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }'
+            '.dir-link:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.12); }'
+            '</style>'
+            '</body>'
+        )
+        html = html.replace("</body>", director_inject)
 
-        // Unified A–Z list of effective skills
-        var all = (j.effective || []).slice().sort(function(a,b){return a.localeCompare(b);});
-        var allEl  = document.getElementById('skillsAll');
-        var hdrEl  = document.getElementById('skillsAllHeader');
-        if (allEl) {
-          allEl.style.display = 'block';
-          allEl.innerHTML = all.map(function(s){
-            return '<span class="chip" style="margin:4px 6px 0 0; display:inline-block">'+s+'</span>';
-          }).join('');
-        }
-        if (hdrEl) hdrEl.style.display = 'block';
+    # Inject Full History toggle script (safe quoting)
+    history_js = (
+        '<script>(function(){'
+        'var t=document.getElementById("historyToggle");'
+        'var h=document.getElementById("history");'
+        'if(!t||!h)return;'
+        't.addEventListener("click",function(){'
+        'var s=(h.style.display==="none"||h.style.display==="");'
+        'h.style.display=s?"block":"none";'
+        't.textContent=s?"Hide":"Show";'
+        'if(s&&window.refreshStats)window.refreshStats();'
+        '});'
+        '})();</script></body>'
+    )
+    html = html.replace("</body>", history_js)
 
-        // Optional: custom & built-in sections
-        var custEl = document.getElementById('customSkills');
-        if (custEl) {
-          var custom = (j.custom || []).slice().sort(function(a,b){return a.localeCompare(b);});
-          custEl.innerHTML = custom.length
-            ? custom.map(function(s){ return '<span class="chip" style="margin:4px 6px 0 0; display:inline-block">'+s+'</span>'; }).join('')
-            : '<span class="muted">(none)</span>';
-        }
-        var baseEl = document.getElementById('baseSkills');
-        if (baseEl) {
-          var disabled = new Set(j.base_disabled || []);
-          var base = (j.base || []).filter(function(s){ return !disabled.has(s); })
-                                   .sort(function(a,b){return a.localeCompare(b);});
-          baseEl.innerHTML = base.length
-            ? base.map(function(s){ return '<span class="chip" style="margin:4px 6px 0 0; display:inline-block">'+s+'</span>'; }).join('')
-            : '<span class="muted">(none)</span>';
-        }
+    # Inject Skills toggle + loader (safe quoting)
+    skills_js = (
+        '<script>(function(){'
+        'var btn=document.getElementById("skillsToggle");'
+        'var panel=document.getElementById("skillsCard");'
+        'var loaded=false;'
+        'async function loadSkills(){try{'
+        ' const r=await fetch("/skills",{cache:"no-store"});'
+        ' const j=await r.json();'
+        ' var all=(j.effective||[]).slice().sort(function(a,b){return a.localeCompare(b);});'
+        ' var allEl=document.getElementById("skillsAll");'
+        ' var hdrEl=document.getElementById("skillsAllHeader");'
+        ' if(allEl){allEl.style.display="block";allEl.innerHTML=all.map(function(s){return "<span class=\\"chip\\" style=\\"margin:4px 6px 0 0; display:inline-block\\">"+s+"</span>";}).join("");}'
+        ' if(hdrEl){hdrEl.style.display="block";}'
+        ' var custEl=document.getElementById("customSkills");'
+        ' if(custEl){var custom=(j.custom||[]).slice().sort(function(a,b){return a.localeCompare(b);});'
+        '  custEl.innerHTML=custom.length?custom.map(function(s){return "<span class=\\"chip\\" style=\\"margin:4px 6px 0 0; display:inline-block\\">"+s+"</span>";}).join(""):"<span class=\\"muted\\">(none)</span>";}'
+        ' var baseEl=document.getElementById("baseSkills");'
+        ' if(baseEl){var disabled=new Set(j.base_disabled||[]);'
+        '  var base=(j.base||[]).filter(function(s){return !disabled.has(s);}).sort(function(a,b){return a.localeCompare(b);});'
+        '  baseEl.innerHTML=base.length?base.map(function(s){return "<span class=\\"chip\\" style=\\"margin:4px 6px 0 0; display:inline-block\\">"+s+"</span>";}).join(""):"<span class=\\"muted\\">(none)</span>";}'
+        ' loaded=true;'
+        '}catch(e){console.log("skills load failed",e);var allEl=document.getElementById("skillsAll");if(allEl)allEl.innerHTML="<span class=\\"muted\\">Could not load skills.</span>";}}'
+        'if(btn&&panel){btn.addEventListener("click",async function(){'
+        ' var show=(panel.style.display==="none"||panel.style.display==="");'
+        ' panel.style.display=show?"block":"none";'
+        ' btn.textContent=show?"Hide":"Show";'
+        ' if(show&&!loaded)await loadSkills();'
+        '});}'
+        'var addForm=document.getElementById("skillAddForm");'
+        'if(addForm){addForm.addEventListener("submit",async function(ev){ev.preventDefault();'
+        ' var inp=document.getElementById("skillInput");'
+        ' var v=(inp&&inp.value||"").trim();'
+        ' if(!v)return;'
+        ' try{await fetch("/skills/custom/add",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({skill:v})});'
+        ' if(inp)inp.value="";loaded=false;await loadSkills();}catch(e){console.log("add skill failed",e);}'
+        '});}'
+        '})();</script></body>'
+    )
+    html = html.replace("</body>", skills_js)
 
-        loaded = true;
-      } catch(e){
-        console.log('skills load failed', e);
-        var allEl = document.getElementById('skillsAll');
-        if (allEl) allEl.innerHTML = '<span class="muted">Could not load skills.</span>';
-      }
-    }
-
-    // Toggle open/close, lazy-load on first open
-    if (btn && panel){
-      btn.addEventListener('click', async function(){
-        var show = (panel.style.display === 'none' || panel.style.display === '');
-        panel.style.display = show ? 'block' : 'none';
-        btn.textContent = show ? 'Hide' : 'Show';
-        if (show && !loaded) await loadSkills();
-      });
-    }
-
-    // Handle "Add skill"
-    var addForm = document.getElementById('skillAddForm');
-    if (addForm){
-      addForm.addEventListener('submit', async function(ev){
-        ev.preventDefault();
-        var inp = document.getElementById('skillInput');
-        var v = (inp && inp.value || '').trim();
-        if (!v) return;
-        try {
-          await fetch('/skills/custom/add', {
-            method: 'POST',
-            headers: {'Content-Type':'application/x-www-form-urlencoded'},
-            body: new URLSearchParams({skill: v})
-          });
-          if (inp) inp.value = '';
-          loaded = false;
-          await loadSkills();
-        } catch(e){
-          console.log('add skill failed', e);
-        }
-
+    # Return response
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -3155,6 +3106,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -2897,6 +2897,71 @@ def stats():
     "downloads_month": downloads_month,        # OLD: kept for backward compatibility
     # if you previously had "downloads": … and other fields, keep them as they were
 })
+    # --- Per-user usage (for the app JS) ---
+@app.get("/me/usage")
+def me_usage():
+    # user_id from session; safe if missing
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+
+    cnt = 0
+    if uid:
+        try:
+            cnt = int(get_user_month_usage(uid))
+        except Exception as e:
+            print("me_usage error:", e)
+            cnt = 0
+
+    return jsonify({"ok": True, "user_id": (uid or None), "month_usage": cnt})
+
+
+@app.get("/me/last-event")
+def me_last_event():
+    # last candidate + timestamp for this user; safe if missing
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+
+    cand, ts = (None, None)
+    if uid:
+        try:
+            cand, ts = last_event_for_user(uid)
+        except Exception as e:
+            print("me_last_event error:", e)
+
+    return jsonify({"ok": True, "candidate": cand or "", "ts": ts or ""})
+
+
+# ---- Quick diag for your account (shows no secrets) ----
+@app.get("/__me/diag")
+def me_diag():
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+
+    try:
+        month_cnt = int(get_user_month_usage(uid)) if uid else 0
+    except Exception:
+        month_cnt = 0
+
+    try:
+        cand, ts = last_event_for_user(uid) if uid else (None, None)
+    except Exception:
+        cand, ts = None, None
+
+    return jsonify({
+        "ok": True,
+        "logged_in": bool(uid),
+        "user_id": uid or None,
+        "username": session.get("user") or None,
+        "db_pool": bool(DB_POOL),
+        "month_usage": month_cnt,
+        "last_event": {"candidate": cand or "", "ts": ts or ""},
+    })
     # ---------- Skills API (view/add/remove/toggle) ----------
 @app.get("/skills")
 def skills_get():
@@ -3157,6 +3222,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

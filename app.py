@@ -3036,9 +3036,9 @@ def skills_base_toggle():
         "base_disabled": sorted(SKILLS_CFG["base_disabled"], key=lambda s: s.lower()),
         "effective": sorted(_effective_skills(), key=lambda s: s.lower())
     })
-# ---------- Me (per-user) endpoints (canonical) ----------
-@app.get("/me/usage")
-def me_usage():
+# ---------- Me (per-user) endpoints — conflict-free versions ----------
+@app.get("/x/me-usage")
+def me_usage_x():
     """Polishes this month for the logged-in user (DB if available, else 0)."""
     try:
         uid = int(session.get("user_id") or 0)
@@ -3048,16 +3048,15 @@ def me_usage():
     count = 0
     try:
         if DB_POOL and uid:
-            # Uses your helper that counts rows in usage_events for this user in the last 30 days
             count = int(count_usage_month_db(uid))
     except Exception as e:
-        print("me_usage error:", e)
+        print("me_usage_x error:", e)
 
     return jsonify({"ok": True, "user_id": (uid or None), "month_usage": count})
 
 
-@app.get("/me/last-event")
-def me_last_event():
+@app.get("/x/me-last-event")
+def me_last_event_x():
     """Last candidate + timestamp for the logged-in user (DB preferred, legacy fallback)."""
     try:
         uid = int(session.get("user_id") or 0)
@@ -3068,24 +3067,23 @@ def me_last_event():
     ts = ""
     try:
         if DB_POOL and uid:
-            c, t = last_event_for_user(uid)  # expected to return (candidate, timestamp_string)
-            cand = (c or "").strip()
-            ts = (t or "").strip()
-        # Fallback to legacy JSON (shared)
+            c, t = last_event_for_user(uid)
+            cand = c or ""
+            ts = t or ""
         if not cand:
-            cand = (STATS.get("last_candidate", "") or "").strip()
+            cand = STATS.get("last_candidate", "") or ""
         if not ts:
-            ts = (STATS.get("last_time", "") or "").strip()
+            ts = STATS.get("last_time", "") or ""
     except Exception as e:
-        print("me_last_event error:", e)
+        print("me_last_event_x error:", e)
 
     return jsonify({"ok": True, "candidate": cand, "ts": ts})
 
 
-@app.get("/me/history")
-def me_history():
+@app.get("/x/me-history")
+def me_history_x():
     """
-    Recent usage rows for the logged-in user.
+    Recent usage rows for this user.
     Returns: {"ok": True, "history": [{"ts": "...", "candidate": "...", "filename": "..."}]}
     """
     try:
@@ -3095,7 +3093,7 @@ def me_history():
 
     out = []
 
-    # Prefer Postgres (per-user)
+    # Prefer Postgres
     if DB_POOL and uid:
         conn = db_conn()
         if conn:
@@ -3103,26 +3101,25 @@ def me_history():
                 with conn:
                     with conn.cursor() as cur:
                         cur.execute("""
-                            SELECT
-                                to_char(e.ts, 'YYYY-MM-DD HH24:MI:SS') AS ts,
-                                COALESCE(e.candidate, '') AS candidate,
-                                COALESCE(e.filename,  '') AS filename
-                            FROM usage_events e
-                            WHERE e.user_id = %s
-                            ORDER BY e.ts DESC
-                            LIMIT 100
+                            SELECT to_char(e.ts, 'YYYY-MM-DD HH24:MI:SS') AS ts,
+                                   COALESCE(e.candidate, '') AS candidate,
+                                   COALESCE(e.filename, '')  AS filename
+                              FROM usage_events e
+                             WHERE e.user_id = %s
+                             ORDER BY e.ts DESC
+                             LIMIT 100
                         """, (uid,))
                         for ts, cand, fn in cur.fetchall():
                             out.append({"ts": ts, "candidate": cand, "filename": fn})
             except Exception as e:
-                print("me_history DB error:", e)
+                print("me_history_x DB error:", e)
             finally:
                 try:
                     db_put(conn)
                 except Exception:
                     pass
 
-    # Fallback to legacy JSON (shared history) if DB missing/empty
+    # Fallback to legacy JSON
     if not out:
         for it in (STATS.get("history", []) or [])[-100:][::-1]:
             out.append({
@@ -3360,6 +3357,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -3140,6 +3140,39 @@ def me_usage():
 def me_history():
     # Delegate to the existing implementation
     return me_history_x()
+    @app.get("/me/credits")
+def me_credits():
+    """
+    Placeholder credits API.
+    - used: number of polishes this month for the current user (proxy for credits used)
+    - balance: remaining trial_credits from the session, if tracked
+    - total: reserved for future (None for now)
+    """
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+
+    # used = month usage from DB if possible (safe fallbacks)
+    try:
+        used = int(count_usage_month_db(uid)) if (DB_POOL and uid) else 0
+    except Exception:
+        used = 0
+
+    # trial credits balance from session (may be None if not used in your app)
+    try:
+        balance = session.get("trial_credits")
+        balance = int(balance) if balance is not None else None
+    except Exception:
+        balance = None
+
+    return jsonify({
+        "ok": True,
+        "user_id": uid or None,
+        "used": used,
+        "balance": balance,  # may be None if not tracked
+        "total": None        # reserved for future credits model
+    })
 
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
@@ -3367,6 +3400,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

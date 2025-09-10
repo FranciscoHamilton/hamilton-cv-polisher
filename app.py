@@ -3580,7 +3580,100 @@ def admin_dashboard():
                 DB_POOL.putconn(conn)
         except Exception:
             pass
+# --- Admin: minimal UI to view the dashboard data (no styling, just tables) ---
+@app.get("/__admin/ui")
+def admin_ui():
+    """
+    Simple HTML page for directors to view month summary and recent events.
+    Uses /__admin/dashboard under the hood.
+    """
+    # Access guard: allow only director/admin sessions
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
 
+    return """
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Director Admin UI</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 16px; }
+    h1 { margin: 0 0 8px 0; }
+    h2 { margin: 24px 0 8px 0; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f6f6f6; }
+    .muted { color: #666; }
+    .badge { display: inline-block; padding: 2px 8px; border: 1px solid #ddd; border-radius: 12px; font-size: 12px; margin-left: 6px; }
+  </style>
+</head>
+<body>
+  <h1>Director Dashboard <span id="src" class="badge muted"></span></h1>
+  <div class="muted">Tip: append <code>?limit=20</code> to the URL to change how many recent rows you load.</div>
+
+  <h2>This Month (by user)</h2>
+  <div id="monthBox">Loading…</div>
+
+  <h2>Recent Events</h2>
+  <div id="recentBox">Loading…</div>
+
+  <script>
+    (async () => {
+      // pass through any ?limit=… query param to the API
+      const qs = window.location.search || "";
+      const res = await fetch("/__admin/dashboard" + qs);
+      if (!res.ok) {
+        document.body.innerHTML = "<p>Failed to load dashboard ("+res.status+"). Are you logged in as director/admin?</p>";
+        return;
+      }
+      const d = await res.json();
+      const $ = (sel) => document.querySelector(sel);
+      const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])));
+
+      $("#src").textContent = d.source || "";
+
+      // Month table
+      const monthRows = (d.month && d.month.rows) || [];
+      const monthTotal = (d.month && d.month.total) || 0;
+      if (!monthRows.length) {
+        $("#monthBox").textContent = "No usage yet this month.";
+      } else {
+        let html = '<table><thead><tr><th>User ID</th><th>Count</th></tr></thead><tbody>';
+        for (const r of monthRows) {
+          html += `<tr><td>${esc(r.user_id)}</td><td>${esc(r.count)}</td></tr>`;
+        }
+        html += `</tbody></table><div class="muted" style="margin-top:6px">Total this month: <strong>${esc(monthTotal)}</strong></div>`;
+        $("#monthBox").innerHTML = html;
+      }
+
+      // Recent table
+      const recent = d.recent || [];
+      if (!recent.length) {
+        $("#recentBox").textContent = "No recent events.";
+      } else {
+        let html = '<table><thead><tr><th>When</th><th>User ID</th><th>Candidate</th><th>Filename</th></tr></thead><tbody>';
+        for (const r of recent) {
+          const when = r.ts ? new Date(r.ts) : null;
+          const whenTxt = when && !isNaN(when.getTime()) ? when.toLocaleString() : (r.ts || "");
+          html += `<tr><td>${esc(whenTxt)}</td><td>${esc(r.user_id)}</td><td>${esc(r.candidate)}</td><td>${esc(r.filename)}</td></tr>`;
+        }
+        html += '</tbody></table>';
+        $("#recentBox").innerHTML = html;
+      }
+    })().catch(err => {
+      document.body.innerHTML = "<p>Unexpected error loading dashboard.</p>";
+    });
+  </script>
+</body>
+</html>
+    """
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
@@ -3807,6 +3900,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

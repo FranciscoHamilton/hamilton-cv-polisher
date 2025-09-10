@@ -2928,24 +2928,6 @@ def stats():
     # if you previously had "downloads": … and other fields, keep them as they were
 })
     # --- Per-user usage (for the app JS) ---
-@app.get("/me/usage")
-def me_usage():
-    # user_id from session; safe if missing
-    try:
-        uid = int(session.get("user_id") or 0)
-    except Exception:
-        uid = 0
-
-    cnt = 0
-    if uid:
-        try:
-            cnt = int(get_user_month_usage(uid))
-        except Exception as e:
-            print("me_usage error:", e)
-            cnt = 0
-
-    return jsonify({"ok": True, "user_id": (uid or None), "month_usage": cnt})
-
 
 @app.get("/me/last-event")
 def me_last_event():
@@ -3070,25 +3052,7 @@ def me_usage():
             print("me_usage error:", e)
     return jsonify({"ok": True, "month_usage": int(count)})
 
-@app.get("/me/last-event")
-def me_last_event():
-    # last candidate + timestamp for the logged-in user
-    try:
-        uid = int(session.get("user_id") or 0)
-    except Exception:
-        uid = 0
-    cand = ""
-    ts = ""
-    try:
-        if DB_POOL and uid:
-            cand, ts = last_event_for_user(uid)
-        if not cand:
-            cand = STATS.get("last_candidate", "") or ""
-        if not ts:
-            ts = STATS.get("last_time", "") or ""
-    except Exception as e:
-        print("me_last_event error:", e)
-    return jsonify({"ok": True, "candidate": cand or "", "ts": ts or ""})
+
 @app.get("/me/history")
 def me_history():
     """
@@ -3337,6 +3301,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -3298,7 +3298,56 @@ def me_dashboard():
         "creditsUsed": None,      # placeholder for future logic
         "creditsBalance": balance # may be None if not tracked
     })
-    
+
+# --- Admin: month usage grouped by user (for Director dashboard) ---
+@app.get("/__admin/usage-month")
+def admin_usage_month():
+    """
+    Returns counts of usage_events for the current calendar month, grouped by user_id.
+    """
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    sql = """
+        SELECT user_id, COUNT(*) AS cnt
+        FROM usage_events
+        WHERE ts >= date_trunc('month', now())
+        GROUP BY user_id
+        ORDER BY cnt DESC
+    """
+    sql_total = """
+        SELECT COUNT(*) AS total
+        FROM usage_events
+        WHERE ts >= date_trunc('month', now())
+    """
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        rows = []
+        total = 0
+        month_start = None
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT date_trunc('month', now())::timestamptz")
+                month_start = cur.fetchone()[0].isoformat()
+
+                cur.execute(sql)
+                for user_id, cnt in cur.fetchall():
+                    rows.append({"user_id": user_id, "count": int(cnt)})
+
+                cur.execute(sql_total)
+                total = int(cur.fetchone()[0])
+
+        return jsonify({"ok": True, "month_start": month_start, "total": total, "rows": rows})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            if conn:
+                DB_POOL.putconn(conn)
+        except Exception:
+            pass
+
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
@@ -3525,6 +3574,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

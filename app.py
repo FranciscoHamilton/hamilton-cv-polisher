@@ -3133,7 +3133,7 @@ def me_history_x():
 
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
-def me_diag():
+def me_diag_v2():
     try:
         uid = int(session.get("user_id") or 0)
     except Exception:
@@ -3357,6 +3357,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -2814,6 +2814,63 @@ def app_page():
         '})();</script></body>'
     )
     html = html.replace("</body>", skills_js)
+    # Inject "Uploading / Processing / Downloading" overlay + XHR download (safe quoting)
+    busy_inject = (
+        '<style>'
+        '#busyOverlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;z-index:9999;}'
+        '#busyBox{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:16px 18px;'
+        'border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}'
+        '#busyMsg{font-weight:600;}'
+        '.busyBar{height:3px;background:#e5e7eb;overflow:hidden;border-radius:2px;margin-top:8px}'
+        '.busyBar>div{width:30%;height:100%;animation:busy 1s linear infinite;background:#0ea5e9}'
+        '@keyframes busy{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}'
+        '</style>'
+        '<div id="busyOverlay"><div id="busyBox"><div id="busyMsg">Preparing…</div>'
+        '<div class="busyBar"><div></div></div></div></div>'
+        '<script>(function(){'
+        'var form=document.querySelector(\'form[action="/polish"]\')||document.querySelector(\'form[action^="/polish"]\');'
+        'if(!form)return;'
+        'var fileInput=form.querySelector(\'input[type="file"][name="cv"]\');'
+        'var overlay=document.getElementById("busyOverlay");'
+        'var msg=document.getElementById("busyMsg");'
+        'function show(t){if(overlay)overlay.style.display="block";if(msg)msg.textContent=t;}'
+        'function hide(){if(overlay)overlay.style.display="none";}'
+        'form.addEventListener("submit",function(ev){'
+        ' try{'
+        '  if(!fileInput||!fileInput.files||!fileInput.files[0])return;'
+        '  ev.preventDefault();'
+        '  var fd=new FormData(form);'
+        '  var xhr=new XMLHttpRequest();'
+        '  xhr.open("POST",form.getAttribute("action")||"/polish",true);'
+        '  xhr.responseType="blob";'
+        '  var sawDownload=false;'
+        '  show("Uploading…");'
+        '  if(xhr.upload){xhr.upload.onprogress=function(e){'
+        '    if(e.lengthComputable && e.loaded>=e.total){show("Processing…");}'
+        '  };}'
+        '  xhr.onprogress=function(){if(!sawDownload){show("Downloading…");sawDownload=true;}};'
+        '  xhr.onerror=function(){hide();form.submit();};'
+        '  xhr.onload=function(){'
+        '    try{'
+        '      if(xhr.status!==200){hide();form.submit();return;}'
+        '      var disp=xhr.getResponseHeader("Content-Disposition")||"";'
+        '      var m=/filename\\*=UTF-8\\\'\\\'([^;]+)|filename=\\"?([^\\"]+)\\"?/i.exec(disp)||[];'
+        '      var filename=(m[1]||m[2]||"polished_cv.docx");'
+        '      var blob=xhr.response;'
+        '      var url=URL.createObjectURL(blob);'
+        '      var a=document.createElement("a");a.href=url;'
+        '      try{filename=decodeURIComponent(filename);}catch(_){ }'
+        '      a.download=filename;'
+        '      document.body.appendChild(a);a.click();a.remove();'
+        '      setTimeout(function(){URL.revokeObjectURL(url);hide();},800);'
+        '    }catch(e){hide();form.submit();}'
+        '  };'
+        '  xhr.send(fd);'
+        ' }catch(e){hide();form.submit();}'
+        '});'
+        '})();</script></body>'
+    )
+    html = html.replace("</body>", busy_inject)
 
     # Return response
     resp = make_response(html)
@@ -3106,6 +3163,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

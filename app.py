@@ -2816,6 +2816,36 @@ def app_page():
     html = html.replace("</body>", skills_js)
     # Inject "Uploading / Processing / Downloading" overlay + XHR download (safe quoting)
     busy_inject = (
+            # Inject stats refresher: prefer /me/*, fallback to /stats (safe quoting)
+    stats_patch_js = (
+        '<script>(function(){'
+        'async function getJSON(u){try{const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw 0;return await r.json();}catch(_){return null;}}'
+        'window.refreshStats=async function(){'
+        ' try{'
+        '  const u=await getJSON("/me/usage");'
+        '  const l=await getJSON("/me/last-event");'
+        '  const s=await getJSON("/stats");'
+        '  var downloads = (u&&u.ok)?(u.month_usage||0):((s&&s.downloads_this_month)!==undefined?(s.downloads_this_month||0):((s&&s.downloads_month)||0));'
+        '  var elD=document.getElementById("downloadsMonth"); if(elD) elD.textContent = downloads;'
+        '  var cand=(l&&l.ok&&l.candidate)||(s&&s.last_candidate)||"—";'
+        '  var time=(l&&l.ok&&l.ts)||(s&&s.last_time)||"—";'
+        '  var elC=document.getElementById("lastCandidate"); if(elC) elC.textContent=cand;'
+        '  var elT=document.getElementById("lastTime"); if(elT) elT.textContent=time;'
+        '  // Credits (best-effort)'
+        '  if(s){'
+        '    var total = (s.credits_total!=null)?s.credits_total:(((s.paid_left||0)+(s.trial_left||0)));'
+        '    var left  = (s.total_left!=null)?s.total_left:total;'
+        '    var used  = (s.credits_used!=null)?s.credits_used:Math.max(0,(total-left));'
+        '    var elU=document.getElementById("creditsUsed"); if(elU && (total!=null)) elU.textContent = used+" / "+total;'
+        '  }'
+        ' }catch(e){console.log("refreshStats failed",e);}'
+        '};'
+        '// run once on load'
+        'setTimeout(function(){if(window.refreshStats)window.refreshStats();},50);'
+        '})();</script></body>'
+    )
+    html = html.replace("</body>", stats_patch_js)
+
         '<style>'
         '#busyOverlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;z-index:9999;}'
         '#busyBox{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:16px 18px;'
@@ -3163,6 +3193,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

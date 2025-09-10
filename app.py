@@ -2866,6 +2866,36 @@ def app_page():
             '})();</script></body>'
         )
     )
+# Inject Full History data loader (fires on first click)
+html = html.replace(
+    "</body>",
+    (
+        '<script>(function(){'
+        'var t=document.getElementById("historyToggle");'
+        'var h=document.getElementById("history");'
+        'var loaded=false;'
+        'async function load(){'
+        '  try{'
+        '    const r=await fetch("/me/history",{cache:"no-store"});'
+        '    const j=await r.json();'
+        '    var rows=j.history||[];'
+        '    if(!h) return;'
+        '    h.innerHTML = rows.length'
+        '      ? rows.map(function(it){'
+        '          return "<div class=\\"row\\" style=\\"padding:6px 0;border-bottom:1px solid var(--line)\\">" +'
+        '                 "<span class=\\"muted\\">"+(it.ts||"-")+"</span> — " +'
+        '                 "<strong>"+(it.candidate||"-")+"</strong> " +'
+        '                 "<span class=\\"muted\\">("+(it.filename||"-")+")</span>" +'
+        '                 "</div>";'
+        '        }).join("")'
+        '      : "<div class=\\"muted\\">(no history yet)</div>";'
+        '    loaded=true;'
+        '  }catch(e){ if(h) h.innerHTML="<div class=\\"muted\\">Could not load history.</div>"; }'
+        '}'
+        'if(t){ t.addEventListener("click", function(){ if(!loaded) load(); }); }'
+        '})();</script></body>'
+    )
+)
 
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store"
@@ -3024,6 +3054,91 @@ def skills_base_toggle():
         "base_disabled": sorted(SKILLS_CFG["base_disabled"], key=lambda s: s.lower()),
         "effective": sorted(_effective_skills(), key=lambda s: s.lower())
     })
+# ---------- Me (per-user) endpoints ----------
+@app.get("/me/usage")
+def me_usage():
+    # how many events this month for the logged-in user
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+    count = 0
+    if DB_POOL and uid:
+        try:
+            count = count_usage_month_db(uid)
+        except Exception as e:
+            print("me_usage error:", e)
+    return jsonify({"ok": True, "month_usage": int(count)})
+
+@app.get("/me/last-event")
+def me_last_event():
+    # last candidate + timestamp for the logged-in user
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+    cand = ""
+    ts = ""
+    try:
+        if DB_POOL and uid:
+            cand, ts = last_event_for_user(uid)
+        if not cand:
+            cand = STATS.get("last_candidate", "") or ""
+        if not ts:
+            ts = STATS.get("last_time", "") or ""
+    except Exception as e:
+        print("me_last_event error:", e)
+    return jsonify({"ok": True, "candidate": cand or "", "ts": ts or ""})
+@app.get("/me/history")
+def me_history():
+    """
+    Return recent usage rows for the logged-in user.
+    Shape: {"ok": True, "history": [{"ts": "...", "candidate": "...", "filename": "..."}]}
+    """
+    # Who's logged in?
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+
+    out = []
+    if DB_POOL and uid:
+        # Read this user's most recent usage from Postgres
+        conn = db_conn()
+        if conn:
+            try:
+                with conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT to_char(e.ts, 'YYYY-MM-DD HH24:MI:SS') AS ts,
+                                   COALESCE(e.candidate, '') AS candidate,
+                                   COALESCE(e.filename, '')  AS filename
+                              FROM usage_events e
+                             WHERE e.user_id = %s
+                             ORDER BY e.ts DESC
+                             LIMIT 100
+                        """, (uid,))
+                        rows = cur.fetchall()
+                        for ts, cand, fn in rows:
+                            out.append({"ts": ts, "candidate": cand, "filename": fn})
+            except Exception as e:
+                print("me_history DB error:", e)
+            finally:
+                try:
+                    db_put(conn)
+                except Exception:
+                    pass
+
+    # Fallback to legacy JSON (shared history) if DB is missing/empty
+    if not out:
+        for it in (STATS.get("history", []) or [])[-100:][::-1]:
+            out.append({
+                "ts": it.get("ts", ""),
+                "candidate": it.get("candidate", ""),
+                "filename": it.get("filename", ""),
+            })
+
+    return jsonify({"ok": True, "history": out})
 
 # ---------- Director routes ----------
 @app.get("/director")
@@ -3222,6 +3337,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

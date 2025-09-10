@@ -3179,6 +3179,37 @@ def me_credits():
         "total": None        # reserved for future credits model
     })
 
+# --- Admin utility: ensure the usage_events table exists (safe to run anytime) ---
+@app.get("/__admin/ensure-usage-events")
+def ensure_usage_events():
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    sql = """
+    CREATE TABLE IF NOT EXISTS usage_events (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        ts TIMESTAMPTZ DEFAULT now(),
+        candidate TEXT,
+        filename TEXT
+    )
+    """
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+        return jsonify({"ok": True, "created_or_exists": True})
+    except Exception as e:
+        # Return the error message for quick diagnosis
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            if conn:
+                DB_POOL.putconn(conn)
+        except Exception:
+            pass
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
@@ -3405,6 +3436,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

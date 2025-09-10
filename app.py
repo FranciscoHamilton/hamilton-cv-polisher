@@ -3130,6 +3130,16 @@ def me_history_x():
 
     return jsonify({"ok": True, "history": out})
 
+# --- Canonical per-user endpoints expected by the UI ---
+@app.get("/me/usage")
+def me_usage():
+    # Delegate to the existing implementation
+    return me_usage_x()
+
+@app.get("/me/history")
+def me_history():
+    # Delegate to the existing implementation
+    return me_history_x()
 
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
@@ -3357,6 +3367,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

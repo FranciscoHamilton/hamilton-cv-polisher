@@ -3348,6 +3348,70 @@ def admin_usage_month():
         except Exception:
             pass
 
+# --- Admin: recent usage events (for Director dashboard) ---
+@app.get("/__admin/recent-usage")
+def admin_recent_usage():
+    """
+    Returns the most recent usage events.
+    Query params:
+      - limit (int, optional): number of rows to return, default 50, max 200.
+    """
+    # Parse & clamp limit
+    try:
+        limit = int(request.args.get("limit", "50"))
+    except Exception:
+        limit = 50
+    limit = max(1, min(limit, 200))
+
+    # If we have a DB, read from usage_events
+    if DB_POOL:
+        sql = """
+            SELECT id, user_id, ts, candidate, filename
+            FROM usage_events
+            ORDER BY ts DESC
+            LIMIT %s
+        """
+        conn = None
+        try:
+            conn = DB_POOL.getconn()
+            rows = []
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql, (limit,))
+                    for _id, uid, ts, cand, fname in cur.fetchall():
+                        rows.append({
+                            "id": int(_id),
+                            "user_id": uid,
+                            "ts": (ts.isoformat() if ts else None),
+                            "candidate": cand or "",
+                            "filename": fname or ""
+                        })
+            return jsonify({"ok": True, "rows": rows, "source": "db"})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+        finally:
+            try:
+                if conn:
+                    DB_POOL.putconn(conn)
+            except Exception:
+                pass
+
+    # Fallback: legacy JSON history (if DB not initialized)
+    out = []
+    try:
+        for it in (STATS.get("history", []) or [])[::-1][:limit]:
+            out.append({
+                "id": None,
+                "user_id": None,
+                "ts": it.get("ts", ""),
+                "candidate": it.get("candidate", ""),
+                "filename": it.get("filename", "")
+            })
+    except Exception:
+        out = []
+
+    return jsonify({"ok": True, "rows": out, "source": "legacy"})
+
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
@@ -3574,6 +3638,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

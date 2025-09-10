@@ -2764,6 +2764,7 @@ def app_page():
     html = html.replace(
         "</body>",
         """
+        
 <script>
   (function(){
     var historyToggle = document.getElementById('historyToggle');
@@ -2780,6 +2781,89 @@ def app_page():
 </body>
         """
     )
+    # Inject Skills toggle + loader (no template edits)
+    html = html.replace(
+        "</body>",
+        """
+<script>
+  (function(){
+    var btn   = document.getElementById('skillsToggle');
+    var panel = document.getElementById('skillsCard');
+    var loaded = false;
+
+    async function loadSkills(){
+      try {
+        const r = await fetch('/skills', {cache: 'no-store'});
+        const j = await r.json();
+
+        // Unified A–Z list of effective skills
+        var all = (j.effective || []).slice().sort(function(a,b){return a.localeCompare(b);});
+        var allEl  = document.getElementById('skillsAll');
+        var hdrEl  = document.getElementById('skillsAllHeader');
+        if (allEl) {
+          allEl.style.display = 'block';
+          allEl.innerHTML = all.map(function(s){
+            return '<span class="chip" style="margin:4px 6px 0 0; display:inline-block">'+s+'</span>';
+          }).join('');
+        }
+        if (hdrEl) hdrEl.style.display = 'block';
+
+        // Optional: custom & built-in sections
+        var custEl = document.getElementById('customSkills');
+        if (custEl) {
+          var custom = (j.custom || []).slice().sort(function(a,b){return a.localeCompare(b);});
+          custEl.innerHTML = custom.length
+            ? custom.map(function(s){ return '<span class="chip" style="margin:4px 6px 0 0; display:inline-block">'+s+'</span>'; }).join('')
+            : '<span class="muted">(none)</span>';
+        }
+        var baseEl = document.getElementById('baseSkills');
+        if (baseEl) {
+          var disabled = new Set(j.base_disabled || []);
+          var base = (j.base || []).filter(function(s){ return !disabled.has(s); })
+                                   .sort(function(a,b){return a.localeCompare(b);});
+          baseEl.innerHTML = base.length
+            ? base.map(function(s){ return '<span class="chip" style="margin:4px 6px 0 0; display:inline-block">'+s+'</span>'; }).join('')
+            : '<span class="muted">(none)</span>';
+        }
+
+        loaded = true;
+      } catch(e){
+        console.log('skills load failed', e);
+        var allEl = document.getElementById('skillsAll');
+        if (allEl) allEl.innerHTML = '<span class="muted">Could not load skills.</span>';
+      }
+    }
+
+    // Toggle open/close, lazy-load on first open
+    if (btn && panel){
+      btn.addEventListener('click', async function(){
+        var show = (panel.style.display === 'none' || panel.style.display === '');
+        panel.style.display = show ? 'block' : 'none';
+        btn.textContent = show ? 'Hide' : 'Show';
+        if (show && !loaded) await loadSkills();
+      });
+    }
+
+    // Handle "Add skill"
+    var addForm = document.getElementById('skillAddForm');
+    if (addForm){
+      addForm.addEventListener('submit', async function(ev){
+        ev.preventDefault();
+        var inp = document.getElementById('skillInput');
+        var v = (inp && inp.value || '').trim();
+        if (!v) return;
+        try {
+          await fetch('/skills/custom/add', {
+            method: 'POST',
+            headers: {'Content-Type':'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({skill: v})
+          });
+          if (inp) inp.value = '';
+          loaded = false;
+          await loadSkills();
+        } catch(e){
+          console.log('add skill failed', e);
+        }
 
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store"
@@ -3071,6 +3155,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

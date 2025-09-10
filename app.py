@@ -2736,173 +2736,137 @@ APP_HTML = HTML
 
 @app.get("/app")
 def app_page():
-    # Render the page as usual
+    # Render template
     html = render_template_string(
-        APP_HTML,
+        HTML,
         show_director_link=bool(is_admin() or session.get("director"))
     )
 
-    # Inject a small Director button (safe quoting)
+    # Inject Director link (if admin/director)
     if is_admin() or session.get("director"):
-        director_inject = (
-            '<a href="/director/usage" class="dir-link" title="Director usage">Director</a>'
-            '<style>'
-            '.dir-link { position: fixed; right: 16px; bottom: 16px;'
-            ' padding: 8px 10px; border: 1px solid #e5e7eb; border-radius: 8px;'
-            ' background: #fff; color: #0f172a; text-decoration: none;'
-            ' box-shadow: 0 1px 2px rgba(0,0,0,0.06);'
-            ' font: 14px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }'
-            '.dir-link:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.12); }'
-            '</style>'
-            '</body>'
+        html = html.replace(
+            "</body>",
+            (
+                '<a href="/director/usage" class="dir-link" title="Director usage">Director</a>'
+                '<style>'
+                '.dir-link{position:fixed;right:16px;bottom:16px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;'
+                'background:#fff;color:#0f172a;text-decoration:none;box-shadow:0 1px 2px rgba(0,0,0,0.06);'
+                'font:14px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}'
+                '.dir-link:hover{box-shadow:0 2px 6px rgba(0,0,0,0.12)}'
+                '</style>'
+                '</body>'
+            )
         )
-        html = html.replace("</body>", director_inject)
 
-    # Inject Full History toggle script (safe quoting)
-    history_js = (
-        '<script>(function(){'
-        'var t=document.getElementById("historyToggle");'
-        'var h=document.getElementById("history");'
-        'if(!t||!h)return;'
-        't.addEventListener("click",function(){'
-        'var s=(h.style.display==="none"||h.style.display==="");'
-        'h.style.display=s?"block":"none";'
-        't.textContent=s?"Hide":"Show";'
-        'if(s&&window.refreshStats)window.refreshStats();'
-        '});'
-        '})();</script></body>'
+    # Inject Full History toggle
+    html = html.replace(
+        "</body>",
+        (
+            '<script>(function(){'
+            'var t=document.getElementById("historyToggle");'
+            'var h=document.getElementById("history");'
+            'if(!t||!h)return;'
+            't.addEventListener("click",function(){'
+            ' var s=(h.style.display==="none"||h.style.display==="");'
+            ' h.style.display=s?"block":"none";'
+            ' t.textContent=s?"Hide":"Show";'
+            ' if(s && typeof window.refreshStats==="function") window.refreshStats();'
+            '});'
+            '})();</script></body>'
+        )
     )
-    html = html.replace("</body>", history_js)
 
-    # Inject Skills toggle + loader (safe quoting)
-    skills_js = (
-        '<script>(function(){'
-        'var btn=document.getElementById("skillsToggle");'
-        'var panel=document.getElementById("skillsCard");'
-        'var loaded=false;'
-        'async function loadSkills(){try{'
-        ' const r=await fetch("/skills",{cache:"no-store"});'
-        ' const j=await r.json();'
-        ' var all=(j.effective||[]).slice().sort(function(a,b){return a.localeCompare(b);});'
-        ' var allEl=document.getElementById("skillsAll");'
-        ' var hdrEl=document.getElementById("skillsAllHeader");'
-        ' if(allEl){allEl.style.display="block";allEl.innerHTML=all.map(function(s){return "<span class=\\"chip\\" style=\\"margin:4px 6px 0 0; display:inline-block\\">"+s+"</span>";}).join("");}'
-        ' if(hdrEl){hdrEl.style.display="block";}'
-        ' var custEl=document.getElementById("customSkills");'
-        ' if(custEl){var custom=(j.custom||[]).slice().sort(function(a,b){return a.localeCompare(b);});'
-        '  custEl.innerHTML=custom.length?custom.map(function(s){return "<span class=\\"chip\\" style=\\"margin:4px 6px 0 0; display:inline-block\\">"+s+"</span>";}).join(""):"<span class=\\"muted\\">(none)</span>";}'
-        ' var baseEl=document.getElementById("baseSkills");'
-        ' if(baseEl){var disabled=new Set(j.base_disabled||[]);'
-        '  var base=(j.base||[]).filter(function(s){return !disabled.has(s);}).sort(function(a,b){return a.localeCompare(b);});'
-        '  baseEl.innerHTML=base.length?base.map(function(s){return "<span class=\\"chip\\" style=\\"margin:4px 6px 0 0; display:inline-block\\">"+s+"</span>";}).join(""):"<span class=\\"muted\\">(none)</span>";}'
-        ' loaded=true;'
-        '}catch(e){console.log("skills load failed",e);var allEl=document.getElementById("skillsAll");if(allEl)allEl.innerHTML="<span class=\\"muted\\">Could not load skills.</span>";}}'
-        'if(btn&&panel){btn.addEventListener("click",async function(){'
-        ' var show=(panel.style.display==="none"||panel.style.display==="");'
-        ' panel.style.display=show?"block":"none";'
-        ' btn.textContent=show?"Hide":"Show";'
-        ' if(show&&!loaded)await loadSkills();'
-        '});}'
-        'var addForm=document.getElementById("skillAddForm");'
-        'if(addForm){addForm.addEventListener("submit",async function(ev){ev.preventDefault();'
-        ' var inp=document.getElementById("skillInput");'
-        ' var v=(inp&&inp.value||"").trim();'
-        ' if(!v)return;'
-        ' try{await fetch("/skills/custom/add",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({skill:v})});'
-        ' if(inp)inp.value="";loaded=false;await loadSkills();}catch(e){console.log("add skill failed",e);}'
-        '});}'
-        '})();</script></body>'
+    # Inject Skills toggle + lazy loader
+    html = html.replace(
+        "</body>",
+        (
+            '<script>(function(){'
+            'var btn=document.getElementById("skillsToggle");'
+            'var panel=document.getElementById("skillsCard");'
+            'var loaded=false;'
+            'async function loadSkills(){try{'
+            ' const r=await fetch("/skills",{cache:"no-store"});'
+            ' const j=await r.json();'
+            ' var all=(j.effective||[]).slice().sort(function(a,b){return a.localeCompare(b)});'
+            ' var allEl=document.getElementById("skillsAll"); var hdr=document.getElementById("skillsAllHeader");'
+            ' if(allEl){allEl.style.display="block";allEl.innerHTML=all.map(s=>"<span class=\\"chip\\" style=\\"margin:4px 6px 0 0;display:inline-block\\">"+s+"</span>").join("")}'
+            ' if(hdr){hdr.style.display="block"}'
+            ' var cust=document.getElementById("customSkills");'
+            ' if(cust){var c=(j.custom||[]).slice().sort((a,b)=>a.localeCompare(b));'
+            '  cust.innerHTML=c.length?c.map(s=>"<span class=\\"chip\\" style=\\"margin:4px 6px 0 0;display:inline-block\\">"+s+"</span>").join(""):"<span class=\\"muted\\">(none)</span>"}'
+            ' var base=document.getElementById("baseSkills");'
+            ' if(base){var dis=new Set(j.base_disabled||[]);'
+            '  var b=(j.base||[]).filter(s=>!dis.has(s)).sort((a,b)=>a.localeCompare(b));'
+            '  base.innerHTML=b.length?b.map(s=>"<span class=\\"chip\\" style=\\"margin:4px 6px 0 0;display:inline-block\\">"+s+"</span>").join(""):"<span class=\\"muted\\">(none)</span>"}'
+            ' loaded=true;'
+            '}catch(e){var allEl=document.getElementById("skillsAll");if(allEl)allEl.innerHTML="<span class=\\"muted\\">Could not load skills.</span>";}}'
+            'if(btn&&panel){btn.addEventListener("click",async function(){'
+            ' var show=(panel.style.display==="none"||panel.style.display==="");'
+            ' panel.style.display=show?"block":"none";'
+            ' btn.textContent=show?"Hide":"Show";'
+            ' if(show && !loaded) await loadSkills();'
+            '});}'
+            'var addForm=document.getElementById("skillAddForm");'
+            'if(addForm){addForm.addEventListener("submit",async function(ev){ev.preventDefault();'
+            ' var inp=document.getElementById("skillInput"); var v=(inp&&inp.value||"").trim(); if(!v)return;'
+            ' try{await fetch("/skills/custom/add",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({skill:v})});'
+            ' if(inp) inp.value=""; loaded=false; await loadSkills();}catch(e){console.log("add skill failed",e);}'
+            '});}'
+            '})();</script></body>'
+        )
     )
-    html = html.replace("</body>", skills_js)
-    # Inject "Uploading / Processing / Downloading" overlay + XHR download (safe quoting)
-    busy_inject = (
-            # Inject stats refresher: prefer /me/*, fallback to /stats (safe quoting)
-    stats_patch_js = (
-        '<script>(function(){'
-        'async function getJSON(u){try{const r=await fetch(u,{cache:"no-store"});if(!r.ok)throw 0;return await r.json();}catch(_){return null;}}'
-        'window.refreshStats=async function(){'
-        ' try{'
-        '  const u=await getJSON("/me/usage");'
-        '  const l=await getJSON("/me/last-event");'
-        '  const s=await getJSON("/stats");'
-        '  var downloads = (u&&u.ok)?(u.month_usage||0):((s&&s.downloads_this_month)!==undefined?(s.downloads_this_month||0):((s&&s.downloads_month)||0));'
-        '  var elD=document.getElementById("downloadsMonth"); if(elD) elD.textContent = downloads;'
-        '  var cand=(l&&l.ok&&l.candidate)||(s&&s.last_candidate)||"—";'
-        '  var time=(l&&l.ok&&l.ts)||(s&&s.last_time)||"—";'
-        '  var elC=document.getElementById("lastCandidate"); if(elC) elC.textContent=cand;'
-        '  var elT=document.getElementById("lastTime"); if(elT) elT.textContent=time;'
-        '  // Credits (best-effort)'
-        '  if(s){'
-        '    var total = (s.credits_total!=null)?s.credits_total:(((s.paid_left||0)+(s.trial_left||0)));'
-        '    var left  = (s.total_left!=null)?s.total_left:total;'
-        '    var used  = (s.credits_used!=null)?s.credits_used:Math.max(0,(total-left));'
-        '    var elU=document.getElementById("creditsUsed"); if(elU && (total!=null)) elU.textContent = used+" / "+total;'
-        '  }'
-        ' }catch(e){console.log("refreshStats failed",e);}'
-        '};'
-        '// run once on load'
-        'setTimeout(function(){if(window.refreshStats)window.refreshStats();},50);'
-        '})();</script></body>'
-    )
-    html = html.replace("</body>", stats_patch_js)
 
-        '<style>'
-        '#busyOverlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;z-index:9999;}'
-        '#busyBox{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:16px 18px;'
-        'border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.2);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}'
-        '#busyMsg{font-weight:600;}'
-        '.busyBar{height:3px;background:#e5e7eb;overflow:hidden;border-radius:2px;margin-top:8px}'
-        '.busyBar>div{width:30%;height:100%;animation:busy 1s linear infinite;background:#0ea5e9}'
-        '@keyframes busy{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}'
-        '</style>'
-        '<div id="busyOverlay"><div id="busyBox"><div id="busyMsg">Preparing…</div>'
-        '<div class="busyBar"><div></div></div></div></div>'
-        '<script>(function(){'
-        'var form=document.querySelector(\'form[action="/polish"]\')||document.querySelector(\'form[action^="/polish"]\');'
-        'if(!form)return;'
-        'var fileInput=form.querySelector(\'input[type="file"][name="cv"]\');'
-        'var overlay=document.getElementById("busyOverlay");'
-        'var msg=document.getElementById("busyMsg");'
-        'function show(t){if(overlay)overlay.style.display="block";if(msg)msg.textContent=t;}'
-        'function hide(){if(overlay)overlay.style.display="none";}'
-        'form.addEventListener("submit",function(ev){'
-        ' try{'
-        '  if(!fileInput||!fileInput.files||!fileInput.files[0])return;'
-        '  ev.preventDefault();'
-        '  var fd=new FormData(form);'
-        '  var xhr=new XMLHttpRequest();'
-        '  xhr.open("POST",form.getAttribute("action")||"/polish",true);'
-        '  xhr.responseType="blob";'
-        '  var sawDownload=false;'
-        '  show("Uploading…");'
-        '  if(xhr.upload){xhr.upload.onprogress=function(e){'
-        '    if(e.lengthComputable && e.loaded>=e.total){show("Processing…");}'
-        '  };}'
-        '  xhr.onprogress=function(){if(!sawDownload){show("Downloading…");sawDownload=true;}};'
-        '  xhr.onerror=function(){hide();form.submit();};'
-        '  xhr.onload=function(){'
-        '    try{'
-        '      if(xhr.status!==200){hide();form.submit();return;}'
-        '      var disp=xhr.getResponseHeader("Content-Disposition")||"";'
-        '      var m=/filename\\*=UTF-8\\\'\\\'([^;]+)|filename=\\"?([^\\"]+)\\"?/i.exec(disp)||[];'
-        '      var filename=(m[1]||m[2]||"polished_cv.docx");'
-        '      var blob=xhr.response;'
-        '      var url=URL.createObjectURL(blob);'
-        '      var a=document.createElement("a");a.href=url;'
-        '      try{filename=decodeURIComponent(filename);}catch(_){ }'
-        '      a.download=filename;'
-        '      document.body.appendChild(a);a.click();a.remove();'
-        '      setTimeout(function(){URL.revokeObjectURL(url);hide();},800);'
-        '    }catch(e){hide();form.submit();}'
-        '  };'
-        '  xhr.send(fd);'
-        ' }catch(e){hide();form.submit();}'
-        '});'
-        '})();</script></body>'
+    # Inject Uploading/Processing/Downloading overlay + XHR downloader
+    html = html.replace(
+        "</body>",
+        (
+            '<style>'
+            '#busyOverlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;z-index:9999}'
+            '#busyBox{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:16px 18px;border-radius:12px;'
+            ' box-shadow:0 10px 30px rgba(0,0,0,.2);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}'
+            '#busyMsg{font-weight:600}.busyBar{height:3px;background:#e5e7eb;overflow:hidden;border-radius:2px;margin-top:8px}'
+            '.busyBar>div{width:30%;height:100%;animation:busy 1s linear infinite;background:#0ea5e9}'
+            '@keyframes busy{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}'
+            '</style>'
+            '<div id="busyOverlay"><div id="busyBox"><div id="busyMsg">Preparing…</div>'
+            '<div class="busyBar"><div></div></div></div></div>'
+            '<script>(function(){'
+            'var form=document.querySelector(\'form[action="/polish"]\')||document.querySelector(\'form[action^="/polish"]\');'
+            'if(!form)return;'
+            'var fileInput=form.querySelector(\'input[type="file"][name="cv"]\');'
+            'var overlay=document.getElementById("busyOverlay");var msg=document.getElementById("busyMsg");'
+            'function show(t){if(overlay)overlay.style.display="block";if(msg)msg.textContent=t;}'
+            'function hide(){if(overlay)overlay.style.display="none";}'
+            'form.addEventListener("submit",function(ev){'
+            ' try{'
+            '  if(!fileInput||!fileInput.files||!fileInput.files[0])return;'
+            '  ev.preventDefault();'
+            '  var fd=new FormData(form);'
+            '  var xhr=new XMLHttpRequest();'
+            '  xhr.open("POST",form.getAttribute("action")||"/polish",true);'
+            '  xhr.responseType="blob";'
+            '  var sawDownload=false;'
+            '  show("Uploading…");'
+            '  if(xhr.upload){xhr.upload.onprogress=function(e){if(e.lengthComputable&&e.loaded>=e.total){show("Processing…");}}}'
+            '  xhr.onprogress=function(){if(!sawDownload){show("Downloading…");sawDownload=true;}};'
+            '  xhr.onerror=function(){hide();form.submit();};'
+            '  xhr.onload=function(){try{'
+            '    if(xhr.status!==200){hide();form.submit();return;}'
+            '    var disp=xhr.getResponseHeader("Content-Disposition")||"";'
+            '    var m=/filename\\*=UTF-8\\\'\\\'([^;]+)|filename=\\"?([^\\"]+)\\"?/i.exec(disp);'
+            '    var name=(m&&decodeURIComponent(m[1]||m[2]||"polished_cv.docx"))||"polished_cv.docx";'
+            '    var blob=xhr.response;'
+            '    var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;'
+            '    document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();hide();},100);'
+            '    if(window.refreshStats) setTimeout(window.refreshStats, 300);'
+            '  }catch(_){hide();form.submit();}};'
+            '  xhr.send(fd);'
+            ' }catch(_){hide();form.submit();}'
+            '});'
+            '})();</script></body>'
+        )
     )
-    html = html.replace("</body>", busy_inject)
 
-    # Return response
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -3193,6 +3157,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

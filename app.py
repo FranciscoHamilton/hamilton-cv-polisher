@@ -3210,6 +3210,49 @@ def ensure_usage_events():
                 DB_POOL.putconn(conn)
         except Exception:
             pass
+# --- Admin utility: insert a mock usage event for the current user (for testing only) ---
+@app.get("/__admin/mock-usage")
+def admin_mock_usage():
+    """
+    Inserts a single usage_events row for the currently logged-in user.
+
+    Query params (optional):
+      - candidate: defaults to 'Mock Candidate'
+      - filename:  defaults to 'mock.docx'
+
+    Example:
+      /__admin/mock-usage?candidate=John%20Doe&filename=demo.docx
+    """
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+
+    if not uid:
+        return jsonify({"ok": False, "error": "No user_id in session (log in first)"}), 400
+
+    candidate = request.args.get("candidate", "Mock Candidate")
+    filename  = request.args.get("filename", "mock.docx")
+
+    sql = "INSERT INTO usage_events (user_id, candidate, filename) VALUES (%s, %s, %s)"
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (uid, candidate, filename))
+        return jsonify({"ok": True, "inserted": {"user_id": uid, "candidate": candidate, "filename": filename}})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            if conn:
+                DB_POOL.putconn(conn)
+        except Exception:
+            pass
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
@@ -3436,6 +3479,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

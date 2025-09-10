@@ -3253,6 +3253,52 @@ def admin_mock_usage():
                 DB_POOL.putconn(conn)
         except Exception:
             pass
+# --- Canonical per-user dashboard payload (feeds the four tiles in one call) ---
+
+@app.get("/me/dashboard")
+def me_dashboard():
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+
+    # 1) Downloads this month (per user)
+    month_usage = 0
+    try:
+        month_usage = int(count_usage_month_db(uid)) if (DB_POOL and uid) else 0
+    except Exception:
+        try:
+            month_usage = int(get_user_month_usage(uid)) if uid else 0
+        except Exception:
+            month_usage = 0
+
+    # 2) Last event (candidate + timestamp)
+    last_candidate, last_ts = "", ""
+    try:
+        if uid:
+            c, t = last_event_for_user(uid)
+            last_candidate = c or ""
+            last_ts = t or ""
+    except Exception:
+        pass
+
+    # 3) Credits (placeholder: show trial_credits if present)
+    balance = None
+    try:
+        b = session.get("trial_credits")
+        balance = int(b) if b is not None else None
+    except Exception:
+        balance = None
+
+    return jsonify({
+        "ok": True,
+        "downloadsMonth": month_usage,
+        "lastCandidate": last_candidate,
+        "lastTime": last_ts,
+        "creditsUsed": None,      # placeholder for future logic
+        "creditsBalance": balance # may be None if not tracked
+    })
+    
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
@@ -3479,6 +3525,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

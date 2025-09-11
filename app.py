@@ -3546,6 +3546,65 @@ def admin_create_db_user():
         return jsonify({"ok": True, "id": (row[0] if row else None), "username": u})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+# --- Admin utility: enable/disable a user (protect 'admin') ---
+@app.get("/__admin/set-user-active")
+def admin_set_user_active():
+    """
+    Usage (as admin/director):
+      /__admin/set-user-active?user_id=N&active=1   -> enable
+      /__admin/set-user-active?user_id=N&active=0   -> disable
+
+    Hard rule: the 'admin' account cannot be enabled/disabled via this route.
+    """
+    # guard
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    # params
+    try:
+        uid = int(request.args.get("user_id") or "0")
+        active_raw = request.args.get("active")
+        if active_raw is None:
+            return jsonify({"ok": False, "error": "missing active (0|1)"}), 400
+        active_val = 1 if str(active_raw) in ("1", "true", "True") else 0
+    except Exception:
+        return jsonify({"ok": False, "error": "bad user_id/active"}), 400
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
+
+    # fetch target
+    try:
+        row = db_query_one("SELECT username FROM users WHERE id=%s", (uid,))
+        if not row:
+            return jsonify({"ok": False, "error": "user not found"}), 404
+        target_username = (row[0] or "").strip().lower()
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+    # hard protect 'admin' (cannot be toggled)
+    if target_username == "admin":
+        return jsonify({
+            "ok": False,
+            "error": "cannot modify 'admin' via this route",
+            "forbidden_admin_target": True
+        }), 403
+
+    # apply
+    try:
+        ok = db_execute("UPDATE users SET active=%s WHERE id=%s", (active_val, uid))
+        if not ok:
+            return jsonify({"ok": False, "error": "update failed"}), 500
+        return jsonify({"ok": True, "user_id": uid, "username": target_username, "active": bool(active_val)})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500        
 # --- Canonical per-user dashboard payload (feeds the four tiles in one call) ---
 
 @app.get("/me/dashboard")
@@ -4373,6 +4432,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

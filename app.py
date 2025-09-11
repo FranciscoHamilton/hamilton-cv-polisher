@@ -2127,6 +2127,13 @@ def do_login():
     if user == APP_ADMIN_USER and pw == APP_ADMIN_PASS:
         session["authed"] = True
         session["user"] = user
+        # assign stable numeric user_id for legacy admin
+        try:
+            import hashlib
+            uname = (session.get("user") or "").strip().lower()
+            session["user_id"] = int(hashlib.sha1(uname.encode("utf-8")).hexdigest()[:8], 16)
+        except Exception:
+            session["user_id"] = 0
         return redirect(url_for("app_page"))
 
     # 3) Legacy users.json fallback (until we migrate)
@@ -2134,6 +2141,16 @@ def do_login():
     if u and u.get("active", True) and pw == u.get("password", ""):
         session["authed"] = True
         session["user"] = user
+        # assign stable numeric user_id (prefer id in users.json, else hash of username)
+        try:
+            import hashlib
+            uid = u.get("id")
+            if uid is None:
+                uname = (session.get("user") or "").strip().lower()
+                uid = int(hashlib.sha1(uname.encode("utf-8")).hexdigest()[:8], 16)
+            session["user_id"] = int(uid)
+        except Exception:
+            session["user_id"] = 0
         return redirect(url_for("app_page"))
 
     # Fail
@@ -3900,6 +3917,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

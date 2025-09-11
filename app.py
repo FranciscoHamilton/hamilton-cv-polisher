@@ -3185,39 +3185,48 @@ def me_history():
 @app.get("/me/credits")
 def me_credits():
     """
-    Placeholder credits API.
-    - used: number of polishes this month for the current user (proxy for credits used)
-    - balance: remaining trial_credits from the session, if tracked
+    Credits info for the current user.
+    - used: number of polishes this month (proxy until we track per-use debits in ledger)
+    - balance: SUM(delta) from credits_ledger for this user (real balance)
     - total: reserved for future (None for now)
     """
+    # Who am I?
     try:
         uid = int(session.get("user_id") or 0)
     except Exception:
         uid = 0
 
-    # used = month usage from DB if possible (safe fallbacks)
+    # used = month usage (safe fallbacks)
     try:
         used = int(count_usage_month_db(uid)) if (DB_POOL and uid) else 0
     except Exception:
-        # If that helper isn't available, fall back to the legacy helper or 0
         try:
             used = int(get_user_month_usage(uid)) if uid else 0
         except Exception:
             used = 0
 
-    # trial credits balance from session (may be None if not used in your app)
-    try:
-        balance = session.get("trial_credits")
-        balance = int(balance) if balance is not None else None
-    except Exception:
-        balance = None
+    # balance = SUM(delta) from credits_ledger (real balance)
+    balance = None
+    if DB_POOL and uid:
+        try:
+            row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid,))
+            balance = int(row[0]) if row else 0
+        except Exception:
+            balance = None
+    else:
+        # legacy fallback (e.g., trial_credits in session)
+        try:
+            tmp = session.get("trial_credits")
+            balance = int(tmp) if tmp is not None else None
+        except Exception:
+            balance = None
 
     return jsonify({
         "ok": True,
         "user_id": uid or None,
         "used": used,
-        "balance": balance,  # may be None if not tracked
-        "total": None        # reserved for future credits model
+        "balance": balance,   # real credits balance from ledger
+        "total": None         # reserved for future credits model
     })
 
 # --- Admin utility: ensure the usage_events table exists (safe to run anytime) ---
@@ -4126,6 +4135,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

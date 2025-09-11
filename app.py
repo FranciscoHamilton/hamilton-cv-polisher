@@ -3604,7 +3604,65 @@ def admin_set_user_active():
             return jsonify({"ok": False, "error": "update failed"}), 500
         return jsonify({"ok": True, "user_id": uid, "username": target_username, "active": bool(active_val)})
     except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500        
+        return jsonify({"ok": False, "error": str(e)}), 500    
+
+# --- Admin utility: ensure the orgs schema exists (safe to run anytime) ---
+@app.get("/__admin/ensure-orgs-schema")
+def ensure_orgs_schema():
+    """
+    Creates the minimal organisation layer:
+      - orgs table (id, name UNIQUE NOT NULL)
+      - users.org_id column (if missing)
+      - usage_events.org_id column (if missing)
+      - helpful indexes
+
+    This does NOT assign users to orgs yet (that’s the next steps).
+    """
+    # Access guard: allow only director/admin sessions
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    sql_statements = [
+        # Orgs table
+        """
+        CREATE TABLE IF NOT EXISTS orgs (
+            id   SERIAL PRIMARY KEY,
+            name TEXT UNIQUE NOT NULL
+        );
+        """,
+        # Users -> org_id
+        "ALTER TABLE IF EXISTS users ADD COLUMN IF NOT EXISTS org_id INTEGER;",
+        # usage_events -> org_id
+        "ALTER TABLE IF EXISTS usage_events ADD COLUMN IF NOT EXISTS org_id INTEGER;",
+        # Indexes (no FKs yet to avoid locking surprises)
+        "CREATE INDEX IF NOT EXISTS idx_users_org_id ON users(org_id);",
+        "CREATE INDEX IF NOT EXISTS idx_usage_events_org_id ON usage_events(org_id);"
+    ]
+
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        with conn:
+            with conn.cursor() as cur:
+                for stmt in sql_statements:
+                    cur.execute(stmt)
+        return jsonify({"ok": True, "created_or_exists": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            if conn:
+                DB_POOL.putconn(conn)
+        except Exception:
+            pass
 # --- Canonical per-user dashboard payload (feeds the four tiles in one call) ---
 
 @app.get("/me/dashboard")
@@ -4432,6 +4490,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

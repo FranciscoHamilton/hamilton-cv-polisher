@@ -3446,6 +3446,53 @@ def admin_mock_usage():
         except Exception:
             pass
 
+# --- Admin utility: set a user's credits balance to an exact value ---
+@app.get("/__admin/set-credits")
+def admin_set_credits():
+    # guard: only admin/director
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    # Params
+    try:
+        uid = int(request.args.get("user_id") or "0")
+        target = int(request.args.get("balance") or "0")
+    except Exception:
+        return jsonify({"ok": False, "error": "bad user_id or balance"}), 400
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
+
+    reason = (request.args.get("reason") or "adjust").strip()
+
+    # Compute delta = target - current
+    cur_row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid,))
+    current = int(cur_row[0]) if cur_row else 0
+    diff = target - current
+    if diff == 0:
+        return jsonify({"ok": True, "user_id": uid, "balance": current, "changed": False})
+
+    # Apply adjustment
+    try:
+        ok = db_execute(
+            "INSERT INTO credits_ledger (user_id, delta, reason, ext_ref) VALUES (%s,%s,%s,%s)",
+            (uid, diff, reason, "set-credits"),
+        )
+        if not ok:
+            return jsonify({"ok": False, "error": "insert failed"}), 500
+        # new balance
+        new_row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid,))
+        new_bal = int(new_row[0]) if new_row else current + diff
+        return jsonify({"ok": True, "user_id": uid, "old_balance": current, "new_balance": new_bal, "delta": diff})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 # --- Admin utility: create & list DB users (for quick testing) ---
 @app.get("/__admin/list-db-users")
 def admin_list_db_users():
@@ -4177,6 +4224,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

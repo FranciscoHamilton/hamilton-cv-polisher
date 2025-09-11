@@ -3798,7 +3798,7 @@ def admin_dashboard():
     try:
         conn = DB_POOL.getconn()
 
-        # --- Counts this month by user ---
+        # Month-by-user counts
         with conn:
             with conn.cursor() as cur:
                 cur.execute("""
@@ -3811,7 +3811,7 @@ def admin_dashboard():
                 raw_month = cur.fetchall()
                 month_total = sum(int(r[1]) for r in raw_month) if raw_month else 0
 
-        # --- Recent events (limit) ---
+        # Recent events
         with conn:
             with conn.cursor() as cur:
                 cur.execute("""
@@ -3822,7 +3822,7 @@ def admin_dashboard():
                 """, (limit,))
                 raw_recent = cur.fetchall()
 
-        # Collect user_ids used in either list
+        # Collect referenced user_ids
         uids = set()
         for r in raw_month or []:
             if r[0] is not None:
@@ -3841,7 +3841,7 @@ def admin_dashboard():
                     for row in cur.fetchall():
                         name_map[int(row[0])] = row[1] or ""
 
-        # Map user_id -> balance (SUM(delta))
+        # Map user_id -> balance
         bal_map = {}
         if uid_list:
             with conn:
@@ -4364,6 +4364,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -3312,6 +3312,60 @@ def admin_mock_usage():
                 DB_POOL.putconn(conn)
         except Exception:
             pass
+
+# --- Admin utility: create & list DB users (for quick testing) ---
+@app.get("/__admin/list-db-users")
+def admin_list_db_users():
+    # guard: only admin/director
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    rows = db_query_all("SELECT id, username, COALESCE(active, TRUE) FROM users ORDER BY id ASC")
+    users = [{"id": r[0], "username": r[1], "active": bool(r[2])} for r in rows]
+    return jsonify({"ok": True, "users": users})
+
+@app.get("/__admin/create-db-user")
+def admin_create_db_user():
+    """
+    QUICK helper for dev: create a DB user.
+    Usage (while logged in as admin): /__admin/create-db-user?u=alice&p=secret
+    """
+    # guard: only admin/director
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    u = (request.args.get("u") or "").strip()
+    p = request.args.get("p") or ""
+    if not u or not p:
+        return jsonify({"ok": False, "error": "missing u or p"}), 400
+
+    # already exists?
+    row = db_query_one("SELECT id FROM users WHERE username=%s", (u,))
+    if row:
+        return jsonify({"ok": False, "error": "user exists", "id": row[0]}), 409
+
+    try:
+        pw_hash = generate_password_hash(p)
+        ok = db_execute(
+            "INSERT INTO users (username, password_hash, active) VALUES (%s,%s,%s)",
+            (u, pw_hash, True),
+        )
+        if not ok:
+            return jsonify({"ok": False, "error": "insert failed"}), 500
+        row = db_query_one("SELECT id FROM users WHERE username=%s", (u,))
+        return jsonify({"ok": True, "id": (row[0] if row else None), "username": u})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 # --- Canonical per-user dashboard payload (feeds the four tiles in one call) ---
 
 @app.get("/me/dashboard")
@@ -3917,6 +3971,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

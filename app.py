@@ -250,24 +250,75 @@ def last_event_for_user(user_id):
         return (None, None)
     return (row[0] or None, row[1] or None)
 
-def log_usage_event(user_id: int, filename: str, candidate: str):
-    """Record one polish in Postgres for this user (no-op if DB missing)."""
-    if not user_id:
-        return
+def log_usage_event(user_id: int, filename: str, candidate: str) -> bool:
+    """
+    Insert a usage_events row for this user.
+    If the user has an org_id, store it too.
+    """
     try:
+        uid = int(user_id or 0)
+    except Exception:
+        uid = 0
+    if not (DB_POOL and uid):
+        return False
+    try:
+        # sanitize a bit
         fn = (filename or "")[:200]
         cand = (candidate or "")[:200]
-        db_execute(
-            """
-            INSERT INTO usage_events (user_id, filename, candidate)
-            VALUES (%s,%s,%s)
-            """,
-            (user_id, fn, cand),
-        )
+
+        # get org (if any)
+        row = db_query_one("SELECT org_id FROM users WHERE id=%s", (uid,))
+        oid = int(row[0]) if row and row[0] is not None else None
+
+        if oid:
+            return db_execute(
+                "INSERT INTO usage_events (user_id, ts, candidate, filename, org_id) VALUES (%s, now(), %s, %s, %s)",
+                (uid, cand, fn, oid),
+            )
+        else:
+            return db_execute(
+                "INSERT INTO usage_events (user_id, ts, candidate, filename) VALUES (%s, now(), %s, %s)",
+                (uid, cand, fn),
+            )
     except Exception as e:
         # don't break the app if DB insert fails
         print("log_usage_event failed:", e)
+        return False
 
+def credits_add(user_id: int, delta: int, reason: str = "polish", ext_ref: str = "") -> bool:
+    """
+    Append a row to credits_ledger for this user (positive = grant, negative = charge).
+    If the user has an org_id, store it too.
+    """
+    try:
+        uid = int(user_id or 0)
+    except Exception:
+        uid = 0
+    if not (DB_POOL and uid):
+        return False
+    try:
+        # look up org for this user (if any)
+        row = db_query_one("SELECT org_id FROM users WHERE id=%s", (uid,))
+        oid = int(row[0]) if row and row[0] is not None else None
+
+        # sanitize
+        d = int(delta)
+        r = (reason or "")[:50]
+        x = (ext_ref or "")[:200]
+
+        if oid:
+            return db_execute(
+                "INSERT INTO credits_ledger (user_id, delta, reason, ext_ref, org_id) VALUES (%s,%s,%s,%s,%s)",
+                (uid, d, r, x, oid),
+            )
+        else:
+            return db_execute(
+                "INSERT INTO credits_ledger (user_id, delta, reason, ext_ref) VALUES (%s,%s,%s,%s)",
+                (uid, d, r, x),
+            )
+    except Exception as e:
+        print("credits_add failed:", e)
+        return False
 
 def count_usage_month_db(user_id: int) -> int:
     """
@@ -4619,6 +4670,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

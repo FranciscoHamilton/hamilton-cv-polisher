@@ -3788,6 +3788,44 @@ def admin_usage_month():
         except Exception:
             pass
 
+# --- Admin: create an organisation (e.g., "Hamilton") ---
+@app.get("/__admin/create-org")
+def admin_create_org():
+    """
+    Usage (admin only):
+      /__admin/create-org?name=Hamilton
+    Returns: { ok, org_id, already? }
+    """
+    # guard: admin only
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_admin = bool(session.get("is_admin")) or (uname == "admin")
+    except Exception:
+        is_admin = False
+    if not is_admin:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    name = (request.args.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "missing name"}), 400
+
+    # create if missing; return existing id if present
+    try:
+        row = db_query_one("SELECT id FROM orgs WHERE name=%s", (name,))
+        if row:
+            return jsonify({"ok": True, "org_id": int(row[0]), "already": True})
+
+        ok = db_execute("INSERT INTO orgs (name) VALUES (%s)", (name,))
+        if not ok:
+            return jsonify({"ok": False, "error": "insert failed"}), 500
+
+        row = db_query_one("SELECT id FROM orgs WHERE name=%s", (name,))
+        return jsonify({"ok": True, "org_id": int(row[0]) if row else None})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 # --- Admin: recent usage events (for Director dashboard) ---
 @app.get("/__admin/recent-usage")
 def admin_recent_usage():
@@ -4490,6 +4528,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -4169,6 +4169,32 @@ def polish():
         if not text or len(text.strip()) < 30:
             abort(400, "Couldn't read enough text. If it's a scanned PDF, please use a DOCX or an OCRed PDF.")
 
+        # --- Credits check: block if no balance (admin bypasses) ---
+        try:
+            uid_check = int(session.get("user_id") or 0)
+        except Exception:
+            uid_check = 0
+
+        can_bypass = False
+        try:
+            # If you have the helper, this will allow true admin to bypass
+            can_bypass = (session.get("user","").strip().lower() == "admin") or bool(session.get("is_admin"))
+        except Exception:
+            pass
+
+        if DB_POOL and uid_check > 0 and not can_bypass:
+            bal = None
+            try:
+                row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid_check,))
+                bal = int(row[0]) if row else 0
+            except Exception as e:
+                # If balance check fails, don't block polishing; just log
+                print("credits balance check failed:", e)
+                bal = None
+
+            if bal is not None and bal <= 0:
+                abort(402, "No credits remaining for this account. Please top up to continue.")
+
         # ---- Polishing logic (unchanged) ----
         data = ai_or_heuristic_structuring(text)
         data["skills"] = extract_top_skills(text)  # keywords-only list as before
@@ -4226,6 +4252,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

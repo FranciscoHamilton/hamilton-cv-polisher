@@ -3748,11 +3748,13 @@ def admin_recent_usage():
 @app.get("/__admin/dashboard")
 def admin_dashboard():
     """
-    One-call payload for Director view:
-      - month: per-user counts for current month + total
-      - recent: last N events (default 50, max 200)
-    Query params:
-      - limit (int, optional): number of recent events (default 50, max 200)
+    Returns:
+      {
+        ok: true,
+        source: "db" | "legacy",
+        month: { total: int, rows: [{ user_id, username, count, balance }] },
+        recent: [{ ts, user_id, username, candidate, filename }]
+      }
     """
     # Access guard: allow only director/admin sessions
     try:
@@ -3770,14 +3772,15 @@ def admin_dashboard():
         limit = 50
     limit = max(1, min(limit, 200))
 
-    # If DB not available, return legacy-only recent history
+    # Legacy path if no DB
     if not DB_POOL:
         out = []
         try:
             for it in (STATS.get("history", []) or [])[::-1][:limit]:
                 out.append({
-                    "id": None, "user_id": None,
                     "ts": it.get("ts", ""),
+                    "user_id": None,
+                    "username": "",
                     "candidate": it.get("candidate", ""),
                     "filename": it.get("filename", "")
                 })
@@ -3786,61 +3789,98 @@ def admin_dashboard():
         return jsonify({
             "ok": True,
             "source": "legacy",
-            "month": {"total": len(out), "rows": []},
+            "month": {"total": int(STATS.get("downloads", 0)), "rows": []},
             "recent": out
         })
 
-    # DB path: gather month summary + recent
+    # DB path
     conn = None
     try:
         conn = DB_POOL.getconn()
-        month_rows, month_total, month_start = [], 0, None
-        recent_rows = []
+
+        # --- Counts this month by user ---
         with conn:
             with conn.cursor() as cur:
-                # Month start for reference
-                cur.execute("SELECT date_trunc('month', now())::timestamptz")
-                month_start = cur.fetchone()[0].isoformat()
-
-                # Per-user counts this month
                 cur.execute("""
                     SELECT user_id, COUNT(*) AS cnt
                     FROM usage_events
-                    WHERE ts >= date_trunc('month', now())
+                    WHERE date_trunc('month', ts) = date_trunc('month', now())
                     GROUP BY user_id
                     ORDER BY cnt DESC
                 """)
-                for uid, cnt in cur.fetchall():
-                    month_rows.append({"user_id": uid, "count": int(cnt)})
+                raw_month = cur.fetchall()
+                month_total = sum(int(r[1]) for r in raw_month) if raw_month else 0
 
-                # Total this month
+        # --- Recent events (limit) ---
+        with conn:
+            with conn.cursor() as cur:
                 cur.execute("""
-                    SELECT COUNT(*) AS total
-                    FROM usage_events
-                    WHERE ts >= date_trunc('month', now())
-                """)
-                month_total = int(cur.fetchone()[0])
-
-                # Recent events
-                cur.execute("""
-                    SELECT id, user_id, ts, candidate, filename
+                    SELECT ts, user_id, candidate, filename
                     FROM usage_events
                     ORDER BY ts DESC
                     LIMIT %s
                 """, (limit,))
-                for _id, uid, ts, cand, fname in cur.fetchall():
-                    recent_rows.append({
-                        "id": int(_id),
-                        "user_id": uid,
-                        "ts": (ts.isoformat() if ts else None),
-                        "candidate": cand or "",
-                        "filename": fname or ""
-                    })
+                raw_recent = cur.fetchall()
+
+        # Collect user_ids used in either list
+        uids = set()
+        for r in raw_month or []:
+            if r[0] is not None:
+                uids.add(int(r[0]))
+        for r in raw_recent or []:
+            if r[1] is not None:
+                uids.add(int(r[1]))
+        uid_list = list(uids)
+
+        # Map user_id -> username
+        name_map = {}
+        if uid_list:
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT id, username FROM users WHERE id = ANY(%s)", (uid_list,))
+                    for row in cur.fetchall():
+                        name_map[int(row[0])] = row[1] or ""
+
+        # Map user_id -> balance (SUM(delta))
+        bal_map = {}
+        if uid_list:
+            with conn:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        SELECT user_id, COALESCE(SUM(delta),0)
+                        FROM credits_ledger
+                        WHERE user_id = ANY(%s)
+                        GROUP BY user_id
+                    """, (uid_list,))
+                    for row in cur.fetchall():
+                        bal_map[int(row[0])] = int(row[1])
+
+        # Build outputs
+        month_rows = []
+        for r in raw_month or []:
+            uid = int(r[0]) if r[0] is not None else 0
+            cnt = int(r[1])
+            month_rows.append({
+                "user_id": uid or None,
+                "username": name_map.get(uid, ""),
+                "count": cnt,
+                "balance": bal_map.get(uid) if uid else None,
+            })
+
+        recent_rows = []
+        for ts, uid, cand, fname in (raw_recent or []):
+            uid_int = int(uid) if uid is not None else 0
+            recent_rows.append({
+                "ts": ts.isoformat() if ts else None,
+                "user_id": uid_int or None,
+                "username": name_map.get(uid_int, ""),
+                "candidate": cand or "",
+                "filename": fname or "",
+            })
 
         return jsonify({
             "ok": True,
             "source": "db",
-            "month_start": month_start,
             "month": {"total": month_total, "rows": month_rows},
             "recent": recent_rows
         })
@@ -4324,6 +4364,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

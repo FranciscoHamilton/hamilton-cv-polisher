@@ -3260,6 +3260,125 @@ def ensure_usage_events():
                 DB_POOL.putconn(conn)
         except Exception:
             pass
+# --- Admin utility: ensure the credits_ledger table exists ---
+@app.get("/__admin/ensure-credits-ledger")
+def ensure_credits_ledger():
+    # Access guard: only admin/director
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    sql = """
+    CREATE TABLE IF NOT EXISTS credits_ledger (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        delta INTEGER NOT NULL,
+        reason TEXT,
+        ext_ref TEXT,
+        ts TIMESTAMPTZ DEFAULT now()
+    )
+    """
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql)
+        return jsonify({"ok": True, "created_or_exists": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            if conn:
+                DB_POOL.putconn(conn)
+        except Exception:
+            pass
+
+
+# --- Admin utility: grant credits to a user (positive delta) ---
+@app.get("/__admin/grant-credits")
+def admin_grant_credits():
+    # Access guard: only admin/director
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    # Params: user_id (int), delta (int>0), reason (optional), ext_ref (optional)
+    try:
+        uid = int(request.args.get("user_id") or "0")
+        delta = int(request.args.get("delta") or "0")
+    except Exception:
+        return jsonify({"ok": False, "error": "bad user_id or delta"}), 400
+
+    if uid <= 0 or delta <= 0:
+        return jsonify({"ok": False, "error": "user_id>0 and delta>0 required"}), 400
+
+    reason = (request.args.get("reason") or "grant").strip()
+    ext_ref = (request.args.get("ext_ref") or "").strip()
+
+    sql = "INSERT INTO credits_ledger (user_id, delta, reason, ext_ref) VALUES (%s,%s,%s,%s)"
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        with conn:
+            with conn.cursor() as cur:
+                cur.execute(sql, (uid, delta, reason, ext_ref))
+        return jsonify({"ok": True, "granted": {"user_id": uid, "delta": delta, "reason": reason, "ext_ref": ext_ref}})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            if conn:
+                DB_POOL.putconn(conn)
+        except Exception:
+            pass
+
+
+# --- Admin utility: quick check of a user's ledger + balance ---
+@app.get("/__admin/credits-summary")
+def admin_credits_summary():
+    # Access guard: only admin/director
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
+    except Exception:
+        is_dir = False
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    try:
+        uid = int(request.args.get("user_id") or "0")
+    except Exception:
+        uid = 0
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
+
+    rows = db_query_all(
+        "SELECT id, delta, reason, ext_ref, ts FROM credits_ledger WHERE user_id=%s ORDER BY ts DESC LIMIT 200",
+        (uid,)
+    )
+    balance_row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid,))
+    balance = int(balance_row[0]) if balance_row else 0
+
+    out = [{"id": r[0], "delta": int(r[1]), "reason": r[2] or "", "ext_ref": r[3] or "", "ts": (r[4].isoformat() if r[4] else None)} for r in rows]
+    return jsonify({"ok": True, "user_id": uid, "balance": balance, "rows": out})            
 # --- Admin utility: insert a mock usage event for the current user (for testing only) ---
 @app.get("/__admin/mock-usage")
 def admin_mock_usage():
@@ -4007,6 +4126,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -4116,6 +4116,22 @@ def polish():
         except Exception as e:
             print("DB usage log failed:", e)
 
+                # --- Credits ledger: debit 1 for this successful polish ---
+        try:
+            uid_int = int(session.get("user_id") or 0)
+        except Exception:
+            uid_int = 0
+        if DB_POOL and uid_int > 0:
+            try:
+                # record a debit; reason = "polish", ext_ref = original filename
+                db_execute(
+                    "INSERT INTO credits_ledger (user_id, delta, reason, ext_ref) VALUES (%s,%s,%s,%s)",
+                    (uid_int, -1, "polish", str(f.filename or "")),
+                )
+            except Exception as e:
+                # don't break the download if ledger write fails
+                print("credits_ledger debit failed:", e)
+
         # ---- Decrement trial credits (if present) ----
         try:
             left = int(session.get("trial_credits", 0))
@@ -4135,6 +4151,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

@@ -3947,7 +3947,7 @@ def admin_ui():
 </html>
     """
 # ---- Quick diagnostic (no secrets) ----
-@app.get("/__me/diag")
+
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
 def _is_admin_session():
     try:
@@ -3984,6 +3984,8 @@ def _protect_root_admin_from_mutation():
         # Never take the site down because of the guard
         pass
 
+# ---- Quick diagnostic (no secrets) ----
+@app.get("/__me/diag")
 def me_diag_v2():
     try:
         uid = int(session.get("user_id") or 0)
@@ -4224,6 +4226,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

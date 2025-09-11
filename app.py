@@ -4028,26 +4028,29 @@ def admin_ui():
       const monthTotal = (d.month && d.month.total) || 0;
       if (!monthRows.length) {
         $("#monthBox").textContent = "No usage yet this month.";
-      } else {
-        let html = '<table><thead><tr><th>User ID</th><th>Count</th></tr></thead><tbody>';
+        } else {
+        let html = '<table><thead><tr><th>User</th><th>User ID</th><th>Count</th><th>Balance</th></tr></thead><tbody>';
         for (const r of monthRows) {
-          html += `<tr><td>${esc(r.user_id)}</td><td>${esc(r.count)}</td></tr>`;
+          const uname = r.username || '';
+          const bal = (typeof r.balance === 'number') ? r.balance : '';
+          html += `<tr><td>${esc(uname)}</td><td>${esc(r.user_id)}</td><td>${esc(r.count)}</td><td>${esc(bal)}</td></tr>`;
         }
         html += `</tbody></table><div class="muted" style="margin-top:6px">Total this month: <strong>${esc(monthTotal)}</strong></div>`;
         $("#monthBox").innerHTML = html;
-      }
+      }    
 
       // Recent table
       const recent = d.recent || [];
       if (!recent.length) {
         $("#recentBox").textContent = "No recent events.";
       } else {
-        let html = '<table><thead><tr><th>When</th><th>User ID</th><th>Candidate</th><th>Filename</th></tr></thead><tbody>';
-        for (const r of recent) {
-          const when = r.ts ? new Date(r.ts) : null;
-          const whenTxt = when && !isNaN(when.getTime()) ? when.toLocaleString() : (r.ts || "");
-          html += `<tr><td>${esc(whenTxt)}</td><td>${esc(r.user_id)}</td><td>${esc(r.candidate)}</td><td>${esc(r.filename)}</td></tr>`;
-        }
+         let html = '<table><thead><tr><th>When</th><th>User</th><th>User ID</th><th>Candidate</th><th>Filename</th></tr></thead><tbody>';
+      for (const r of recent) {
+        const when = r.ts ? new Date(r.ts) : null;
+        const whenTxt = when && !isNaN(when.getTime()) ? when.toLocaleString() : (r.ts || "");
+        const uname = r.username || '';
+        html += `<tr><td>${esc(whenTxt)}</td><td>${esc(uname)}</td><td>${esc(r.user_id)}</td><td>${esc(r.candidate)}</td><td>${esc(r.filename)}</td></tr>`;
+      }
         html += '</tbody></table>';
         $("#recentBox").innerHTML = html;
       }

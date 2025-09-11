@@ -1324,9 +1324,14 @@ button[disabled]{opacity:.6;cursor:not-allowed}
       setText('#lastTime', '');
     }
 
-    // Credits (placeholder)
-    if (typeof d.creditsUsed !== 'undefined' && d.creditsUsed !== null) setText('#creditsUsed', d.creditsUsed);
-    else if (typeof d.creditsBalance !== 'undefined' && d.creditsBalance !== null) setText('#creditsUsed', d.creditsBalance);
+    // Credits tile: show remaining balance (prefer this), fallback to used
+if (typeof d.creditsBalance === 'number' && !Number.isNaN(d.creditsBalance)) {
+  setText('#creditsUsed', d.creditsBalance);
+} else if (typeof d.creditsUsed === 'number' && !Number.isNaN(d.creditsUsed)) {
+  setText('#creditsUsed', d.creditsUsed);
+} else {
+  setText('#creditsUsed', '');
+}
 
     return; // success -> stop here, skip legacy logic below
   } catch (e) {
@@ -4172,6 +4177,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

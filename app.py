@@ -3826,6 +3826,97 @@ def admin_create_org():
         return jsonify({"ok": True, "org_id": int(row[0]) if row else None})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+# --- Admin: set a user's org_id ---
+@app.get("/__admin/set-user-org")
+def admin_set_user_org():
+    """
+    Usage (admin only):
+      /__admin/set-user-org?user_id=2&org_id=1
+    """
+    # guard
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_admin = bool(session.get("is_admin")) or (uname == "admin")
+    except Exception:
+        is_admin = False
+    if not is_admin:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    # params
+    try:
+        uid = int(request.args.get("user_id") or "0")
+        oid = int(request.args.get("org_id") or "0")
+    except Exception:
+        return jsonify({"ok": False, "error": "bad user_id/org_id"}), 400
+    if uid <= 0 or oid <= 0:
+        return jsonify({"ok": False, "error": "user_id and org_id required"}), 400
+
+    # validate org exists
+    try:
+        if not db_query_one("SELECT 1 FROM orgs WHERE id=%s", (oid,)):
+            return jsonify({"ok": False, "error": "org not found"}), 404
+        ok = db_execute("UPDATE users SET org_id=%s WHERE id=%s", (oid, uid))
+        if not ok:
+            return jsonify({"ok": False, "error": "update failed"}), 500
+        return jsonify({"ok": True, "user_id": uid, "org_id": oid})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
+
+# --- Admin: backfill org_id onto historical rows for that user ---
+@app.get("/__admin/backfill-user-org-data")
+def admin_backfill_user_org_data():
+    """
+    Usage (admin only):
+      /__admin/backfill-user-org-data?user_id=2
+
+    Copies users.org_id onto that user's existing usage_events and credits_ledger rows.
+    Safe to run multiple times.
+    """
+    # guard
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_admin = bool(session.get("is_admin")) or (uname == "admin")
+    except Exception:
+        is_admin = False
+    if not is_admin:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    # which user?
+    try:
+        uid = int(request.args.get("user_id") or "0")
+    except Exception:
+        return jsonify({"ok": False, "error": "bad user_id"}), 400
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
+
+    conn = None
+    try:
+        # ensure the credits_ledger has org_id column too (idempotent safeguard)
+        db_execute("ALTER TABLE IF EXISTS credits_ledger ADD COLUMN IF NOT EXISTS org_id INTEGER")
+        db_execute("CREATE INDEX IF NOT EXISTS idx_credits_ledger_org_id ON credits_ledger(org_id)")
+
+        # get user's org_id
+        row = db_query_one("SELECT org_id FROM users WHERE id=%s", (uid,))
+        if not row or not row[0]:
+            return jsonify({"ok": False, "error": "user has no org_id set"}), 400
+        oid = int(row[0])
+
+        # set org_id where missing on historical rows
+        a = db_execute("UPDATE usage_events   SET org_id=%s WHERE user_id=%s AND org_id IS NULL", (oid, uid))
+        b = db_execute("UPDATE credits_ledger SET org_id=%s WHERE user_id=%s AND org_id IS NULL", (oid, uid))
+
+        return jsonify({"ok": True, "user_id": uid, "org_id": oid})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 # --- Admin: recent usage events (for Director dashboard) ---
 @app.get("/__admin/recent-usage")
 def admin_recent_usage():
@@ -4528,6 +4619,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

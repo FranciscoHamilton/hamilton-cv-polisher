@@ -4628,12 +4628,19 @@ def polish():
         STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
         _save_stats()
 
-        # --- DB logging for Director usage (safe no-op if no DB / no user) ---
+        # --- DB logging for Director usage + charge 1 credit (safe no-op if no DB / no user) ---
         try:
-            uid = session.get("user_id")
+            uid = int(session.get("user_id") or 0)
+        except Exception:
+            uid = 0
+        try:
+            # record usage event (stores org_id if present)
             log_usage_event(uid, f.filename, candidate_name)
+            # charge 1 credit for this successful polish
+            if uid:
+                credits_add(uid, -1, reason="polish", ext_ref=f.filename or "")
         except Exception as e:
-            print("DB usage log failed:", e)
+            print("DB usage/credits log failed:", e)
 
                 # --- Credits ledger: debit 1 for this successful polish ---
         try:
@@ -4670,6 +4677,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

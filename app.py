@@ -3498,13 +3498,20 @@ def admin_create_db_user():
 
 @app.get("/me/dashboard")
 def me_dashboard():
+    """
+    One-call payload for the Session Stats tiles.
+    - downloadsMonth: polishes this month for the current user
+    - lastCandidate / lastTime: last event for current user (DB first, legacy fallback)
+    - creditsUsed: TEMP mirrors downloadsMonth (until you want a separate 'used' metric)
+    - creditsBalance: real balance from credits_ledger (if DB available)
+    """
+    # Who am I?
     try:
         uid = int(session.get("user_id") or 0)
     except Exception:
         uid = 0
 
-    # 1) Downloads this month (per user)
-    month_usage = 0
+    # downloadsMonth (safe fallbacks)
     try:
         month_usage = int(count_usage_month_db(uid)) if (DB_POOL and uid) else 0
     except Exception:
@@ -3513,31 +3520,45 @@ def me_dashboard():
         except Exception:
             month_usage = 0
 
-    # 2) Last event (candidate + timestamp)
+    # Last event: DB first, legacy fallback
     last_candidate, last_ts = "", ""
     try:
-        if uid:
+        if DB_POOL and uid:
             c, t = last_event_for_user(uid)
             last_candidate = c or ""
             last_ts = t or ""
     except Exception:
         pass
+    if not last_candidate and not last_ts:
+        try:
+            last_candidate = (STATS.get("last_candidate") or "") if STATS else ""
+            last_ts = (STATS.get("last_time") or "") if STATS else ""
+        except Exception:
+            pass
 
-    # 3) Credits (placeholder: show trial_credits if present)
-    balance = None
-    try:
-        b = session.get("trial_credits")
-        balance = int(b) if b is not None else None
-    except Exception:
-        balance = None
+    # Credits balance from ledger (DB), legacy fallback to session trial_credits
+    credits_balance = None
+    if DB_POOL and uid:
+        try:
+            row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid,))
+            credits_balance = int(row[0]) if row else 0
+        except Exception:
+            credits_balance = None
+    else:
+        try:
+            tmp = session.get("trial_credits")
+            credits_balance = int(tmp) if tmp is not None else None
+        except Exception:
+            credits_balance = None
 
     return jsonify({
         "ok": True,
+        "user_id": uid or None,
         "downloadsMonth": month_usage,
         "lastCandidate": last_candidate,
         "lastTime": last_ts,
-        "creditsUsed": month_usage, 
-        "creditsBalance": balance # may be None if not tracked
+        "creditsUsed": month_usage,       # TEMP: mirrors month usage
+        "creditsBalance": credits_balance # REAL balance from ledger (if available)
     })
 
 # --- Admin: month usage grouped by user (for Director dashboard) ---
@@ -4151,6 +4172,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

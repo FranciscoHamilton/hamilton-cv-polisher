@@ -3747,6 +3747,42 @@ def admin_ui():
     """
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
+# --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
+def _is_admin_session():
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        return uname == "admin" or bool(session.get("is_admin")) or bool(session.get("is_director") and uname == "admin")
+    except Exception:
+        return False
+
+@app.before_request
+def _protect_root_admin_from_mutation():
+    """
+    Safety net: if a request tries to modify the 'admin' user and the session is NOT admin,
+    block it. We look at common mutation endpoints and read the target username from query/form.
+    """
+    try:
+        path = (request.path or "").lower()
+        # Only inspect potentially mutating areas to keep overhead tiny
+        if not any(seg in path for seg in ("/director", "/admin", "/legacy", "/user", "/users")):
+            return
+
+        # target username can arrive as ?username=, ?user=, ?u= or in POST body
+        target = (
+            (request.values.get("username")
+             or request.values.get("user")
+             or request.values.get("u")
+             or "")
+        ).strip().lower()
+
+        # If someone targets 'admin' on a mutating route and current session isn't admin -> forbid
+        if target == "admin" and any(tok in path for tok in ("disable", "enable", "toggle", "delete", "remove", "deactivate", "activate", "set", "update", "create")):
+            if not _is_admin_session():
+                return jsonify({"ok": False, "error": "cannot_modify_admin"}), 403
+    except Exception:
+        # Never take the site down because of the guard
+        pass
+
 def me_diag_v2():
     try:
         uid = int(session.get("user_id") or 0)
@@ -3971,6 +4007,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

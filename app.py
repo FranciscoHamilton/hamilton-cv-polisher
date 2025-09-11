@@ -3924,6 +3924,9 @@ def admin_ui():
     th { background: #f6f6f6; }
     .muted { color: #666; }
     .badge { display: inline-block; padding: 2px 8px; border: 1px solid #ddd; border-radius: 12px; font-size: 12px; margin-left: 6px; }
+    .balance-ok { color: #0a7; font-weight: 600; }
+    .balance-low { color: #d9822b; font-weight: 600; }
+    .balance-zero { color: #d33; font-weight: 700; }
   </style>
 </head>
 <body>
@@ -4025,21 +4028,24 @@ def admin_ui():
 
       // Month table
       const monthRows = (d.month && d.month.rows) || [];
-      const monthTotal = (d.month && d.month.total) || 0;
-      if (!monthRows.length) {
-        $("#monthBox").textContent = "No usage yet this month.";
-        } else {
-        let html = '<table><thead><tr><th>User</th><th>User ID</th><th>Count</th><th>Balance</th></tr></thead><tbody>';
-        for (const r of monthRows) {
-          const uname = r.username || '';
-          const bal = (typeof r.balance === 'number') ? r.balance : '';
-          html += `<tr><td>${esc(uname)}</td><td>${esc(r.user_id)}</td><td>${esc(r.count)}</td><td>${esc(bal)}</td></tr>`;
-        }
-        html += `</tbody></table><div class="muted" style="margin-top:6px">Total this month: <strong>${esc(monthTotal)}</strong></div>`;
-        $("#monthBox").innerHTML = html;
-      }    
+const monthTotal = (d.month && d.month.total) || 0;
 
-      // Recent table
+if (!monthRows.length) {
+  $("#monthBox").textContent = "No usage yet this month.";
+} else {
+  let html = '<table><thead><tr><th>User</th><th>User ID</th><th>Count</th><th>Balance</th></tr></thead><tbody>';
+  for (const r of monthRows) {
+    const uname = r.username || '';
+    const balNum = (typeof r.balance === 'number') ? r.balance : null;
+    const balClass = (balNum === null) ? '' : (balNum <= 0 ? 'balance-zero' : (balNum <= 3 ? 'balance-low' : 'balance-ok'));
+    const balCell = (balNum === null) ? '' : `<span class="${balClass}">${esc(balNum)}</span>`;
+    html += `<tr><td>${esc(uname)}</td><td>${esc(r.user_id)}</td><td>${esc(r.count)}</td><td>${balCell}</td></tr>`;
+  }
+  html += `</tbody></table><div class="muted" style="margin-top:6px">Total this month: <strong>${esc(monthTotal)}</strong></div>`;
+  $("#monthBox").innerHTML = html;
+}
+
+// Recent table
       const recent = d.recent || [];
       if (!recent.length) {
         $("#recentBox").textContent = "No recent events.";
@@ -4367,6 +4373,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

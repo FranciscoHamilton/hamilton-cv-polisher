@@ -3896,6 +3896,78 @@ def admin_ui():
   <h2>Recent Events</h2>
   <div id="recentBox">Loading…</div>
 
+<section style="margin:24px 0; padding:16px; border:1px solid #ddd; border-radius:8px">
+    <h2>Credits Tools</h2>
+    <div style="display:flex; gap:24px; flex-wrap:wrap;">
+      <form id="grantForm" style="display:flex; gap:8px; align-items:flex-end;">
+        <div>
+          <label>User ID</label><br>
+          <input id="grantUid" type="number" min="1" required style="padding:6px;">
+        </div>
+        <div>
+          <label>Grant (delta)</label><br>
+          <input id="grantDelta" type="number" min="1" value="10" required style="padding:6px;">
+        </div>
+        <div>
+          <label>Reason</label><br>
+          <input id="grantReason" type="text" value="grant" style="padding:6px;">
+        </div>
+        <button type="submit" style="padding:8px 12px;">Grant credits</button>
+      </form>
+
+      <form id="setForm" style="display:flex; gap:8px; align-items:flex-end;">
+        <div>
+          <label>User ID</label><br>
+          <input id="setUid" type="number" min="1" required style="padding:6px;">
+        </div>
+        <div>
+          <label>Target balance</label><br>
+          <input id="setBalance" type="number" min="0" value="0" required style="padding:6px;">
+        </div>
+        <div>
+          <label>Reason</label><br>
+          <input id="setReason" type="text" value="adjust" style="padding:6px;">
+        </div>
+        <button type="submit" style="padding:8px 12px;">Set exact balance</button>
+      </form>
+    </div>
+
+    <pre id="creditsOut" style="margin-top:12px; padding:12px; background:#f7f7f7; border-radius:6px; max-width:100%; overflow:auto;"></pre>
+  </section>
+
+  <script>
+  (async function(){
+    const out = document.getElementById('creditsOut');
+    function print(obj){ out.textContent = JSON.stringify(obj, null, 2); }
+
+    // Grant credits
+    const grant = document.getElementById('grantForm');
+    grant?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const uid = document.getElementById('grantUid').value;
+      const delta = document.getElementById('grantDelta').value;
+      const reason = document.getElementById('grantReason').value || 'grant';
+      try {
+        const r = await fetch(`/__admin/grant-credits?user_id=${encodeURIComponent(uid)}&delta=${encodeURIComponent(delta)}&reason=${encodeURIComponent(reason)}`);
+        print(await r.json());
+      } catch(err){ print({ ok:false, error:String(err) }); }
+    });
+
+    // Set exact balance
+    const setf = document.getElementById('setForm');
+    setf?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const uid = document.getElementById('setUid').value;
+      const bal = document.getElementById('setBalance').value;
+      const reason = document.getElementById('setReason').value || 'adjust';
+      try {
+        const r = await fetch(`/__admin/set-credits?user_id=${encodeURIComponent(uid)}&balance=${encodeURIComponent(bal)}&reason=${encodeURIComponent(reason)}`);
+        print(await r.json());
+      } catch(err){ print({ ok:false, error:String(err) }); }
+    });
+  })();
+  </script>
+
   <script>
     (async () => {
       // pass through any ?limit=… query param to the API
@@ -4252,6 +4324,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

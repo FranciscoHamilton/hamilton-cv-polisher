@@ -2993,6 +2993,51 @@ def app_page():
             '})();</script></body>'
         )
     )
+    # Inject Full History data loader (fires on first click)
+    html = html.replace(
+        "</body>",
+        (
+            '<script>(function(){'
+            ...
+            '})();</script></body>'
+        )
+    )
+
+    # --- Session Stats tiles: refresh on load and on demand ---
+    html = html.replace("</body>", """
+<script>
+  // Fills: #downloadsMonth, #lastCandidate, #lastTime, #creditsUsed (and #creditsBalance if present)
+  window.refreshStats = async function(){
+    try {
+      const r = await fetch('/me/dashboard', { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      const set = (sel, val) => { const el = document.querySelector(sel); if (el) el.textContent = (val ?? '').toString(); };
+
+      set('#downloadsMonth', d.downloadsMonth);
+      set('#lastCandidate', d.lastCandidate || '');
+
+      if (d.lastTime) {
+        const dt = new Date(d.lastTime);
+        set('#lastTime', isNaN(dt.getTime()) ? d.lastTime : dt.toLocaleString());
+      } else {
+        set('#lastTime','');
+      }
+
+      // Credits used and (optional) balance
+      if (typeof d.creditsUsed === 'number') set('#creditsUsed', d.creditsUsed);
+      if (typeof d.creditsBalance === 'number') set('#creditsBalance', d.creditsBalance);
+    } catch (e) {
+      console.log('refreshStats failed', e);
+    }
+  };
+
+  // Auto-run once when the page loads
+  document.addEventListener('DOMContentLoaded', () => {
+    if (window.refreshStats) window.refreshStats();
+  });
+</script>
+</body>""")
 
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store"
@@ -4920,6 +4965,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

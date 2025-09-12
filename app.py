@@ -3714,6 +3714,141 @@ def ensure_orgs_schema():
                 DB_POOL.putconn(conn)
         except Exception:
             pass
+            # --- Helper: org of the current session user (or None) ---
+def _current_user_org_id():
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+    if not (DB_POOL and uid):
+        return None
+    try:
+        row = db_query_one("SELECT org_id FROM users WHERE id=%s", (uid,))
+        if row and row[0]:
+            return int(row[0])
+    except Exception as e:
+        print("org lookup failed:", e)
+    return None
+
+
+# --- Director (org-scoped): one-call dashboard payload for this org ---
+@app.get("/director/api/dashboard")
+def director_api_dashboard():
+    """
+    Returns ONLY data for the current user's organisation.
+
+    Response shape:
+      {
+        ok: true,
+        month: {
+          total: <int>,
+          rows: [ { user_id, username, count, balance }, ... ]
+        },
+        recent: [ { ts, user_id, username, candidate, filename }, ... ]
+      }
+    """
+    # must be logged in
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    if not DB_POOL:
+        # fallback to legacy (empty – org scoping requires DB)
+        return jsonify({"ok": True, "source": "legacy", "month": {"total": 0, "rows": []}, "recent": []})
+
+    # org scope
+    org_id = _current_user_org_id()
+    if not org_id:
+        # user has no org; return empty but OK
+        return jsonify({"ok": True, "source": "no_org", "month": {"total": 0, "rows": []}, "recent": []})
+
+    # limit for recent
+    try:
+        limit = int(request.args.get("limit", "50"))
+    except Exception:
+        limit = 50
+    limit = max(1, min(limit, 200))
+
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        month_rows, month_total, recent_rows = [], 0, []
+
+        with conn:
+            with conn.cursor() as cur:
+                # Per-user counts this month for this org
+                cur.execute("""
+                    SELECT u.id AS user_id, u.username, COUNT(e.*) AS cnt
+                    FROM users u
+                    LEFT JOIN usage_events e
+                      ON e.user_id = u.id
+                     AND e.ts >= date_trunc('month', now())
+                    WHERE u.org_id = %s
+                    GROUP BY u.id, u.username
+                    ORDER BY cnt DESC, u.username ASC
+                """, (org_id,))
+                per_user = cur.fetchall()
+
+                # Total this month for this org
+                cur.execute("""
+                    SELECT COUNT(*) FROM usage_events
+                    WHERE org_id = %s AND ts >= date_trunc('month', now())
+                """, (org_id,))
+                month_total = int(cur.fetchone()[0])
+
+                # Current balances per user in this org
+                cur.execute("""
+                    SELECT user_id, COALESCE(SUM(delta),0) AS balance
+                    FROM credits_ledger
+                    WHERE org_id = %s
+                    GROUP BY user_id
+                """, (org_id,))
+                bal_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
+
+                # Build month rows with balances
+                for user_id, username, cnt in per_user:
+                    month_rows.append({
+                        "user_id": int(user_id),
+                        "username": username or "",
+                        "count": int(cnt),
+                        "balance": bal_map.get(int(user_id))
+                    })
+
+                # Recent events in this org
+                cur.execute("""
+                    SELECT e.ts, e.user_id, u.username, e.candidate, e.filename
+                    FROM usage_events e
+                    JOIN users u ON u.id = e.user_id
+                    WHERE e.org_id = %s
+                    ORDER BY e.ts DESC
+                    LIMIT %s
+                """, (org_id, limit))
+                for ts, user_id, username, cand, fname in cur.fetchall():
+                    recent_rows.append({
+                        "ts": (ts.isoformat() if ts else None),
+                        "user_id": int(user_id),
+                        "username": username or "",
+                        "candidate": cand or "",
+                        "filename": fname or "",
+                    })
+
+        return jsonify({
+            "ok": True,
+            "source": "db-org",
+            "month": {"total": month_total, "rows": month_rows},
+            "recent": recent_rows
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            if conn:
+                DB_POOL.putconn(conn)
+        except Exception:
+            pass
 # --- Canonical per-user dashboard payload (feeds the four tiles in one call) ---
 
 @app.get("/me/dashboard")
@@ -4677,6 +4812,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

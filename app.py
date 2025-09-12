@@ -3694,6 +3694,42 @@ def admin_set_user_active():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500    
 
+# --- Admin: ONE-TIME migration to enable org-shared credits ---
+@app.get("/__admin/migrate_org_pool")
+def admin_migrate_org_pool():
+    # admin only
+    if not (session.get("is_admin") or session.get("username","").lower()=="admin"):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    stmts = [
+        """
+        CREATE TABLE IF NOT EXISTS org_credits_ledger (
+          id SERIAL PRIMARY KEY,
+          org_id INTEGER NOT NULL,
+          delta INTEGER NOT NULL,
+          reason TEXT,
+          user_id INTEGER,
+          created_by INTEGER,
+          created_at TIMESTAMPTZ DEFAULT NOW()
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_org_credits_ledger_org ON org_credits_ledger(org_id)",
+        "CREATE INDEX IF NOT EXISTS idx_org_credits_ledger_org_user_month ON org_credits_ledger(org_id, user_id, created_at)",
+        """
+        CREATE TABLE IF NOT EXISTS org_user_limits (
+          org_id INTEGER NOT NULL,
+          user_id INTEGER NOT NULL,
+          monthly_cap INTEGER,
+          active BOOLEAN DEFAULT TRUE,
+          PRIMARY KEY (org_id, user_id)
+        )
+        """
+    ]
+    for s in stmts:
+        ok = db_execute(s, tuple())
+        if not ok:
+            return jsonify({"ok": False, "error": "migration_failed"}), 500
+    return jsonify({"ok": True, "migrated": True})
 # --- Admin utility: ensure the orgs schema exists (safe to run anytime) ---
 @app.get("/__admin/ensure-orgs-schema")
 def ensure_orgs_schema():
@@ -3767,7 +3803,82 @@ def _current_user_org_id():
         print("org lookup failed:", e)
     return None
 
+def _month_bounds_utc():
+    now = datetime.utcnow()
+    start = datetime(now.year, now.month, 1)
+    if now.month == 12:
+        next_start = datetime(now.year + 1, 1, 1)
+    else:
+        next_start = datetime(now.year, now.month + 1, 1)
+    return start, next_start
 
+def org_balance(org_id: int) -> int:
+    row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger WHERE org_id=%s", (org_id,))
+    return int(row[0]) if row else 0
+
+def org_user_spent_this_month(org_id: int, user_id: int) -> int:
+    start, next_start = _month_bounds_utc()
+    row = db_query_one("""
+        SELECT COALESCE(-SUM(delta),0) FROM org_credits_ledger
+        WHERE org_id=%s AND user_id=%s AND delta < 0
+          AND created_at >= %s AND created_at < %s
+    """, (org_id, user_id, start, next_start))
+    return int(row[0]) if row else 0
+
+def get_user_monthly_cap(org_id: int, user_id: int):
+    row = db_query_one("""
+        SELECT monthly_cap FROM org_user_limits
+        WHERE org_id=%s AND user_id=%s AND active
+    """, (org_id, user_id))
+    if not row:
+        return None
+    return None if row[0] is None else int(row[0])
+
+def _user_org_id(user_id: int):
+    row = db_query_one("SELECT org_id FROM users WHERE id=%s", (user_id,))
+    return int(row[0]) if row and row[0] is not None else None
+
+def charge_credit_for_polish(user_id: int, cost: int = 1, candidate: str = "", filename: str = ""):
+    """
+    Returns (ok: bool, err: Optional[str])
+      err in {"insufficient_org_credits","user_monthly_cap_reached","insufficient_user_credits","charge_failed"}
+    """
+    try:
+        me_is_admin = bool(session.get("is_admin")) or (session.get("username","").strip().lower() == "admin")
+    except Exception:
+        me_is_admin = False
+    if me_is_admin:
+        return True, None
+
+    org_id = _user_org_id(user_id)
+
+    if org_id:
+        bal = org_balance(org_id)
+        if bal < cost:
+            return False, "insufficient_org_credits"
+
+        cap = get_user_monthly_cap(org_id, user_id)
+        if cap is not None:
+            spent = org_user_spent_this_month(org_id, user_id)
+            if spent + cost > cap:
+                return False, "user_monthly_cap_reached"
+
+        ok = db_execute(
+            "INSERT INTO org_credits_ledger (org_id, delta, reason, user_id, created_by) VALUES (%s,%s,%s,%s,%s)",
+            (org_id, -cost, f"polish:{candidate}:{filename}", user_id, user_id)
+        )
+        return (True, None) if ok else (False, "charge_failed")
+
+    # fallback: personal ledger
+    row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (user_id,))
+    ubal = int(row[0]) if row else 0
+    if ubal < cost:
+        return False, "insufficient_user_credits"
+    ok = db_execute(
+        "INSERT INTO credits_ledger (user_id, delta, reason, created_by) VALUES (%s,%s,%s,%s)",
+        (user_id, -cost, f"polish:{candidate}:{filename}", user_id)
+    )
+    return (True, None) if ok else (False, "charge_failed")
 # --- Director (org-scoped): one-call dashboard payload for this org ---
 @app.get("/director/api/dashboard")
 def director_api_dashboard():
@@ -5099,6 +5210,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

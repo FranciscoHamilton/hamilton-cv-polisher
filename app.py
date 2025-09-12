@@ -4499,6 +4499,106 @@ if (!monthRows.length) {
 </body>
 </html>
     """
+# --- Director: minimal UI for org-scoped dashboard (for Hamilton, etc.) ---
+@app.get("/director/ui")
+def director_ui():
+    """
+    Simple HTML page for directors to view month summary and recent events,
+    but scoped to THEIR org only. Uses /director/api/dashboard under the hood.
+    """
+    # must be logged in (any non-admin user tied to an org)
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+    if uid <= 0:
+        # send to login if not authed
+        return redirect(url_for("login"))
+
+    return """
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Director – Org Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 16px; }
+    h1 { margin: 0 0 8px 0; }
+    h2 { margin: 24px 0 8px 0; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background: #f6f6f6; }
+    .muted { color: #666; }
+    .badge { display: inline-block; padding: 2px 8px; border: 1px solid #ddd; border-radius: 12px; font-size: 12px; margin-left: 6px; }
+    .balance-ok   { color: #0a7f14; font-weight: 600; }
+    .balance-low  { color: #d28500; font-weight: 600; }
+    .balance-zero { color: #b00020; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <h1>Director Dashboard <span id="src" class="badge muted"></span></h1>
+  <div class="muted">Tip: append <code>?limit=20</code> to the URL to change how many recent rows you load.</div>
+
+  <h2>This Month (by user)</h2>
+  <div id="monthBox">Loading…</div>
+
+  <h2>Recent Events</h2>
+  <div id="recentBox">Loading…</div>
+
+  <script>
+  (async () => {
+    const qs = window.location.search || "";
+    const res = await fetch("/director/api/dashboard" + qs);
+    if (!res.ok) {
+      document.body.innerHTML = "<p>Failed to load dashboard ("+res.status+"). Are you logged in?</p>";
+      return;
+    }
+    const d = await res.json();
+    const $ = (sel) => document.querySelector(sel);
+    const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])));
+
+    $("#src").textContent = d.source || "";
+
+    // Month table
+    const monthRows = (d.month && d.month.rows) || [];
+    const monthTotal = (d.month && d.month.total) || 0;
+    if (!monthRows.length) {
+      $("#monthBox").textContent = "No usage yet this month.";
+    } else {
+      let html = '<table><thead><tr><th>User</th><th>User ID</th><th>Count</th><th>Balance</th></tr></thead><tbody>';
+      for (const r of monthRows) {
+        const uname = r.username || '';
+        const balNum = (typeof r.balance === 'number') ? r.balance : null;
+        const balClass = (balNum === null) ? '' : (balNum <= 0 ? 'balance-zero' : (balNum <= 3 ? 'balance-low' : 'balance-ok'));
+        const balCell = (balNum === null) ? '' : `<span class="${balClass}">${esc(balNum)}</span>`;
+        html += `<tr><td>${esc(uname)}</td><td>${esc(r.user_id)}</td><td>${esc(r.count)}</td><td>${balCell}</td></tr>`;
+      }
+      html += `</tbody></table><div class="muted" style="margin-top:6px">Total this month: <strong>${esc(monthTotal)}</strong></div>`;
+      $("#monthBox").innerHTML = html;
+    }
+
+    // Recent table
+    const recent = d.recent || [];
+    if (!recent.length) {
+      $("#recentBox").textContent = "No recent events.";
+    } else {
+      let html = '<table><thead><tr><th>When</th><th>User</th><th>Candidate</th><th>Filename</th></tr></thead><tbody>';
+      for (const r of recent) {
+        const when = r.ts ? new Date(r.ts) : null;
+        const whenTxt = when && !isNaN(when.getTime()) ? when.toLocaleString() : (r.ts || "");
+        html += `<tr><td>${esc(whenTxt)}</td><td>${esc(r.username || r.user_id)}</td><td>${esc(r.candidate)}</td><td>${esc(r.filename)}</td></tr>`;
+      }
+      html += '</tbody></table>';
+      $("#recentBox").innerHTML = html;
+    }
+  })().catch(err => {
+    document.body.innerHTML = "<p>Unexpected error loading dashboard.</p>";
+  });
+  </script>
+</body>
+</html>
+    """    
 # ---- Quick diagnostic (no secrets) ----
 
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
@@ -4812,6 +4912,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

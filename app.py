@@ -3956,76 +3956,6 @@ def director_api_users():
                 DB_POOL.putconn(conn)
         except Exception:
             pass
-# --- Director (org-scoped): list users in my org with balances ---
-@app.get("/director/api/users")
-def director_api_users():
-    """
-    Returns users in the same org as the current session user.
-    Shape:
-      {
-        ok: true,
-        org_id: <int|null>,
-        users: [
-          { id, username, active, balance }
-        ]
-      }
-    """
-    # must be logged in
-    try:
-        uid = int(session.get("user_id") or 0)
-    except Exception:
-        uid = 0
-    if uid <= 0:
-        return jsonify({"ok": False, "error": "not_logged_in"}), 401
-
-    if not DB_POOL:
-        return jsonify({"ok": True, "org_id": None, "users": []})
-
-    # find my org
-    org_id = _current_user_org_id()
-    if not org_id:
-        return jsonify({"ok": True, "org_id": None, "users": []})
-
-    conn = None
-    try:
-        conn = DB_POOL.getconn()
-        users, bal_map = [], {}
-
-        with conn:
-            with conn.cursor() as cur:
-                # balances for this org
-                cur.execute("""
-                    SELECT user_id, COALESCE(SUM(delta),0) AS balance
-                    FROM credits_ledger
-                    WHERE org_id = %s
-                    GROUP BY user_id
-                """, (org_id,))
-                bal_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
-
-                # users in this org
-                cur.execute("""
-                    SELECT id, username, COALESCE(active, TRUE) AS active
-                    FROM users
-                    WHERE org_id = %s
-                    ORDER BY username ASC
-                """, (org_id,))
-                for uid2, uname, act in cur.fetchall():
-                    users.append({
-                        "id": int(uid2),
-                        "username": uname or "",
-                        "active": bool(act),
-                        "balance": bal_map.get(int(uid2))
-                    })
-
-        return jsonify({"ok": True, "org_id": org_id, "users": users})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-    finally:
-        try:
-            if conn:
-                DB_POOL.putconn(conn)
-        except Exception:
-            pass
 
 # --- Director (org-scoped): create a user in my org (optional seed credits) ---
 @app.get("/director/api/create-user")
@@ -5169,6 +5099,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

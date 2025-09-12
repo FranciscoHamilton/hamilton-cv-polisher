@@ -3854,66 +3854,74 @@ def director_api_dashboard():
 @app.get("/me/dashboard")
 def me_dashboard():
     """
-    One-call payload for the Session Stats tiles.
-    - downloadsMonth: polishes this month for the current user
-    - lastCandidate / lastTime: last event for current user (DB first, legacy fallback)
-    - creditsUsed: TEMP mirrors downloadsMonth (until you want a separate 'used' metric)
-    - creditsBalance: real balance from credits_ledger (if DB available)
+    One-call payload for the Session Stats tiles on the client page.
+    Returns only the current user's numbers.
     """
-    # Who am I?
+    # must be logged in
     try:
         uid = int(session.get("user_id") or 0)
     except Exception:
         uid = 0
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
 
-    # downloadsMonth (safe fallbacks)
-    try:
-        month_usage = int(count_usage_month_db(uid)) if (DB_POOL and uid) else 0
-    except Exception:
-        try:
-            month_usage = int(get_user_month_usage(uid)) if uid else 0
-        except Exception:
-            month_usage = 0
+    downloads_month = 0
+    last_cand = ""
+    last_ts_iso = None
+    credits_used = 0
+    credits_balance = None
 
-    # Last event: DB first, legacy fallback
-    last_candidate, last_ts = "", ""
-    try:
-        if DB_POOL and uid:
-            c, t = last_event_for_user(uid)
-            last_candidate = c or ""
-            last_ts = t or ""
-    except Exception:
-        pass
-    if not last_candidate and not last_ts:
+    if DB_POOL:
         try:
-            last_candidate = (STATS.get("last_candidate") or "") if STATS else ""
-            last_ts = (STATS.get("last_time") or "") if STATS else ""
+            # Downloads this month
+            row = db_query_one(
+                "SELECT COUNT(*) FROM usage_events WHERE user_id=%s AND ts >= date_trunc('month', now())",
+                (uid,),
+            )
+            downloads_month = int(row[0]) if row else 0
+        except Exception as e:
+            print("me_dashboard count failed:", e)
+
+        try:
+            # Last event
+            row = db_query_one(
+                "SELECT candidate, ts FROM usage_events WHERE user_id=%s ORDER BY ts DESC LIMIT 1",
+                (uid,),
+            )
+            if row:
+                last_cand = row[0] or ""
+                ts = row[1]
+                last_ts_iso = ts.isoformat() if ts else None
+        except Exception as e:
+            print("me_dashboard last-event failed:", e)
+
+        try:
+            # Credits: balance and used (sum of negative deltas as positive number)
+            row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid,))
+            if row:
+                credits_balance = int(row[0])
+
+            row = db_query_one("SELECT COALESCE(SUM(-delta),0) FROM credits_ledger WHERE user_id=%s AND delta < 0", (uid,))
+            if row:
+                credits_used = int(row[0])
+        except Exception as e:
+            print("me_dashboard credits failed:", e)
+
+    else:
+        # Legacy fallback (very limited)
+        try:
+            last_cand = STATS.get("last_candidate") or ""
+            last_ts_iso = STATS.get("last_time") or None
         except Exception:
             pass
 
-    # Credits balance from ledger (DB), legacy fallback to session trial_credits
-    credits_balance = None
-    if DB_POOL and uid:
-        try:
-            row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid,))
-            credits_balance = int(row[0]) if row else 0
-        except Exception:
-            credits_balance = None
-    else:
-        try:
-            tmp = session.get("trial_credits")
-            credits_balance = int(tmp) if tmp is not None else None
-        except Exception:
-            credits_balance = None
-
     return jsonify({
         "ok": True,
-        "user_id": uid or None,
-        "downloadsMonth": month_usage,
-        "lastCandidate": last_candidate,
-        "lastTime": last_ts,
-        "creditsUsed": month_usage,       # TEMP: mirrors month usage
-        "creditsBalance": credits_balance # REAL balance from ledger (if available)
+        "downloadsMonth": downloads_month,
+        "lastCandidate": last_cand,
+        "lastTime": last_ts_iso,
+        "creditsUsed": credits_used,
+        "creditsBalance": credits_balance,
     })
 
 # --- Admin: month usage grouped by user (for Director dashboard) ---
@@ -4912,6 +4920,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

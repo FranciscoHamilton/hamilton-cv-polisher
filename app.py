@@ -2993,15 +2993,7 @@ def app_page():
             '})();</script></body>'
         )
     )
-    # Inject Full History data loader (fires on first click)
-    html = html.replace(
-        "</body>",
-        (
-            '<script>(function(){'
-            ...
-            '})();</script></body>'
-        )
-    )
+    
 
     # --- Session Stats tiles: refresh on load and on demand ---
     html = html.replace("</body>", """
@@ -4965,6 +4957,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

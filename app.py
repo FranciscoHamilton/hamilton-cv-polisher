@@ -3886,6 +3886,218 @@ def director_api_dashboard():
                 DB_POOL.putconn(conn)
         except Exception:
             pass
+            # --- Director (org-scoped): list users in my org with balances ---
+@app.get("/director/api/users")
+def director_api_users():
+    """
+    Returns users in the same org as the current session user.
+    Shape:
+      {
+        ok: true,
+        org_id: <int|null>,
+        users: [
+          { id, username, active, balance }
+        ]
+      }
+    """
+    # must be logged in
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    if not DB_POOL:
+        return jsonify({"ok": True, "org_id": None, "users": []})
+
+    # find my org
+    org_id = _current_user_org_id()
+    if not org_id:
+        return jsonify({"ok": True, "org_id": None, "users": []})
+
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        users, bal_map = [], {}
+
+        with conn:
+            with conn.cursor() as cur:
+                # balances for this org
+                cur.execute("""
+                    SELECT user_id, COALESCE(SUM(delta),0) AS balance
+                    FROM credits_ledger
+                    WHERE org_id = %s
+                    GROUP BY user_id
+                """, (org_id,))
+                bal_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
+
+                # users in this org
+                cur.execute("""
+                    SELECT id, username, COALESCE(active, TRUE) AS active
+                    FROM users
+                    WHERE org_id = %s
+                    ORDER BY username ASC
+                """, (org_id,))
+                for uid2, uname, act in cur.fetchall():
+                    users.append({
+                        "id": int(uid2),
+                        "username": uname or "",
+                        "active": bool(act),
+                        "balance": bal_map.get(int(uid2))
+                    })
+
+        return jsonify({"ok": True, "org_id": org_id, "users": users})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            if conn:
+                DB_POOL.putconn(conn)
+        except Exception:
+            pass
+# --- Director (org-scoped): list users in my org with balances ---
+@app.get("/director/api/users")
+def director_api_users():
+    """
+    Returns users in the same org as the current session user.
+    Shape:
+      {
+        ok: true,
+        org_id: <int|null>,
+        users: [
+          { id, username, active, balance }
+        ]
+      }
+    """
+    # must be logged in
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    if not DB_POOL:
+        return jsonify({"ok": True, "org_id": None, "users": []})
+
+    # find my org
+    org_id = _current_user_org_id()
+    if not org_id:
+        return jsonify({"ok": True, "org_id": None, "users": []})
+
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        users, bal_map = [], {}
+
+        with conn:
+            with conn.cursor() as cur:
+                # balances for this org
+                cur.execute("""
+                    SELECT user_id, COALESCE(SUM(delta),0) AS balance
+                    FROM credits_ledger
+                    WHERE org_id = %s
+                    GROUP BY user_id
+                """, (org_id,))
+                bal_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
+
+                # users in this org
+                cur.execute("""
+                    SELECT id, username, COALESCE(active, TRUE) AS active
+                    FROM users
+                    WHERE org_id = %s
+                    ORDER BY username ASC
+                """, (org_id,))
+                for uid2, uname, act in cur.fetchall():
+                    users.append({
+                        "id": int(uid2),
+                        "username": uname or "",
+                        "active": bool(act),
+                        "balance": bal_map.get(int(uid2))
+                    })
+
+        return jsonify({"ok": True, "org_id": org_id, "users": users})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            if conn:
+                DB_POOL.putconn(conn)
+        except Exception:
+            pass
+
+# --- Director (org-scoped): create a user in my org (optional seed credits) ---
+@app.get("/director/api/create-user")
+def director_api_create_user():
+    """
+    Creates a new active user in the current director's org.
+    Query params:
+      - u: username (required)
+      - p: password (required)
+      - seed: optional integer to grant starting credits
+    Returns: { ok, id, username, seed_granted }
+    """
+    # must be logged in
+    try:
+        me_uid = int(session.get("user_id") or 0)
+    except Exception:
+        me_uid = 0
+    if me_uid <= 0:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "db_unavailable"}), 500
+
+    # find my org
+    org_id = _current_user_org_id()
+    if not org_id:
+        return jsonify({"ok": False, "error": "no_org"}), 400
+
+    # read inputs
+    u = (request.args.get("u") or "").strip()
+    p = request.args.get("p") or ""
+    seed_raw = request.args.get("seed")
+    try:
+        seed = int(seed_raw) if seed_raw not in (None, "") else 0
+    except Exception:
+        seed = 0
+
+    if not u or not p:
+        return jsonify({"ok": False, "error": "missing u or p"}), 400
+
+    # basic guards
+    uname = u.lower()
+    if uname in ("admin", "director"):
+        return jsonify({"ok": False, "error": "reserved_username"}), 400
+
+    # create
+    try:
+        # global uniqueness check (safer)
+        row = db_query_one("SELECT id FROM users WHERE username=%s", (u,))
+        if row:
+            return jsonify({"ok": False, "error": "user_exists", "id": int(row[0])}), 409
+
+        pw_hash = generate_password_hash(p)
+        ok = db_execute(
+            "INSERT INTO users (username, password_hash, active, org_id) VALUES (%s, %s, %s, %s)",
+            (u, pw_hash, True, org_id),
+        )
+        if not ok:
+            return jsonify({"ok": False, "error": "insert_failed"}), 500
+
+        row2 = db_query_one("SELECT id FROM users WHERE username=%s", (u,))
+        new_id = int(row2[0]) if row2 else None
+
+        # optionally grant seed credits
+        granted = 0
+        if new_id and seed > 0:
+            if credits_add(new_id, seed, reason="seed", ext_ref="director-create"):
+                granted = seed
+
+        return jsonify({"ok": True, "id": new_id, "username": u, "seed_granted": granted})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 # --- Canonical per-user dashboard payload (feeds the four tiles in one call) ---
 
 @app.get("/me/dashboard")
@@ -4957,6 +5169,7 @@ def health():
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
+
 
 
 

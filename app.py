@@ -5120,32 +5120,6 @@ def polish():
         if not text or len(text.strip()) < 30:
             abort(400, "Couldn't read enough text. If it's a scanned PDF, please use a DOCX or an OCRed PDF.")
 
-        # --- Credits check: block if no balance (admin bypasses) ---
-        try:
-            uid_check = int(session.get("user_id") or 0)
-        except Exception:
-            uid_check = 0
-
-        can_bypass = False
-        try:
-            # If you have the helper, this will allow true admin to bypass
-            can_bypass = (session.get("user","").strip().lower() == "admin") or bool(session.get("is_admin"))
-        except Exception:
-            pass
-
-        if DB_POOL and uid_check > 0 and not can_bypass:
-            bal = None
-            try:
-                row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid_check,))
-                bal = int(row[0]) if row else 0
-            except Exception as e:
-                # If balance check fails, don't block polishing; just log
-                print("credits balance check failed:", e)
-                bal = None
-
-            if bal is not None and bal <= 0:
-                abort(402, "No credits remaining for this account. Please top up to continue.")
-
         # ---- Polishing logic (unchanged) ----
         data = ai_or_heuristic_structuring(text)
         data["skills"] = extract_top_skills(text)  # keywords-only list as before
@@ -5161,35 +5135,28 @@ def polish():
         STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
         _save_stats()
 
-        # --- DB logging for Director usage + charge 1 credit (safe no-op if no DB / no user) ---
+        # --- DB usage log + CHARGE via org pool (or per-user fallback) ---
         try:
             uid = int(session.get("user_id") or 0)
         except Exception:
             uid = 0
+
         try:
             # record usage event (stores org_id if present)
             log_usage_event(uid, f.filename, candidate_name)
-            # charge 1 credit for this successful polish
+            # charge exactly 1 credit (org pool if available, else user)
             if uid:
-                credits_add(uid, -1, reason="polish", ext_ref=f.filename or "")
-        except Exception as e:
-            print("DB usage/credits log failed:", e)
-
-                # --- Credits ledger: debit 1 for this successful polish ---
-        try:
-            uid_int = int(session.get("user_id") or 0)
-        except Exception:
-            uid_int = 0
-        if DB_POOL and uid_int > 0:
-            try:
-                # record a debit; reason = "polish", ext_ref = original filename
-                db_execute(
-                    "INSERT INTO credits_ledger (user_id, delta, reason, ext_ref) VALUES (%s,%s,%s,%s)",
-                    (uid_int, -1, "polish", str(f.filename or "")),
+                ok, err = charge_credit_for_polish(
+                    user_id=uid,
+                    cost=1,
+                    candidate=candidate_name,
+                    filename=str(f.filename or "")
                 )
-            except Exception as e:
-                # don't break the download if ledger write fails
-                print("credits_ledger debit failed:", e)
+                if not ok:
+                    status = 402 if err in ("insufficient_org_credits", "insufficient_user_credits") else 403
+                    return jsonify({"ok": False, "error": err}), status
+        except Exception as e:
+            print("DB usage/credits charge failed:", e)
 
         # ---- Decrement trial credits (if present) ----
         try:
@@ -5203,13 +5170,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
-
-@app.get("/health")
-def health():
-    return "ok"
-
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=int(os.getenv("PORT","5000")), debug=True, use_reloader=False)
 
 
 

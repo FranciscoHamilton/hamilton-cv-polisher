@@ -4135,6 +4135,101 @@ def director_api_users():
         except Exception:
             pass
 
+def _require_logged_in():
+    try:
+        uid = int(session.get("user_id") or 0)
+        return uid if uid > 0 else None
+    except Exception:
+        return None
+
+# --- Director: set per-user monthly cap within my org ---
+@app.get("/director/api/user/set-monthly-cap")
+def director_set_monthly_cap():
+    me_uid = _require_logged_in()
+    if not me_uid:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    my_org = _current_user_org_id()
+    if not my_org:
+        return jsonify({"ok": False, "error": "no_org"}), 400
+
+    # params: user_id (required), cap (int or "null")
+    try:
+        target_id = int(request.args.get("user_id") or "0")
+        cap_raw = request.args.get("cap")  # string: int or "null"
+    except Exception:
+        return jsonify({"ok": False, "error": "bad_params"}), 400
+    if target_id <= 0:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
+
+    row = db_query_one("SELECT username, org_id FROM users WHERE id=%s", (target_id,))
+    if not row:
+        return jsonify({"ok": False, "error": "user_not_found"}), 404
+
+    target_username = (row[0] or "").strip().lower()
+    if int(row[1] or 0) != my_org:
+        return jsonify({"ok": False, "error": "not_in_my_org"}), 403
+    if target_username == "admin":
+        return jsonify({"ok": False, "error": "cannot_modify_admin"}), 403
+
+    # cap parsing
+    cap_val = None
+    if cap_raw is not None and str(cap_raw).lower() != "null":
+        try:
+            cap_val = max(0, int(cap_raw))
+        except Exception:
+            return jsonify({"ok": False, "error": "bad_cap"}), 400
+
+    # upsert into org_user_limits
+    existing = db_query_one("SELECT 1 FROM org_user_limits WHERE org_id=%s AND user_id=%s", (my_org, target_id))
+    if existing:
+        ok = db_execute(
+            "UPDATE org_user_limits SET monthly_cap=%s, active=TRUE WHERE org_id=%s AND user_id=%s",
+            (cap_val, my_org, target_id)
+        )
+    else:
+        ok = db_execute(
+            "INSERT INTO org_user_limits (org_id, user_id, monthly_cap, active) VALUES (%s,%s,%s,TRUE)",
+            (my_org, target_id, cap_val)
+        )
+    if not ok:
+        return jsonify({"ok": False, "error": "update_failed"}), 500
+
+    spent = org_user_spent_this_month(my_org, target_id)
+    return jsonify({"ok": True, "user_id": target_id, "monthly_cap": cap_val, "spent_this_month": spent})
+
+# --- Director: org credits summary (my org) ---
+@app.get("/director/api/org/credits-summary")
+def director_org_credits_summary():
+    me_uid = _require_logged_in()
+    if not me_uid:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    my_org = _current_user_org_id()
+    if not my_org:
+        return jsonify({"ok": False, "error": "no_org"}), 400
+
+    balance = org_balance(my_org)
+
+    rows = db_query_all("""
+        SELECT id, delta, reason, user_id, created_by, created_at
+        FROM org_credits_ledger
+        WHERE org_id=%s
+        ORDER BY id DESC
+        LIMIT 200
+    """, (my_org,))
+
+    # list users in this org with their caps
+    caps = db_query_all("""
+        SELECT u.id AS user_id, u.username, l.monthly_cap
+        FROM users u
+        LEFT JOIN org_user_limits l
+          ON l.org_id = u.org_id AND l.user_id = u.id AND l.active
+        WHERE u.org_id=%s
+        ORDER BY u.username ASC
+    """, (my_org,))
+
+    return jsonify({"ok": True, "org_id": my_org, "balance": balance, "rows": rows or [], "limits": caps or []})
 # --- Director (org-scoped): create a user in my org (optional seed credits) ---
 @app.get("/director/api/create-user")
 def director_api_create_user():
@@ -5237,6 +5332,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

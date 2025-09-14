@@ -5461,12 +5461,7 @@ def me_diag_v2():
 # ---------- Director routes ----------
 @app.get("/director")
 def director_home():
-    # If not logged in as “director”, show the existing login page
-    if not session.get("director"):
-        return render_template_string(DIRECTOR_LOGIN_HTML)
-
-    # Already authenticated as director → go straight to the new usage view
-    return redirect("/director/usage")
+       return redirect(url_for("director_ui"))
 
 
 @app.post("/director/login")
@@ -5570,34 +5565,12 @@ def director_forgot_post():
     STATS["director_pass_override"] = newpass
     _save_stats()
     return redirect(url_for("director_home"))
+    
 @app.get("/director/usage")
 def director_usage():
-    # must be logged in (either normal login or your director session)
-    if not (session.get("user_id") or session.get("director")):
-        return redirect("/login")
+        return redirect(url_for("director_ui"))
 
-    # must be admin or director
-    if not (is_admin() or session.get("director")):
-        abort(403)
 
-    try:
-        users = list_users_usage_month()  # [{id, username, active, month_usage, total_usage}, ...]
-    except Exception as e:
-        print("director users error:", e)
-        users = []
-
-    try:
-        events = get_recent_usage_events(100)  # latest 100
-    except Exception as e:
-        print("director events error:", e)
-        events = []
-
-    return render_template_string(
-    DIRECTOR_HTML,
-    users=users,
-    events=events,
-    legacy=STATS.get("history", [])[-50:]  # last 50 legacy entries
-)
 # ---------- App polishing + API (org-aware credits) ----------
 @app.post("/polish")
 def polish():
@@ -5706,6 +5679,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

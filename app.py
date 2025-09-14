@@ -5255,38 +5255,7 @@ def director_ui():
     </table>
   </div>
 
-  // Reset password form -> POST /director/api/user/reset-password
-  document.getElementById('rp_btn')?.addEventListener('click', async () => {{
-    const uidEl = document.getElementById('rp_uid');
-    const pwEl  = document.getElementById('rp_pw');
-    const msgEl = document.getElementById('rp_msg');
-    const uid = (uidEl?.value || '').trim();
-    const pw  = (pwEl?.value || '').trim();
-    if (!uid || !pw) {{
-      msgEl.textContent = 'Please enter both User ID and a new password.';
-      return;
-    }}
-    const btn = document.getElementById('rp_btn');
-    btn.disabled = true; msgEl.textContent = 'Working...';
-    try {{
-      const res = await fetch('/director/api/user/reset-password', {{
-        method: 'POST',
-        headers: {{'Content-Type': 'application/json'}},
-        body: JSON.stringify({{ user_id: Number(uid), new_password: pw }})
-      }});
-      const js = await res.json();
-      if (!res.ok || !js.ok) {{
-        msgEl.textContent = 'Failed: ' + (js.error || res.status);
-      }} else {{
-        msgEl.textContent = 'Password updated for user #' + js.user_id + ' (' + (js.username || '') + ')';
-        pwEl.value = '';
-      }}
-    }} catch (e) {{
-      msgEl.textContent = 'Network error';
-    }} finally {{
-      btn.disabled = false;
-    }}
-  }});
+
   <script>
   // Enable/Disable toggle handler (calls /director/api/user/set-active)
   document.addEventListener('click', async (ev) => {{
@@ -5714,6 +5683,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -5354,7 +5354,63 @@ def on_payment_required(e):
 @app.get("/out-of-credits")
 def out_of_credits_preview():
     reason = request.args.get("msg") or "Preview: this is how the page looks when credits run out."
-    return _render_out_of_credits(reason)    
+    return _render_out_of_credits(reason)   
+
+# --- Admin: create org tables if missing (safe to run anytime) ---
+@app.get("/__admin/ensure-org-schema")
+def admin_ensure_org_schema():
+    # admin only
+    if not (session.get("is_admin")
+            or (session.get("username","").lower() == "admin")
+            or (session.get("user","").lower() == "admin")):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "db_unavailable"}), 500
+
+    # Create minimal tables used by org credits + per-user caps
+    ddl = [
+        # org credits ledger
+        """
+        CREATE TABLE IF NOT EXISTS org_credits_ledger (
+          id         SERIAL PRIMARY KEY,
+          org_id     INTEGER NOT NULL,
+          user_id    INTEGER,
+          delta      INTEGER NOT NULL,
+          reason     TEXT,
+          created_by INTEGER,
+          created_at TIMESTAMP DEFAULT NOW()
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_org_credits_ledger_org ON org_credits_ledger(org_id)",
+
+        # optional per-user monthly caps within an org
+        """
+        CREATE TABLE IF NOT EXISTS org_user_limits (
+          id         SERIAL PRIMARY KEY,
+          org_id     INTEGER NOT NULL,
+          user_id    INTEGER NOT NULL,
+          month_cap  INTEGER,
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+        """,
+
+        # (optional) orgs table — harmless if you already have one
+        """
+        CREATE TABLE IF NOT EXISTS orgs (
+          id         SERIAL PRIMARY KEY,
+          name       TEXT UNIQUE,
+          active     BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP DEFAULT NOW()
+        )
+        """
+    ]
+
+    created = []
+    for stmt in ddl:
+        ok = db_execute(stmt)
+        created.append(bool(ok))
+
+    return jsonify({"ok": True, "created_or_exists": created})
 # ---- Quick diagnostic (no secrets) ----
 
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
@@ -5643,6 +5699,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

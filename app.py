@@ -5000,11 +5000,12 @@ if (!monthRows.length) {
 </html>
     """
 # --- Director: minimal UI for org-scoped dashboard (read-only) ---
+# --- Director: minimal UI for org-scoped dashboard (read-only + enable/disable) ---
 @app.get("/director/ui")
 def director_ui():
     """
     Simple HTML page for directors to view their org's pool balance,
-    users (with any caps if present), and recent pool activity.
+    users (with any caps if present), recent pool activity, and toggle user active state.
     """
     # must be logged in
     try:
@@ -5041,7 +5042,8 @@ def director_ui():
                (SELECT l.monthly_cap
                   FROM org_user_limits l
                  WHERE l.org_id = u.org_id AND l.user_id = u.id AND l.active
-                 LIMIT 1) AS monthly_cap
+                 LIMIT 1) AS monthly_cap,
+               COALESCE(u.active, TRUE) AS active
           FROM users u
          WHERE u.org_id = %s
          ORDER BY u.username ASC
@@ -5062,6 +5064,7 @@ def director_ui():
 <head>
   <meta charset="utf-8"/>
   <title>Director · Org Dashboard</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <style>
     body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }}
     .wrap {{ max-width: 1100px; margin: 0 auto; }}
@@ -5077,6 +5080,11 @@ def director_ui():
     .delta-neg {{ color: #9a1e1e; }}
     .small {{ font-size: 12px; color: #777; }}
     .toolbar a {{ margin-right: 10px; }}
+    .pill {{ display:inline-block; padding: 2px 8px; border-radius: 999px; background:#f0f0f0; font-size:12px; }}
+    .pill.ok {{ background:#e6f6ea; color:#0a7a26; }}
+    .pill.off {{ background:#fde7e7; color:#9a1e1e; }}
+    button.toggle {{ font-size:12px; padding:6px 10px; border:1px solid #ddd; border-radius:8px; background:#fff; cursor:pointer; }}
+    button.toggle:hover {{ background:#f6f6f6; }}
   </style>
 </head>
 <body>
@@ -5107,10 +5115,20 @@ def director_ui():
           <th style="width:80px;">User ID</th>
           <th>Username</th>
           <th style="width:140px;">Monthly Cap</th>
+          <th style="width:120px;">Active</th>
+          <th style="width:120px;">Action</th>
         </tr>
       </thead>
-      <tbody>
-        {''.join(f'<tr><td>{u[0]}</td><td>{(u[1] or "")}</td><td>{("" if u[2] is None else u[2])}</td></tr>' for u in users)}
+      <tbody id="usersBody">
+        {''.join(
+            f'<tr data-uid="{{u[0]}}">'
+            f'<td>{{u[0]}}</td>'
+            f'<td>{{(u[1] or "")}}</td>'
+            f'<td>{{("" if u[2] is None else u[2])}}</td>'
+            f'<td><span class="pill {{ "ok" if u[3] else "off" }}">{{"Active" if u[3] else "Disabled"}}</span></td>'
+            f'<td><button class="toggle" data-active="{{1 if not u[3] else 0}}">{{"Enable" if not u[3] else "Disable"}}</button></td>'
+            f'</tr>'
+          for u in users)}
       </tbody>
     </table>
 
@@ -5128,20 +5146,124 @@ def director_ui():
       </thead>
       <tbody>
         {''.join(f'<tr>'
-                 f'<td>{r[0]}</td>'
-                 f'<td>{r[1]}</td>'
-                 f'<td>{r[2]}</td>'
-                 f'<td class="{{"delta-pos" if (r[3] or 0) > 0 else "delta-neg"}}">{r[3]}</td>'
-                 f'<td>{(r[4] or "")}</td>'
-                 f'<td>{r[5]}</td>'
+                 f'<td>{{r[0]}}</td>'
+                 f'<td>{{r[1]}}</td>'
+                 f'<td>{{r[2]}}</td>'
+                 f'<td class="{{"delta-pos" if (r[3] or 0) > 0 else "delta-neg"}}">{{r[3]}}</td>'
+                 f'<td>{{(r[4] or "")}}</td>'
+                 f'<td>{{r[5]}}</td>'
                  f'</tr>' for r in recent)}
       </tbody>
     </table>
   </div>
+
+  <script>
+  // Enable/Disable toggle handler (calls /director/api/user/set-active)
+  document.addEventListener('click', async (ev) => {{
+    const btn = ev.target.closest('button.toggle');
+    if (!btn) return;
+    const row = btn.closest('tr');
+    const uid = row.getAttribute('data-uid');
+    const newActive = btn.getAttribute('data-active'); // "1" to enable, "0" to disable
+    btn.disabled = true;
+    try {{
+      const res = await fetch(`/director/api/user/set-active?user_id=${{encodeURIComponent(uid)}}&active=${{encodeURIComponent(newActive)}}`);
+      const js = await res.json();
+      if (!res.ok || !js.ok) {{
+        alert('Failed: ' + (js.error || res.status));
+      }} else {{
+        // Update UI: pill + button
+        const pill = row.querySelector('.pill');
+        const activeNow = (newActive === '1');
+        pill.textContent = activeNow ? 'Active' : 'Disabled';
+        pill.className = 'pill ' + (activeNow ? 'ok' : 'off');
+        btn.textContent = activeNow ? 'Disable' : 'Enable';
+        btn.setAttribute('data-active', activeNow ? '0' : '1');
+      }}
+    }} catch (e) {{
+      alert('Network error');
+    }} finally {{
+      btn.disabled = false;
+    }}
+  }});
+  </script>
 </body>
 </html>
 """
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+
+# --- Friendly 402 page (Out of credits) ---
+def _render_out_of_credits(reason_text=None):
+    # who am I
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+
+    # compute balance (org-aware)
+    scope = "anon"
+    balance = None
+    org_id = None
+    try:
+        if uid > 0:
+            org_id = _user_org_id(uid)
+            if org_id:
+                scope = "org"
+                balance = org_balance(org_id)
+            else:
+                scope = "user"
+                row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid,))
+                balance = int(row[0]) if row else 0
+    except Exception:
+        pass
+
+    msg = reason_text or "You’ve run out of credits."
+    bal_str = "" if balance is None else f"{balance}"
+    scope_label = {"org":"Your organization pool", "user":"Your account", "anon":"Your account"}[scope]
+
+    html = f"""
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Out of credits</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <style>
+    body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 40px; }}
+    .card {{ max-width: 640px; border: 1px solid #eee; border-radius: 12px; padding: 20px; box-shadow: 0 2px 6px rgba(0,0,0,.06); }}
+    h1 {{ margin: 0 0 10px; }}
+    .muted {{ color:#666; }}
+    .links a {{ display:inline-block; margin-right:12px; }}
+    .balance {{ font-size: 18px; margin: 10px 0 16px; }}
+    .tag {{ display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:12px; font-size:12px; color:#666; margin-left:8px; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Out of credits <span class="tag">{scope_label}</span></h1>
+    <div class="muted">{msg}</div>
+    <div class="balance">Current balance: <strong>{bal_str if bal_str!='' else '—'}</strong></div>
+    <div class="links">
+      <a href="/me/credits" target="_blank">View my credits</a>
+      <a href="/director/ui" target="_blank">Director dashboard</a>
+      <a href="/">Back to upload</a>
+    </div>
+  </div>
+</body>
+</html>
+"""
+    return make_response(html, 402, {"Content-Type": "text/html; charset=utf-8"})
+
+@app.errorhandler(402)
+def on_payment_required(e):
+    reason = getattr(e, "description", None)  # carries abort(402, "...") text
+    return _render_out_of_credits(reason)
+
+# Optional: direct route to preview the page
+@app.get("/out-of-credits")
+def out_of_credits_preview():
+    reason = request.args.get("msg") or "Preview: this is how the page looks when credits run out."
+    return _render_out_of_credits(reason)    
 # ---- Quick diagnostic (no secrets) ----
 
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
@@ -5457,6 +5579,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

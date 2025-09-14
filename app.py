@@ -38,17 +38,16 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS plans (
+-- Orgs + org_id on users
+CREATE TABLE IF NOT EXISTS orgs (
   id SERIAL PRIMARY KEY,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  plan_name TEXT NOT NULL,
-  monthly_credits INTEGER NOT NULL,
-  overage_rate NUMERIC(6,2) NOT NULL,
-  renews_at DATE,
+  name TEXT UNIQUE NOT NULL,
   active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW()
 );
+ALTER TABLE users ADD COLUMN IF NOT EXISTS org_id INTEGER;
 
+-- Per-user usage events (+ optional org_id)
 CREATE TABLE IF NOT EXISTS usage_events (
   id SERIAL PRIMARY KEY,
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -56,6 +55,53 @@ CREATE TABLE IF NOT EXISTS usage_events (
   candidate TEXT,
   ts TIMESTAMP DEFAULT NOW()
 );
+ALTER TABLE usage_events ADD COLUMN IF NOT EXISTS org_id INTEGER;
+
+-- Per-user credits ledger (kept for history; also stores org_id when known)
+CREATE TABLE IF NOT EXISTS credits_ledger (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  delta INTEGER NOT NULL,
+  reason TEXT,
+  ext_ref TEXT,
+  org_id INTEGER,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- NEW: Org-wide credits pool (one shared balance per org)
+CREATE TABLE IF NOT EXISTS org_credits_ledger (
+  id SERIAL PRIMARY KEY,
+  org_id INTEGER NOT NULL,
+  delta INTEGER NOT NULL,
+  reason TEXT,
+  created_by INTEGER,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- NEW: Optional per-user monthly caps (within an org)
+CREATE TABLE IF NOT EXISTS org_user_limits (
+  id SERIAL PRIMARY KEY,
+  org_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  monthly_cap INTEGER,
+  active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Helpful indexes (idempotent)
+CREATE INDEX IF NOT EXISTS idx_users_org_id           ON users(org_id);
+CREATE INDEX IF NOT EXISTS idx_usage_month_user       ON usage_events(user_id, ts);
+CREATE INDEX IF NOT EXISTS idx_usage_org_id           ON usage_events(org_id);
+CREATE INDEX IF NOT EXISTS idx_cred_user              ON credits_ledger(user_id);
+CREATE INDEX IF NOT EXISTS idx_cred_org               ON credits_ledger(org_id);
+CREATE INDEX IF NOT EXISTS idx_orgcred_org            ON org_credits_ledger(org_id);
+CREATE INDEX IF NOT EXISTS idx_orglimits_org_user     ON org_user_limits(org_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_orglimits_active       ON org_user_limits(active);
+
+-- Seed a default org (id=1) if you want Hamilton as org 1
+INSERT INTO orgs (id, name, active)
+VALUES (1, 'Hamilton', TRUE)
+ON CONFLICT (id) DO NOTHING;
 """
 
 def init_db():
@@ -5668,6 +5714,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

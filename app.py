@@ -3705,26 +3705,21 @@ def admin_org_grant_credits():
         return jsonify({"ok": False, "error": "forbidden"}), 403
     try:
         org_id = int(request.args.get("org_id") or "0")
-        delta = int(request.args.get("delta") or "0")
+        delta  = int(request.args.get("delta") or "0")
     except Exception:
         return jsonify({"ok": False, "error": "bad_org_id/delta"}), 400
     reason = (request.args.get("reason") or "admin_grant").strip()
     if org_id <= 0 or delta == 0:
         return jsonify({"ok": False, "error": "org_id and non-zero delta required"}), 400
-    
-    # Try insert with created_by; if the column doesn't exist (older schema), fall back without it
-ok = db_execute(
-    "INSERT INTO org_credits_ledger (org_id, delta, reason, created_by) VALUES (%s,%s,%s,%s)",
-    (org_id, delta, reason, created_by),
-)
-if not ok:
-    # fallback for older schema missing 'created_by'
+
     ok = db_execute(
-        "INSERT INTO org_credits_ledger (org_id, delta, reason) VALUES (%s,%s,%s)",
-        (org_id, delta, reason),
+        "INSERT INTO org_credits_ledger (org_id, delta, reason, created_by) VALUES (%s,%s,%s,%s)",
+        (org_id, delta, reason, int(session.get("user_id") or 0))
     )
-if not ok:
-    return jsonify({"ok": False, "error": "insert_failed"}), 500
+    if not ok:
+        return jsonify({"ok": False, "error": "insert_failed"}), 500
+
+    return jsonify({"ok": True, "org_id": org_id, "new_balance": org_balance(org_id)})
 
 # --- Admin: set org balance (compute delta to reach target) ---
 @app.get("/__admin/org/set-credits")
@@ -5686,6 +5681,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

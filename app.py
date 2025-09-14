@@ -4008,17 +4008,13 @@ def charge_credit_for_polish(user_id: int, cost: int = 1, candidate: str = "", f
 @app.get("/director/api/dashboard")
 def director_api_dashboard():
     """
-    Returns ONLY data for the current user's organisation.
-
-    Response shape:
-      {
-        ok: true,
-        month: {
-          total: <int>,
-          rows: [ { user_id, username, count, balance }, ... ]
-        },
-        recent: [ { ts, user_id, username, candidate, filename }, ... ]
-      }
+    Org-scoped dashboard for the currently logged-in user.
+    Returns: {
+      ok, source, orgId, orgName,
+      pool: { balance },
+      month: { total, rows:[{user_id, username, count}] },
+      recent: [ { ts, user_id, username, candidate, filename } ]
+    }
     """
     # must be logged in
     try:
@@ -4029,99 +4025,75 @@ def director_api_dashboard():
         return jsonify({"ok": False, "error": "not_logged_in"}), 401
 
     if not DB_POOL:
-        # fallback to legacy (empty – org scoping requires DB)
         return jsonify({"ok": True, "source": "legacy", "month": {"total": 0, "rows": []}, "recent": []})
 
     # org scope
     org_id = _current_user_org_id()
     if not org_id:
-        # user has no org; return empty but OK
         return jsonify({"ok": True, "source": "no_org", "month": {"total": 0, "rows": []}, "recent": []})
 
-    # limit for recent
+    # inputs
     try:
         limit = int(request.args.get("limit", "50"))
     except Exception:
         limit = 50
     limit = max(1, min(limit, 200))
 
-    conn = None
-    try:
-        conn = DB_POOL.getconn()
-        month_rows, month_total, recent_rows = [], 0, []
+    # org name
+    row = db_query_one("SELECT name FROM orgs WHERE id=%s", (org_id,))
+    org_name = (row[0] if row and row[0] else None)
 
-        with conn:
-            with conn.cursor() as cur:
-                # Per-user counts this month for this org
-                cur.execute("""
-                    SELECT u.id AS user_id, u.username, COUNT(e.*) AS cnt
-                    FROM users u
-                    LEFT JOIN usage_events e
-                      ON e.user_id = u.id
-                     AND e.ts >= date_trunc('month', now())
-                    WHERE u.org_id = %s
-                    GROUP BY u.id, u.username
-                    ORDER BY cnt DESC, u.username ASC
-                """, (org_id,))
-                per_user = cur.fetchall()
+    # ORG POOL BALANCE (sum org_credits_ledger.delta for this org)
+    bal_row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger WHERE org_id=%s", (org_id,))
+    pool_balance = int(bal_row[0]) if bal_row else 0
 
-                # Total this month for this org
-                cur.execute("""
-                    SELECT COUNT(*) FROM usage_events
-                    WHERE org_id = %s AND ts >= date_trunc('month', now())
-                """, (org_id,))
-                month_total = int(cur.fetchone()[0])
+    # This month per-user counts
+    per_user = db_query_all("""
+        SELECT u.id AS user_id, u.username, COUNT(e.*) AS cnt
+        FROM users u
+        LEFT JOIN usage_events e
+               ON e.user_id = u.id
+              AND e.ts >= date_trunc('month', now())
+        WHERE u.org_id = %s
+        GROUP BY u.id, u.username
+        ORDER BY cnt DESC, u.username ASC
+    """, (org_id,)) or []
 
-                # Current balances per user in this org
-                cur.execute("""
-                    SELECT user_id, COALESCE(SUM(delta),0) AS balance
-                    FROM credits_ledger
-                    WHERE org_id = %s
-                    GROUP BY user_id
-                """, (org_id,))
-                bal_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
+    month_total_row = db_query_one("""
+        SELECT COUNT(*) FROM usage_events
+        WHERE org_id = %s AND ts >= date_trunc('month', now())
+    """, (org_id,))
+    month_total = int(month_total_row[0]) if month_total_row else 0
 
-                # Build month rows with balances
-                for user_id, username, cnt in per_user:
-                    month_rows.append({
-                        "user_id": int(user_id),
-                        "username": username or "",
-                        "count": int(cnt),
-                        "balance": bal_map.get(int(user_id))
-                    })
+    # Recent org events
+    rec = db_query_all("""
+        SELECT e.ts, e.user_id, u.username, e.candidate, e.filename
+        FROM usage_events e
+        LEFT JOIN users u ON u.id = e.user_id
+        WHERE e.org_id = %s
+        ORDER BY e.ts DESC
+        LIMIT %s
+    """, (org_id, limit)) or []
 
-                # Recent events in this org
-                cur.execute("""
-                    SELECT e.ts, e.user_id, u.username, e.candidate, e.filename
-                    FROM usage_events e
-                    JOIN users u ON u.id = e.user_id
-                    WHERE e.org_id = %s
-                    ORDER BY e.ts DESC
-                    LIMIT %s
-                """, (org_id, limit))
-                for ts, user_id, username, cand, fname in cur.fetchall():
-                    recent_rows.append({
-                        "ts": (ts.isoformat() if ts else None),
-                        "user_id": int(user_id),
-                        "username": username or "",
-                        "candidate": cand or "",
-                        "filename": fname or "",
-                    })
+    recent = [{
+        "ts": (r[0].isoformat(sep=" ", timespec="seconds") if hasattr(r[0], "isoformat") else str(r[0])),
+        "user_id": r[1],
+        "username": r[2],
+        "candidate": r[3],
+        "filename": r[4],
+    } for r in rec]
 
-        return jsonify({
-            "ok": True,
-            "source": "db-org",
-            "month": {"total": month_total, "rows": month_rows},
-            "recent": recent_rows
-        })
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-    finally:
-        try:
-            if conn:
-                DB_POOL.putconn(conn)
-        except Exception:
-            pass
+    month_rows = [{"user_id": r[0], "username": r[1], "count": int(r[2])} for r in per_user]
+
+    return jsonify({
+        "ok": True,
+        "source": "db-org",
+        "orgId": org_id,
+        "orgName": org_name,
+        "pool": {"balance": pool_balance},
+        "month": {"total": month_total, "rows": month_rows},
+        "recent": recent
+    })
             # --- Director (org-scoped): list users in my org with balances ---
 @app.get("/director/api/users")
 def director_api_users():
@@ -5814,6 +5786,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

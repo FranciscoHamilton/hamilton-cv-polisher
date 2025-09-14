@@ -4999,106 +4999,149 @@ if (!monthRows.length) {
 </body>
 </html>
     """
-# --- Director: minimal UI for org-scoped dashboard (for Hamilton, etc.) ---
+# --- Director: minimal UI for org-scoped dashboard (read-only) ---
 @app.get("/director/ui")
 def director_ui():
     """
-    Simple HTML page for directors to view month summary and recent events,
-    but scoped to THEIR org only. Uses /director/api/dashboard under the hood.
+    Simple HTML page for directors to view their org's pool balance,
+    users (with any caps if present), and recent pool activity.
     """
-    # must be logged in (any non-admin user tied to an org)
+    # must be logged in
     try:
         uid = int(session.get("user_id") or 0)
     except Exception:
         uid = 0
     if uid <= 0:
-        # send to login if not authed
         return redirect(url_for("login"))
 
-    return """
+    # must belong to an org (or be admin)
+    my_org = _current_user_org_id()
+    is_admin = False
+    try:
+        is_admin = bool(session.get("is_admin")) or (session.get("username","").lower() == "admin") or (session.get("user","").lower() == "admin")
+    except Exception:
+        pass
+
+    if not my_org and not is_admin:
+        return make_response("No organization assigned to this account.", 403)
+
+    # if admin (no org on session), allow ?org_id=... to inspect
+    if is_admin and not my_org:
+        try:
+            my_org = int(request.args.get("org_id") or "0")
+        except Exception:
+            my_org = 0
+        if my_org <= 0:
+            return make_response("Admin view: please pass ?org_id=NN to inspect an org.", 400)
+
+    # data pulls
+    bal = org_balance(my_org)
+    users = db_query_all("""
+        SELECT u.id, u.username,
+               (SELECT l.monthly_cap
+                  FROM org_user_limits l
+                 WHERE l.org_id = u.org_id AND l.user_id = u.id AND l.active
+                 LIMIT 1) AS monthly_cap
+          FROM users u
+         WHERE u.org_id = %s
+         ORDER BY u.username ASC
+    """, (my_org,)) or []
+
+    recent = db_query_all("""
+        SELECT id, created_at, user_id, delta, reason, created_by
+          FROM org_credits_ledger
+         WHERE org_id = %s
+         ORDER BY id DESC
+         LIMIT 50
+    """, (my_org,)) or []
+
+    # render tiny HTML
+    html = f"""
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Director – Org Dashboard</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta charset="utf-8"/>
+  <title>Director · Org Dashboard</title>
   <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 16px; }
-    h1 { margin: 0 0 8px 0; }
-    h2 { margin: 24px 0 8px 0; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-    th { background: #f6f6f6; }
-    .muted { color: #666; }
-    .badge { display: inline-block; padding: 2px 8px; border: 1px solid #ddd; border-radius: 12px; font-size: 12px; margin-left: 6px; }
-    .balance-ok   { color: #0a7f14; font-weight: 600; }
-    .balance-low  { color: #d28500; font-weight: 600; }
-    .balance-zero { color: #b00020; font-weight: 700; }
+    body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }}
+    .wrap {{ max-width: 1100px; margin: 0 auto; }}
+    h1 {{ margin: 0 0 4px; }}
+    .muted {{ color: #666; font-size: 14px; margin: 0 0 16px; }}
+    .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }}
+    .card {{ border: 1px solid #eee; border-radius: 12px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }}
+    .big {{ font-size: 28px; font-weight: 700; margin: 8px 0 0; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: left; }}
+    th {{ background: #fafafa; }}
+    .delta-pos {{ color: #0a7a26; }}
+    .delta-neg {{ color: #9a1e1e; }}
+    .small {{ font-size: 12px; color: #777; }}
+    .toolbar a {{ margin-right: 10px; }}
   </style>
 </head>
 <body>
-  <h1>Director Dashboard <span id="src" class="badge muted"></span></h1>
-  <div class="muted">Tip: append <code>?limit=20</code> to the URL to change how many recent rows you load.</div>
+  <div class="wrap">
+    <h1>Org Dashboard</h1>
+    <p class="muted">Org ID: {my_org}</p>
 
-  <h2>This Month (by user)</h2>
-  <div id="monthBox">Loading…</div>
+    <div class="cards">
+      <div class="card">
+        <div>Org Credits Balance</div>
+        <div class="big">{bal}</div>
+        <div class="small">Shared pool used by all users in this org.</div>
+      </div>
+      <div class="card">
+        <div>Quick Links</div>
+        <div class="toolbar small">
+          <a href="/director/api/org/credits-summary" target="_blank">API: Org Summary</a>
+          <a href="/me/credits" target="_blank">API: My Credits</a>
+        </div>
+        <div class="small">Use admin tools to top up the org pool.</div>
+      </div>
+    </div>
 
-  <h2>Recent Events</h2>
-  <div id="recentBox">Loading…</div>
+    <h2>Users</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:80px;">User ID</th>
+          <th>Username</th>
+          <th style="width:140px;">Monthly Cap</th>
+        </tr>
+      </thead>
+      <tbody>
+        {''.join(f'<tr><td>{u[0]}</td><td>{(u[1] or "")}</td><td>{("" if u[2] is None else u[2])}</td></tr>' for u in users)}
+      </tbody>
+    </table>
 
-  <script>
-  (async () => {
-    const qs = window.location.search || "";
-    const res = await fetch("/director/api/dashboard" + qs);
-    if (!res.ok) {
-      document.body.innerHTML = "<p>Failed to load dashboard ("+res.status+"). Are you logged in?</p>";
-      return;
-    }
-    const d = await res.json();
-    const $ = (sel) => document.querySelector(sel);
-    const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])));
-
-    $("#src").textContent = d.source || "";
-
-    // Month table
-    const monthRows = (d.month && d.month.rows) || [];
-    const monthTotal = (d.month && d.month.total) || 0;
-    if (!monthRows.length) {
-      $("#monthBox").textContent = "No usage yet this month.";
-    } else {
-      let html = '<table><thead><tr><th>User</th><th>User ID</th><th>Count</th><th>Balance</th></tr></thead><tbody>';
-      for (const r of monthRows) {
-        const uname = r.username || '';
-        const balNum = (typeof r.balance === 'number') ? r.balance : null;
-        const balClass = (balNum === null) ? '' : (balNum <= 0 ? 'balance-zero' : (balNum <= 3 ? 'balance-low' : 'balance-ok'));
-        const balCell = (balNum === null) ? '' : `<span class="${balClass}">${esc(balNum)}</span>`;
-        html += `<tr><td>${esc(uname)}</td><td>${esc(r.user_id)}</td><td>${esc(r.count)}</td><td>${balCell}</td></tr>`;
-      }
-      html += `</tbody></table><div class="muted" style="margin-top:6px">Total this month: <strong>${esc(monthTotal)}</strong></div>`;
-      $("#monthBox").innerHTML = html;
-    }
-
-    // Recent table
-    const recent = d.recent || [];
-    if (!recent.length) {
-      $("#recentBox").textContent = "No recent events.";
-    } else {
-      let html = '<table><thead><tr><th>When</th><th>User</th><th>Candidate</th><th>Filename</th></tr></thead><tbody>';
-      for (const r of recent) {
-        const when = r.ts ? new Date(r.ts) : null;
-        const whenTxt = when && !isNaN(when.getTime()) ? when.toLocaleString() : (r.ts || "");
-        html += `<tr><td>${esc(whenTxt)}</td><td>${esc(r.username || r.user_id)}</td><td>${esc(r.candidate)}</td><td>${esc(r.filename)}</td></tr>`;
-      }
-      html += '</tbody></table>';
-      $("#recentBox").innerHTML = html;
-    }
-  })().catch(err => {
-    document.body.innerHTML = "<p>Unexpected error loading dashboard.</p>";
-  });
-  </script>
+    <h2 style="margin-top:24px;">Recent Activity</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:90px;">Entry ID</th>
+          <th style="width:180px;">When</th>
+          <th style="width:90px;">User</th>
+          <th style="width:90px;">Delta</th>
+          <th>Reason</th>
+          <th style="width:90px;">By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {''.join(f'<tr>'
+                 f'<td>{r[0]}</td>'
+                 f'<td>{r[1]}</td>'
+                 f'<td>{r[2]}</td>'
+                 f'<td class="{{"delta-pos" if (r[3] or 0) > 0 else "delta-neg"}}">{r[3]}</td>'
+                 f'<td>{(r[4] or "")}</td>'
+                 f'<td>{r[5]}</td>'
+                 f'</tr>' for r in recent)}
+      </tbody>
+    </table>
+  </div>
 </body>
 </html>
-    """    
+"""
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 # ---- Quick diagnostic (no secrets) ----
 
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
@@ -5414,6 +5457,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

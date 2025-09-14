@@ -3654,63 +3654,6 @@ def admin_set_credits():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 # --- Admin: org pool credits summary ---
-@app.get("/__admin/org/credits-summary")
-def admin_org_credits_summary():
-    if not (session.get("is_admin") or (session.get("username","").lower()=="admin") or (session.get("user","").lower()=="admin")):
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-    try:
-        org_id = int(request.args.get("org_id") or "0")
-    except Exception:
-        return jsonify({"ok": False, "error": "bad_org_id"}), 400
-    if org_id <= 0:
-        return jsonify({"ok": False, "error": "org_id required"}), 400
-
-    balance = org_balance(org_id)
-    rows = db_query_all("""
-        SELECT id, delta, reason, user_id, created_by, created_at
-        FROM org_credits_ledger
-        WHERE org_id=%s
-        ORDER BY id DESC
-        LIMIT 200
-    """, (org_id,))
-    return jsonify({"ok": True, "org_id": org_id, "balance": balance, "rows": rows or []})
-
-# --- Admin utility: grant credits to an org (org-wide pool) ---
-@app.get("/__admin/org/grant-credits")
-def admin_org_grant_credits():
-    # admin only
-    try:
-        uname = (session.get("user") or "").strip().lower()
-        is_admin = bool(session.get("is_admin")) or uname == "admin"
-    except Exception:
-        is_admin = False
-    if not is_admin:
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-    if not DB_POOL:
-        return jsonify({"ok": False, "error": "db_unavailable"}), 500
-
-    # params
-    try:
-        org_id = int(request.args.get("org_id") or "0")
-        delta  = int(request.args.get("delta") or "0")
-    except Exception:
-        return jsonify({"ok": False, "error": "bad_params"}), 400
-    if org_id <= 0 or delta == 0:
-        return jsonify({"ok": False, "error": "org_id and nonzero delta required"}), 400
-
-    reason = (request.args.get("reason") or "admin_topup").strip()[:50]
-    created_by = int(session.get("user_id") or 0) or None
-
-    ok = db_execute(
-        "INSERT INTO org_credits_ledger (org_id, delta, reason, created_by) VALUES (%s,%s,%s,%s)",
-        (org_id, delta, reason, created_by),
-    )
-    if not ok:
-        return jsonify({"ok": False, "error": "insert_failed"}), 500
-
-    row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger WHERE org_id=%s", (org_id,))
-    new_bal = int(row[0]) if row else 0
-    return jsonify({"ok": True, "org_id": org_id, "delta": delta, "new_balance": new_bal, "reason": reason})
 
 # --- Admin utility: view org credits summary (rows + balance) ---
 @app.get("/__admin/org/credits-summary")
@@ -5763,6 +5706,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

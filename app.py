@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from flask import Flask, request, send_file, render_template_string, abort, jsonify, make_response
 from flask import session, redirect, url_for  # <-- ADDED earlier
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.exceptions import HTTPException
 def is_admin() -> bool:
     """Return True if the logged-in session user matches APP_ADMIN_USER."""
     try:
@@ -5254,9 +5255,18 @@ def _render_out_of_credits(reason_text=None):
 """
     return make_response(html, 402, {"Content-Type": "text/html; charset=utf-8"})
 
-@app.errorhandler(402)
+class PaymentRequired(HTTPException):
+    code = 402
+    description = "Payment Required"
+
+@app.errorhandler(PaymentRequired)
 def on_payment_required(e):
-    reason = getattr(e, "description", None)  # carries abort(402, "...") text
+    reason = getattr(e, "description", None)
+    return _render_out_of_credits(reason)
+
+@app.get("/out-of-credits")
+def out_of_credits_preview():
+    reason = request.args.get("msg") or "Preview: this is how the page looks when credits run out."
     return _render_out_of_credits(reason)
 
 # Optional: direct route to preview the page
@@ -5509,18 +5519,18 @@ def polish():
                 if org_id:
                     bal = org_balance(org_id)
                     if bal <= 0:
-                        abort(402, "No credits remaining for your organization. Please top up to continue.")
+                        raise PaymentRequired("No credits remaining for your organization. Please top up to continue.")
                     # Optional per-user monthly cap (only applies if a cap is set)
                     cap = get_user_monthly_cap(org_id, uid_check)
                     if cap is not None:
                         spent = org_user_spent_this_month(org_id, uid_check)
                         if spent >= cap:
-                            abort(402, "Your monthly polish limit has been reached. Ask your director to raise your cap.")
+                            raise PaymentRequired("Your monthly polish limit has been reached. Ask your director to raise your cap.")
                 else:
                     row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid_check,))
                     bal = int(row[0]) if row else 0
                     if bal <= 0:
-                        abort(402, "No credits remaining for this account. Please top up to continue.")
+                        raise PaymentRequired("No credits remaining for this account. Please top up to continue.")
             except Exception as e:
                 # If balance check fails, don't block polishing; just log
                 print("credits precheck failed:", e)
@@ -5565,7 +5575,7 @@ def polish():
                     "user_monthly_cap_reached": "Your monthly polish limit has been reached. Ask your director to raise your cap.",
                     "insufficient_user_credits": "No credits remaining for this account. Please top up to continue.",
                 }.get(err, "Unable to charge a credit for this polish. Please try again.")
-                abort(402, msg)
+                raise PaymentRequired(msg)
 
         # ---- Optional: decrement trial credits (legacy session) ----
         try:
@@ -5579,6 +5589,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

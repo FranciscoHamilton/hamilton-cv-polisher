@@ -5306,7 +5306,7 @@ def director_usage():
     events=events,
     legacy=STATS.get("history", [])[-50:]  # last 50 legacy entries
 )
-# ---------- App polishing + API (unchanged) ----------
+# ---------- App polishing + API (org-aware credits) ----------
 @app.post("/polish")
 def polish():
     # Always reprocess (no caching)
@@ -5321,6 +5321,44 @@ def polish():
         text = extract_text_any(p)
         if not text or len(text.strip()) < 30:
             abort(400, "Couldn't read enough text. If it's a scanned PDF, please use a DOCX or an OCRed PDF.")
+
+        # --- Pre-check credits (org-aware). Admin bypasses. ---
+        try:
+            uid_check = int(session.get("user_id") or 0)
+        except Exception:
+            uid_check = 0
+
+        try:
+            can_bypass = (session.get("user","").strip().lower() == "admin") or bool(session.get("is_admin"))
+        except Exception:
+            can_bypass = False
+
+        if DB_POOL and uid_check > 0 and not can_bypass:
+            # If the user belongs to an org, check the org pool; otherwise check personal balance.
+            try:
+                org_id = _user_org_id(uid_check)
+            except Exception:
+                org_id = None
+
+            try:
+                if org_id:
+                    bal = org_balance(org_id)
+                    if bal <= 0:
+                        abort(402, "No credits remaining for your organization. Please top up to continue.")
+                    # Optional per-user monthly cap (only applies if a cap is set)
+                    cap = get_user_monthly_cap(org_id, uid_check)
+                    if cap is not None:
+                        spent = org_user_spent_this_month(org_id, uid_check)
+                        if spent >= cap:
+                            abort(402, "Your monthly polish limit has been reached. Ask your director to raise your cap.")
+                else:
+                    row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid_check,))
+                    bal = int(row[0]) if row else 0
+                    if bal <= 0:
+                        abort(402, "No credits remaining for this account. Please top up to continue.")
+            except Exception as e:
+                # If balance check fails, don't block polishing; just log
+                print("credits precheck failed:", e)
 
         # ---- Polishing logic (unchanged) ----
         data = ai_or_heuristic_structuring(text)
@@ -5337,30 +5375,34 @@ def polish():
         STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
         _save_stats()
 
-        # --- DB usage log + CHARGE via org pool (or per-user fallback) ---
+        # --- DB logging + org-aware debit (single source of truth) ---
         try:
             uid = int(session.get("user_id") or 0)
         except Exception:
             uid = 0
 
+        # 1) Always record usage if we can
         try:
-            # record usage event (stores org_id if present)
-            log_usage_event(uid, f.filename, candidate_name)
-            # charge exactly 1 credit (org pool if available, else user)
             if uid:
-                ok, err = charge_credit_for_polish(
-                    user_id=uid,
-                    cost=1,
-                    candidate=candidate_name,
-                    filename=str(f.filename or "")
-                )
-                if not ok:
-                    status = 402 if err in ("insufficient_org_credits", "insufficient_user_credits") else 403
-                    return jsonify({"ok": False, "error": err}), status
+                log_usage_event(uid, f.filename, candidate_name)
         except Exception as e:
-            print("DB usage/credits charge failed:", e)
+            print("usage log failed:", e)
 
-        # ---- Decrement trial credits (if present) ----
+        # 2) Charge exactly one credit from the correct pool
+        #    (org_credits_ledger if user has an org, else personal credits_ledger).
+        if DB_POOL and uid and not can_bypass:
+            ok, err = charge_credit_for_polish(uid, 1, candidate_name, f.filename)
+            if not ok:
+                # If the charge failed post-generation (e.g., a race depleted credits),
+                # fail gracefully with a clear message.
+                msg = {
+                    "insufficient_org_credits": "No credits remaining for your organization. Please top up to continue.",
+                    "user_monthly_cap_reached": "Your monthly polish limit has been reached. Ask your director to raise your cap.",
+                    "insufficient_user_credits": "No credits remaining for this account. Please top up to continue.",
+                }.get(err, "Unable to charge a credit for this polish. Please try again.")
+                abort(402, msg)
+
+        # ---- Optional: decrement trial credits (legacy session) ----
         try:
             left = int(session.get("trial_credits", 0))
             if left > 0:
@@ -5372,8 +5414,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
-
-
 
 
 

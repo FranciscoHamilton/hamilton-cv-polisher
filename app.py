@@ -5498,6 +5498,33 @@ def admin_ensure_org_schema():
         created.append(bool(ok))
 
     return jsonify({"ok": True, "created_or_exists": created})
+
+# --- one-time DB column fixer (safe to call anytime) ---
+@app.get("/__admin/ensure-core-columns")
+def __admin_ensure_core_columns():
+    if not (session.get("is_admin")
+            or (session.get("username","").lower() == "admin")
+            or (session.get("user","").lower() == "admin")):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    results = {}
+    # orgs + users need 'active'
+    results["orgs_active"]  = bool(db_execute("ALTER TABLE orgs  ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE"))
+    results["users_active"] = bool(db_execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE"))
+
+    # orgs need plan fields
+    results["orgs_plan_credits_month"] = bool(db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS plan_credits_month INTEGER"))
+    results["orgs_plan_name"]          = bool(db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS plan_name TEXT"))
+
+    # if you use a 'plans' table anywhere, make sure it has these too (harmless if table missing)
+    try:
+        results["plans_active"] = bool(db_execute("ALTER TABLE plans ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE"))
+        results["plans_monthly_credits"] = bool(db_execute("ALTER TABLE plans ADD COLUMN IF NOT EXISTS monthly_credits INTEGER"))
+        results["plans_overage_rate"]    = bool(db_execute("ALTER TABLE plans ADD COLUMN IF NOT EXISTS overage_rate NUMERIC"))
+    except Exception:
+        results["plans_table_present"] = False
+
+    return jsonify({"ok": True, "applied": results})
 # ---- Quick diagnostic (no secrets) ----
 
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
@@ -5786,6 +5813,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

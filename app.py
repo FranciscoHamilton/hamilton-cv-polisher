@@ -3277,28 +3277,51 @@ def me_history():
     
 @app.get("/me/credits")
 def me_credits():
-    """
-    Credits info for the current user.
-    - used: number of polishes this month (proxy until we track per-use debits in ledger)
-    - balance: SUM(delta) from credits_ledger for this user (real balance)
-    - total: reserved for future (None for now)
-    """
-    # Who am I?
+    # Identify user
     try:
         uid = int(session.get("user_id") or 0)
     except Exception:
         uid = 0
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
 
-    # used = month usage (safe fallbacks)
+    # Compute 'used' (month usage) for backward compatibility
+    used = 0
     try:
-        used = int(count_usage_month_db(uid)) if (DB_POOL and uid) else 0
+        if DB_POOL and uid:
+            try:
+                used = int(count_usage_month_db(uid))
+            except Exception:
+                # optional legacy fallback
+                try:
+                    used = int(get_user_month_usage(uid)) if uid else 0
+                except Exception:
+                    used = 0
     except Exception:
-        try:
-            used = int(get_user_month_usage(uid)) if uid else 0
-        except Exception:
-            used = 0
+        used = 0
 
-    # balance = SUM(delta) from credits_ledger (real balance)
+    # Org-aware balance & caps
+    org = _user_org_id(uid)
+    if org:
+        bal = org_balance(org)
+        cap = get_user_monthly_cap(org, uid)
+        spent = org_user_spent_this_month(org, uid)
+        return jsonify({
+            "ok": True,
+            "scope": "org",
+            "org_id": org,
+            "balance": bal,
+            # cap info
+            "myMonthlyCap": cap,
+            "mySpentThisMonth": spent,
+            "myRemainingThisMonth": (None if cap is None else max(0, cap - spent)),
+            # backward-compat fields
+            "user_id": uid,
+            "used": used,
+            "total": None
+        })
+
+    # Fallback for users without an org: show personal balance (as before)
     balance = None
     if DB_POOL and uid:
         try:
@@ -3307,7 +3330,7 @@ def me_credits():
         except Exception:
             balance = None
     else:
-        # legacy fallback (e.g., trial_credits in session)
+        # legacy session fallback
         try:
             tmp = session.get("trial_credits")
             balance = int(tmp) if tmp is not None else None
@@ -3316,12 +3339,13 @@ def me_credits():
 
     return jsonify({
         "ok": True,
-        "user_id": uid or None,
+        "scope": "user",
+        "user_id": uid,
         "used": used,
-        "balance": balance,   # real credits balance from ledger
-        "total": None         # reserved for future credits model
+        "balance": balance,
+        "total": None
     })
-
+    
 # --- Admin utility: ensure the usage_events table exists (safe to run anytime) ---
 @app.get("/__admin/ensure-usage-events")
 def ensure_usage_events():
@@ -4316,6 +4340,22 @@ def me_dashboard():
         uid = 0
     if uid <= 0:
         return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+        # --- org-aware credits balance + cap info for tiles ---
+    org = _user_org_id(uid)
+    if org:
+        credits_balance = org_balance(org)
+        cap = get_user_monthly_cap(org, uid)
+        spent = org_user_spent_this_month(org, uid)
+        cap_info = {
+            "cap": cap,
+            "spent": spent,
+            "remaining": (None if cap is None else max(0, cap - spent))
+        }
+    else:
+        row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid,))
+        credits_balance = int(row[0]) if row else 0
+        cap_info = None
 
     downloads_month = 0
     last_cand = ""
@@ -5332,6 +5372,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

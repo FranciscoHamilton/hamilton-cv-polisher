@@ -5172,6 +5172,18 @@ def director_ui():
       </tbody>
     </table>
 
+    <div class="card" style="margin-top:16px;">
+      <div style="font-weight:600; margin-bottom:8px;">Reset User Password</div>
+      <div class="small" style="margin-bottom:8px;">Directors can reset passwords for users in their org.</div>
+      <div>
+        <label>User ID&nbsp;<input id="rp_uid" type="number" min="1" style="width:120px"></label>
+        &nbsp;&nbsp;
+        <label>New password&nbsp;<input id="rp_pw" type="password" style="width:220px"></label>
+        &nbsp;&nbsp;
+        <button id="rp_btn" class="toggle">Reset</button>
+      </div>
+      <div id="rp_msg" class="small" style="margin-top:8px;"></div>
+    </div>
     <h2 style="margin-top:24px;">Recent Activity</h2>
     <table>
       <thead>
@@ -5197,6 +5209,38 @@ def director_ui():
     </table>
   </div>
 
+  // Reset password form -> POST /director/api/user/reset-password
+  document.getElementById('rp_btn')?.addEventListener('click', async () => {{
+    const uidEl = document.getElementById('rp_uid');
+    const pwEl  = document.getElementById('rp_pw');
+    const msgEl = document.getElementById('rp_msg');
+    const uid = (uidEl?.value || '').trim();
+    const pw  = (pwEl?.value || '').trim();
+    if (!uid || !pw) {{
+      msgEl.textContent = 'Please enter both User ID and a new password.';
+      return;
+    }}
+    const btn = document.getElementById('rp_btn');
+    btn.disabled = true; msgEl.textContent = 'Working...';
+    try {{
+      const res = await fetch('/director/api/user/reset-password', {{
+        method: 'POST',
+        headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{ user_id: Number(uid), new_password: pw }})
+      }});
+      const js = await res.json();
+      if (!res.ok || !js.ok) {{
+        msgEl.textContent = 'Failed: ' + (js.error || res.status);
+      }} else {{
+        msgEl.textContent = 'Password updated for user #' + js.user_id + ' (' + (js.username || '') + ')';
+        pwEl.value = '';
+      }}
+    }} catch (e) {{
+      msgEl.textContent = 'Network error';
+    }} finally {{
+      btn.disabled = false;
+    }}
+  }});
   <script>
   // Enable/Disable toggle handler (calls /director/api/user/set-active)
   document.addEventListener('click', async (ev) => {{
@@ -5624,6 +5668,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

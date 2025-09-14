@@ -5133,149 +5133,257 @@ def director_ui():
     # render tiny HTML
     html = f"""
 <!doctype html>
+    return """
+<!doctype html>
 <html>
 <head>
-  <meta charset="utf-8"/>
-  <title>Director · Org Dashboard</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta charset="utf-8">
+  <title>Director – Org Console</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 24px; }}
-    .wrap {{ max-width: 1100px; margin: 0 auto; }}
-    h1 {{ margin: 0 0 4px; }}
-    .muted {{ color: #666; font-size: 14px; margin: 0 0 16px; }}
-    .cards {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }}
-    .card {{ border: 1px solid #eee; border-radius: 12px; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }}
-    .big {{ font-size: 28px; font-weight: 700; margin: 8px 0 0; }}
-    table {{ width: 100%; border-collapse: collapse; }}
-    th, td {{ padding: 8px 10px; border-bottom: 1px solid #f0f0f0; text-align: left; }}
-    th {{ background: #fafafa; }}
-    .delta-pos {{ color: #0a7a26; }}
-    .delta-neg {{ color: #9a1e1e; }}
-    .small {{ font-size: 12px; color: #777; }}
-    .toolbar a {{ margin-right: 10px; }}
-    .pill {{ display:inline-block; padding: 2px 8px; border-radius: 999px; background:#f0f0f0; font-size:12px; }}
-    .pill.ok {{ background:#e6f6ea; color:#0a7a26; }}
-    .pill.off {{ background:#fde7e7; color:#9a1e1e; }}
-    button.toggle {{ font-size:12px; padding:6px 10px; border:1px solid #ddd; border-radius:8px; background:#fff; cursor:pointer; }}
-    button.toggle:hover {{ background:#f6f6f6; }}
+    :root { --bg:#fff; --ink:#111; --muted:#666; --line:#e6e6e6; --ok:#0a7f14; --warn:#d28500; --bad:#b00020; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--ink); margin:0; padding:20px; }
+    header { display:flex; gap:12px; align-items:center; margin-bottom:18px; }
+    header .back { text-decoration:none; padding:8px 10px; border:1px solid var(--line); border-radius:10px; }
+    h1 { font-size:22px; margin:0; }
+    h2 { margin:22px 0 10px; }
+    .muted { color: var(--muted); font-size:14px; }
+    .grid { display:grid; gap:12px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: middle; }
+    th { background: #fafafa; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-size:12px; }
+    .pill.ok { color: var(--ok); font-weight:600; }
+    .pill.off { color: var(--bad); font-weight:700; }
+    .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+    .controls input { padding:8px; border:1px solid var(--line); border-radius:8px; min-width:180px; }
+    .controls button { padding:8px 12px; border:1px solid var(--line); border-radius:10px; background:#f7f7f7; cursor:pointer; }
+    .msg { margin-top:6px; font-size:14px; }
+    .small { font-size:12px; color:var(--muted); }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Org Dashboard</h1>
-    <p class="muted">Org ID: {my_org}</p>
+  <header>
+    <a class="back" href="/app" onclick="if(history.length>1){history.back(); return false;}">← Back</a>
+    <h1>Director Console</h1>
+    <span id="orgBadge" class="muted"></span>
+  </header>
 
-    <div class="cards">
-      <div class="card">
-        <div>Org Credits Balance</div>
-        <div class="big">{bal}</div>
-        <div class="small">Shared pool used by all users in this org.</div>
-      </div>
-      <div class="card">
-        <div>Quick Links</div>
-        <div class="toolbar small">
-          <a href="/director/api/org/credits-summary" target="_blank">API: Org Summary</a>
-          <a href="/me/credits" target="_blank">API: My Credits</a>
-        </div>
-        <div class="small">Use admin tools to top up the org pool.</div>
-      </div>
+  <section class="grid">
+    <div>
+      <h2>Org Balance</h2>
+      <div class="muted">Pool credits available for your organization.</div>
+      <div id="poolBox" style="margin-top:6px;font-size:18px;">Loading…</div>
     </div>
+  </section>
 
-    <h2>Users</h2>
-    <table>
-      <thead>
-        <tr>
-          <th style="width:80px;">User ID</th>
-          <th>Username</th>
-          <th style="width:140px;">Monthly Cap</th>
-          <th style="width:120px;">Active</th>
-          <th style="width:120px;">Action</th>
-        </tr>
-      </thead>
-      <tbody id="usersBody">
-        {''.join(
-            f'<tr data-uid="{{u[0]}}">'
-            f'<td>{{u[0]}}</td>'
-            f'<td>{{(u[1] or "")}}</td>'
-            f'<td>{{("" if u[2] is None else u[2])}}</td>'
-            f'<td><span class="pill {{ "ok" if u[3] else "off" }}">{{"Active" if u[3] else "Disabled"}}</span></td>'
-            f'<td><button class="toggle" data-active="{{1 if not u[3] else 0}}">{{"Enable" if not u[3] else "Disable"}}</button></td>'
-            f'</tr>'
-          for u in users)}
-      </tbody>
-    </table>
+  <h2 style="margin-top:26px;">Users</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>User ID</th>
+        <th>Username</th>
+        <th>Monthly Cap</th>
+        <th>Active</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="usersBody">
+      <tr><td colspan="5" class="muted">Loading…</td></tr>
+    </tbody>
+  </table>
 
-    <div class="card" style="margin-top:16px;">
-      <div style="font-weight:600; margin-bottom:8px;">Reset User Password</div>
-      <div class="small" style="margin-bottom:8px;">Directors can reset passwords for users in their org.</div>
-      <div>
-        <label>User ID&nbsp;<input id="rp_uid" type="number" min="1" style="width:120px"></label>
-        &nbsp;&nbsp;
-        <label>New password&nbsp;<input id="rp_pw" type="password" style="width:220px"></label>
-        &nbsp;&nbsp;
-        <button id="rp_btn" class="toggle">Reset</button>
-      </div>
-      <div id="rp_msg" class="small" style="margin-top:8px;"></div>
+  <div style="margin-top:14px; border:1px solid var(--line); border-radius:12px; padding:12px;">
+    <h3 style="margin:0 0 8px;">Create User</h3>
+    <div class="controls">
+      <input id="cu_u" placeholder="Username">
+      <input id="cu_p" placeholder="Password">
+      <input id="cu_seed" type="number" inputmode="numeric" placeholder="Seed credits (optional)">
+      <button id="cu_btn">Create</button>
+      <span id="cu_msg" class="msg"></span>
     </div>
-    <h2 style="margin-top:24px;">Recent Activity</h2>
-    <table>
-      <thead>
-        <tr>
-          <th style="width:90px;">Entry ID</th>
-          <th style="width:180px;">When</th>
-          <th style="width:90px;">User</th>
-          <th style="width:90px;">Delta</th>
-          <th>Reason</th>
-          <th style="width:90px;">By</th>
-        </tr>
-      </thead>
-      <tbody>
-        {''.join(f'<tr>'
-                 f'<td>{{r[0]}}</td>'
-                 f'<td>{{r[1]}}</td>'
-                 f'<td>{{r[2]}}</td>'
-                 f'<td class="{{"delta-pos" if (r[3] or 0) > 0 else "delta-neg"}}">{{r[3]}}</td>'
-                 f'<td>{{(r[4] or "")}}</td>'
-                 f'<td>{{r[5]}}</td>'
-                 f'</tr>' for r in recent)}
-      </tbody>
-    </table>
+    <div class="small">New users are created in your org. Seed credits (if provided) are added to the org pool.</div>
   </div>
 
+  <div style="margin-top:14px; border:1px solid var(--line); border-radius:12px; padding:12px;">
+    <h3 style="margin:0 0 8px;">Reset User Password</h3>
+    <div class="controls">
+      <input id="rp_uid" placeholder="User ID">
+      <input id="rp_pw" placeholder="New password">
+      <button id="rp_btn">Reset</button>
+      <span id="rp_msg" class="msg"></span>
+    </div>
+  </div>
+
+  <h2 style="margin-top:26px;">Recent Activity</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>When</th>
+        <th>User</th>
+        <th>Candidate</th>
+        <th>Filename</th>
+        <th>Delta</th>
+        <th>Reason</th>
+      </tr>
+    </thead>
+    <tbody id="recentBody">
+      <tr><td colspan="6" class="muted">Loading…</td></tr>
+    </tbody>
+  </table>
 
   <script>
-  // Enable/Disable toggle handler (calls /director/api/user/set-active)
-  document.addEventListener('click', async (ev) => {{
-    const btn = ev.target.closest('button.toggle');
-    if (!btn) return;
-    const row = btn.closest('tr');
-    const uid = row.getAttribute('data-uid');
-    const newActive = btn.getAttribute('data-active'); // "1" to enable, "0" to disable
-    btn.disabled = true;
-    try {{
-      const res = await fetch(`/director/api/user/set-active?user_id=${{encodeURIComponent(uid)}}&active=${{encodeURIComponent(newActive)}}`);
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])));
+
+  async function loadDashboard() {
+    const res = await fetch('/director/api/dashboard?limit=20');
+    if (!res.ok) { $('#poolBox').textContent = 'Failed to load.'; return; }
+    const d = await res.json();
+    $('#orgBadge').textContent = d.orgName ? ('Org: ' + d.orgName) : '';
+    const bal = (d.pool && typeof d.pool.balance === 'number') ? d.pool.balance : null;
+    $('#poolBox').textContent = (bal == null) ? '—' : (bal + ' credits');
+
+    const recent = d.recent || [];
+    if (!recent.length) {
+      $('#recentBody').innerHTML = '<tr><td colspan="6" class="muted">No recent activity.</td></tr>';
+    } else {
+      let html = '';
+      for (const r of recent) {
+        const when = r.ts ? new Date(r.ts) : null;
+        const whenTxt = when && !isNaN(when.getTime()) ? when.toLocaleString() : esc(r.ts || '');
+        html += `<tr>
+          <td>${whenTxt}</td>
+          <td>${esc(r.username || r.user_id || '')}</td>
+          <td>${esc(r.candidate || '')}</td>
+          <td>${esc(r.filename || '')}</td>
+          <td>${typeof r.delta === 'number' ? r.delta : ''}</td>
+          <td>${esc(r.reason || '')}</td>
+        </tr>`;
+      }
+      $('#recentBody').innerHTML = html;
+    }
+  }
+
+  async function loadUsers() {
+    const res = await fetch('/director/api/users');
+    if (!res.ok) { $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">Failed to load users.</td></tr>'; return; }
+    const js = await res.json();
+    const rows = js.users || [];
+    if (!rows.length) {
+      $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">No users in this org yet.</td></tr>';
+      return;
+    }
+    let html = '';
+    for (const u of rows) {
+      const cap = (u.cap == null ? '' : u.cap);
+      const active = !!u.active;
+      const pill = `<span class="pill ${active ? 'ok' : 'off'}">${active ? 'Active' : 'Disabled'}</span>`;
+      const toggleLabel = active ? 'Disable' : 'Enable';
+      const toggleNext = active ? 0 : 1;
+      html += `<tr data-uid="${u.id}">
+        <td>${u.id}</td>
+        <td>${esc(u.username || '')}</td>
+        <td>
+          <input class="cap" type="number" inputmode="numeric" placeholder="(none)" value="${cap}">
+          <button class="setcap">Save</button>
+        </td>
+        <td>${pill}</td>
+        <td>
+          <button class="toggle" data-active="${toggleNext}">${toggleLabel}</button>
+        </td>
+      </tr>`;
+    }
+    $('#usersBody').innerHTML = html;
+  }
+
+  // Create user
+  document.getElementById('cu_btn')?.addEventListener('click', async () => {
+    const u = ($('#cu_u')?.value || '').trim();
+    const p = ($('#cu_p')?.value || '').trim();
+    const seed = ($('#cu_seed')?.value || '').trim();
+    const msg = $('#cu_msg');
+    if (!u || !p) { msg.textContent = 'Username and password are required.'; return; }
+    msg.textContent = 'Working…';
+    try {
+      const qs = new URLSearchParams({ u, p });
+      if (seed) qs.set('seed', String(Number(seed)));
+      const res = await fetch('/director/api/create-user?' + qs.toString());
       const js = await res.json();
-      if (!res.ok || !js.ok) {{
-        alert('Failed: ' + (js.error || res.status));
-      }} else {{
-        // Update UI: pill + button
-        const pill = row.querySelector('.pill');
-        const activeNow = (newActive === '1');
-        pill.textContent = activeNow ? 'Active' : 'Disabled';
-        pill.className = 'pill ' + (activeNow ? 'ok' : 'off');
-        btn.textContent = activeNow ? 'Disable' : 'Enable';
-        btn.setAttribute('data-active', activeNow ? '0' : '1');
-      }}
-    }} catch (e) {{
-      alert('Network error');
-    }} finally {{
-      btn.disabled = false;
-    }}
-  }});
+      if (!res.ok || !js.ok) { msg.textContent = 'Failed: ' + (js.error || res.status); return; }
+      msg.textContent = 'User created (id ' + js.user_id + ').';
+      $('#cu_u').value = ''; $('#cu_p').value = ''; $('#cu_seed').value = '';
+      await loadUsers(); await loadDashboard();
+    } catch (e) {
+      msg.textContent = 'Network error';
+    }
+  });
+
+  // Reset password
+  document.getElementById('rp_btn')?.addEventListener('click', async () => {
+    const uid = ($('#rp_uid')?.value || '').trim();
+    const pw  = ($('#rp_pw')?.value || '').trim();
+    const msg = $('#rp_msg');
+    if (!uid || !pw) { msg.textContent = 'Please enter both User ID and a new password.'; return; }
+    msg.textContent = 'Working…';
+    try {
+      const res = await fetch('/director/api/user/reset-password', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ user_id: Number(uid), new_password: pw })
+      });
+      const js = await res.json();
+      if (!res.ok || !js.ok) { msg.textContent = 'Failed: ' + (js.error || res.status); return; }
+      msg.textContent = 'Password updated for user #' + js.user_id + ' (' + (js.username || '') + ')';
+      $('#rp_pw').value = '';
+    } catch (e) {
+      msg.textContent = 'Network error';
+    }
+  });
+
+  // Row actions: enable/disable + set cap
+  document.addEventListener('click', async (ev) => {
+    const row = ev.target.closest('tr[data-uid]');
+    if (!row) return;
+
+    // Toggle active
+    if (ev.target.closest('button.toggle')) {
+      const btn = ev.target.closest('button.toggle');
+      const uid = row.getAttribute('data-uid');
+      const newActive = btn.getAttribute('data-active'); // "1" or "0"
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/director/api/user/set-active?user_id=${encodeURIComponent(uid)}&active=${encodeURIComponent(newActive)}`);
+        const js = await res.json();
+        if (!res.ok || !js.ok) { alert('Failed: ' + (js.error || res.status)); }
+        else { await loadUsers(); }
+      } finally { btn.disabled = false; }
+      return;
+    }
+
+    // Save monthly cap
+    if (ev.target.closest('button.setcap')) {
+      const capInput = row.querySelector('input.cap');
+      const raw = (capInput?.value || '').trim();
+      const uid = row.getAttribute('data-uid');
+      const cap = raw === '' ? 'null' : String(Number(raw));
+      const btn = ev.target.closest('button.setcap');
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/director/api/user/set-monthly-cap?user_id=${encodeURIComponent(uid)}&cap=${encodeURIComponent(cap)}`);
+        const js = await res.json();
+        if (!res.ok || !js.ok) { alert('Failed: ' + (js.error || res.status)); }
+        else { alert('Saved'); }
+      } finally { btn.disabled = false; }
+      return;
+    }
+  });
+
+  // initial load
+  (async () => { await loadUsers(); await loadDashboard(); })();
   </script>
 </body>
 </html>
-"""
+    """
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 # --- Friendly 402 page (Out of credits) ---
@@ -5699,6 +5807,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -5264,10 +5264,6 @@ def on_payment_required(e):
     reason = getattr(e, "description", None)
     return _render_out_of_credits(reason)
 
-@app.get("/out-of-credits")
-def out_of_credits_preview():
-    reason = request.args.get("msg") or "Preview: this is how the page looks when credits run out."
-    return _render_out_of_credits(reason)
 
 # Optional: direct route to preview the page
 @app.get("/out-of-credits")
@@ -5589,6 +5585,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

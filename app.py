@@ -5363,7 +5363,7 @@ def director_ui():
 </body>
 </html>
     """
-    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+    
 
 # --- Friendly 402 page (Out of credits) ---
 def _render_out_of_credits(reason_text=None):
@@ -5525,6 +5525,156 @@ def __admin_ensure_core_columns():
         results["plans_table_present"] = False
 
     return jsonify({"ok": True, "applied": results})
+
+# ---------- Owner (admin) console APIs ----------
+
+@app.get("/owner/api/overview")
+def owner_api_overview():
+    # admin-only
+    if not (session.get("is_admin")
+            or (session.get("username","").lower() == "admin")
+            or (session.get("user","").lower() == "admin")):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "db_unavailable"}), 500
+
+    # KPIs
+    try:
+        r = db_query_one("SELECT COUNT(*) FROM orgs", None)
+        total_orgs = int(r[0]) if r else 0
+    except Exception:
+        total_orgs = 0
+
+    try:
+        r = db_query_one("SELECT COUNT(*) FROM users", None)
+        total_users = int(r[0]) if r else 0
+    except Exception:
+        total_users = 0
+
+    try:
+        r = db_query_one("""
+            SELECT COALESCE(COUNT(DISTINCT user_id),0)
+            FROM org_credits_ledger
+            WHERE created_at >= now() - interval '7 days'
+              AND delta < 0
+              AND user_id IS NOT NULL
+        """, None)
+        active_7d = int(r[0]) if r else 0
+    except Exception:
+        active_7d = 0
+
+    try:
+        r = db_query_one("""
+            SELECT COALESCE(SUM(CASE WHEN delta < 0 THEN -delta ELSE 0 END),0)
+            FROM org_credits_ledger
+            WHERE date_trunc('month', created_at) = date_trunc('month', now())
+        """, None)
+        month_usage = int(r[0]) if r else 0
+    except Exception:
+        month_usage = 0
+
+    try:
+        r = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger", None)
+        pool_balance_sum = int(r[0]) if r else 0
+    except Exception:
+        pool_balance_sum = 0
+
+    kpis = {
+        "total_orgs": total_orgs,
+        "total_users": total_users,
+        "active_7d": active_7d,
+        "month_usage": month_usage,
+        "pool_balance_sum": pool_balance_sum,
+    }
+
+    # Orgs table data
+    try:
+        orgs = db_query_all("""
+            SELECT
+              o.id,
+              COALESCE(NULLIF(o.name,''), 'org '||o.id) AS name,
+              COALESCE(o.plan_credits_month, 0) AS plan_credits_month,
+              COALESCE(o.plan_name, '') AS plan_name,
+              COALESCE((
+                SELECT SUM(CASE WHEN l.delta < 0 THEN -l.delta ELSE 0 END)
+                  FROM org_credits_ledger l
+                 WHERE l.org_id = o.id
+                   AND date_trunc('month', l.created_at) = date_trunc('month', now())
+              ), 0) AS month_usage,
+              COALESCE((
+                SELECT SUM(l.delta)
+                  FROM org_credits_ledger l
+                 WHERE l.org_id = o.id
+              ), 0) AS balance
+            FROM orgs o
+            ORDER BY o.id ASC
+        """, None) or []
+    except Exception:
+        orgs = []
+
+    org_list = [{
+        "org_id": r[0],
+        "name": r[1],
+        "plan_credits_month": int(r[2] or 0),
+        "plan_name": r[3] or "",
+        "month_usage": int(r[4] or 0),
+        "balance": int(r[5] or 0),
+    } for r in orgs]
+
+    return jsonify({"ok": True, "kpis": kpis, "orgs": org_list})
+
+
+@app.get("/owner/api/set-org-plan")
+def owner_api_set_org_plan():
+    # admin-only
+    if not (session.get("is_admin")
+            or (session.get("username","").lower() == "admin")
+            or (session.get("user","").lower() == "admin")):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "db_unavailable"}), 500
+
+    # read params
+    try:
+        org_id = int(request.args.get("org_id") or "0")
+    except Exception:
+        return jsonify({"ok": False, "error": "bad_org_id"}), 400
+    if org_id <= 0:
+        return jsonify({"ok": False, "error": "org_id required"}), 400
+
+    monthly = request.args.get("monthly_credits", "").strip()
+    plan_name = (request.args.get("plan_name") or "").strip()
+
+    sets = []
+    params = []
+
+    if monthly != "":
+        try:
+            sets.append("plan_credits_month = %s")
+            params.append(int(monthly))
+        except Exception:
+            return jsonify({"ok": False, "error": "bad_monthly_credits"}), 400
+
+    if plan_name != "":
+        sets.append("plan_name = %s")
+        params.append(plan_name)
+
+    if not sets:
+        return jsonify({"ok": False, "error": "nothing_to_update"}), 400
+
+    params.append(org_id)
+    ok = db_execute(f"UPDATE orgs SET {', '.join(sets)} WHERE id = %s", tuple(params))
+    if not ok:
+        return jsonify({"ok": False, "error": "update_failed"}), 500
+
+    # return the new values
+    row = db_query_one("SELECT plan_credits_month, plan_name FROM orgs WHERE id=%s", (org_id,))
+    return jsonify({
+        "ok": True,
+        "org_id": org_id,
+        "plan_credits_month": int((row[0] or 0)) if row else 0,
+        "plan_name": (row[1] or "") if row else ""
+    })
 # ---- Quick diagnostic (no secrets) ----
 
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
@@ -6141,6 +6291,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

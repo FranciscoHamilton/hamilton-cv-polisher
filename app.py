@@ -5074,11 +5074,13 @@ if (!monthRows.length) {
     """
 # --- Director: minimal UI for org-scoped dashboard (read-only) ---
 # --- Director: minimal UI for org-scoped dashboard (read-only + enable/disable) ---
+# --- Director UI (fixed: triple quotes + ASCII only) ---
 @app.get("/director/ui")
 def director_ui():
     """
     Simple HTML page for directors to view their org's pool balance,
-    users (with any caps if present), recent pool activity, and toggle user active state.
+    users (with any caps if present), recent pool activity, create users,
+    reset passwords, and toggle user active state.
     """
     # must be logged in
     try:
@@ -5123,48 +5125,53 @@ def director_ui():
     """, (my_org,)) or []
 
     recent = db_query_all("""
-        SELECT id, created_at, user_id, delta, reason, created_by
-          FROM org_credits_ledger
-         WHERE org_id = %s
-         ORDER BY id DESC
+        SELECT e.created_at, u.username, e.candidate, e.filename, e.delta, e.reason
+          FROM (
+            SELECT created_at, user_id, NULL::text AS candidate, NULL::text AS filename, delta, reason
+              FROM org_credits_ledger
+             WHERE org_id = %s
+            UNION ALL
+            SELECT created_at, user_id, candidate, filename, NULL::int AS delta, 'polish'::text AS reason
+              FROM usage_events
+             WHERE org_id = %s
+          ) e
+          LEFT JOIN users u ON u.id = e.user_id
+         ORDER BY e.created_at DESC
          LIMIT 50
-    """, (my_org,)) or []
+    """, (my_org, my_org)) or []
 
-    # render tiny HTML
     html = f"""
-<!doctype html>
-    return """
 <!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Director – Org Console</title>
+  <title>Director - Org Console</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    :root { --bg:#fff; --ink:#111; --muted:#666; --line:#e6e6e6; --ok:#0a7f14; --warn:#d28500; --bad:#b00020; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--ink); margin:0; padding:20px; }
-    header { display:flex; gap:12px; align-items:center; margin-bottom:18px; }
-    header .back { text-decoration:none; padding:8px 10px; border:1px solid var(--line); border-radius:10px; }
-    h1 { font-size:22px; margin:0; }
-    h2 { margin:22px 0 10px; }
-    .muted { color: var(--muted); font-size:14px; }
-    .grid { display:grid; gap:12px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: middle; }
-    th { background: #fafafa; }
-    .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-size:12px; }
-    .pill.ok { color: var(--ok); font-weight:600; }
-    .pill.off { color: var(--bad); font-weight:700; }
-    .controls { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
-    .controls input { padding:8px; border:1px solid var(--line); border-radius:8px; min-width:180px; }
-    .controls button { padding:8px 12px; border:1px solid var(--line); border-radius:10px; background:#f7f7f7; cursor:pointer; }
-    .msg { margin-top:6px; font-size:14px; }
-    .small { font-size:12px; color:var(--muted); }
+    :root {{ --bg:#fff; --ink:#111; --muted:#666; --line:#e6e6e6; --ok:#0a7f14; --warn:#d28500; --bad:#b00020; }}
+    body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--ink); margin:0; padding:20px; }}
+    header {{ display:flex; gap:12px; align-items:center; margin-bottom:18px; }}
+    header .back {{ text-decoration:none; padding:8px 10px; border:1px solid var(--line); border-radius:10px; }}
+    h1 {{ font-size:22px; margin:0; }}
+    h2 {{ margin:22px 0 10px; }}
+    .muted {{ color: var(--muted); font-size:14px; }}
+    .grid {{ display:grid; gap:12px; }}
+    table {{ border-collapse: collapse; width: 100%; }}
+    th, td {{ border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: middle; }}
+    th {{ background: #fafafa; }}
+    .pill {{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-size:12px; }}
+    .pill.ok {{ color: var(--ok); font-weight:600; }}
+    .pill.off {{ color: var(--bad); font-weight:700; }}
+    .controls {{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }}
+    .controls input {{ padding:8px; border:1px solid var(--line); border-radius:8px; min-width:180px; }}
+    .controls button {{ padding:8px 12px; border:1px solid var(--line); border-radius:10px; background:#f7f7f7; cursor:pointer; }}
+    .msg {{ margin-top:6px; font-size:14px; }}
+    .small {{ font-size:12px; color:var(--muted); }}
   </style>
 </head>
 <body>
   <header>
-    <a class="back" href="/app" onclick="if(history.length>1){history.back(); return false;}">← Back</a>
+    <a class="back" href="/app" onclick="if(history.length>1){{history.back(); return false;}}">← Back</a>
     <h1>Director Console</h1>
     <span id="orgBadge" class="muted"></span>
   </header>
@@ -5234,152 +5241,152 @@ def director_ui():
 
   <script>
   const $ = (s) => document.querySelector(s);
-  const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])));
+  const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}}[c])));
 
-  async function loadDashboard() {
+  async function loadDashboard() {{
     const res = await fetch('/director/api/dashboard?limit=20');
-    if (!res.ok) { $('#poolBox').textContent = 'Failed to load.'; return; }
+    if (!res.ok) {{ $('#poolBox').textContent = 'Failed to load.'; return; }}
     const d = await res.json();
     $('#orgBadge').textContent = d.orgName ? ('Org: ' + d.orgName) : '';
     const bal = (d.pool && typeof d.pool.balance === 'number') ? d.pool.balance : null;
     $('#poolBox').textContent = (bal == null) ? '—' : (bal + ' credits');
 
     const recent = d.recent || [];
-    if (!recent.length) {
+    if (!recent.length) {{
       $('#recentBody').innerHTML = '<tr><td colspan="6" class="muted">No recent activity.</td></tr>';
-    } else {
+    }} else {{
       let html = '';
-      for (const r of recent) {
+      for (const r of recent) {{
         const when = r.ts ? new Date(r.ts) : null;
         const whenTxt = when && !isNaN(when.getTime()) ? when.toLocaleString() : esc(r.ts || '');
         html += `<tr>
-          <td>${whenTxt}</td>
-          <td>${esc(r.username || r.user_id || '')}</td>
-          <td>${esc(r.candidate || '')}</td>
-          <td>${esc(r.filename || '')}</td>
-          <td>${typeof r.delta === 'number' ? r.delta : ''}</td>
-          <td>${esc(r.reason || '')}</td>
+          <td>${{whenTxt}}</td>
+          <td>${{esc(r.username || r.user_id || '')}}</td>
+          <td>${{esc(r.candidate || '')}}</td>
+          <td>${{esc(r.filename || '')}}</td>
+          <td>${{typeof r.delta === 'number' ? r.delta : ''}}</td>
+          <td>${{esc(r.reason || '')}}</td>
         </tr>`;
-      }
+      }}
       $('#recentBody').innerHTML = html;
-    }
-  }
+    }}
+  }}
 
-  async function loadUsers() {
+  async function loadUsers() {{
     const res = await fetch('/director/api/users');
-    if (!res.ok) { $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">Failed to load users.</td></tr>'; return; }
+    if (!res.ok) {{ $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">Failed to load users.</td></tr>'; return; }}
     const js = await res.json();
     const rows = js.users || [];
-    if (!rows.length) {
+    if (!rows.length) {{
       $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">No users in this org yet.</td></tr>';
       return;
-    }
+    }}
     let html = '';
-    for (const u of rows) {
+    for (const u of rows) {{
       const cap = (u.cap == null ? '' : u.cap);
       const active = !!u.active;
-      const pill = `<span class="pill ${active ? 'ok' : 'off'}">${active ? 'Active' : 'Disabled'}</span>`;
+      const pill = `<span class="pill ${{active ? 'ok' : 'off'}}">${{active ? 'Active' : 'Disabled'}}</span>`;
       const toggleLabel = active ? 'Disable' : 'Enable';
       const toggleNext = active ? 0 : 1;
-      html += `<tr data-uid="${u.id}">
-        <td>${u.id}</td>
-        <td>${esc(u.username || '')}</td>
+      html += `<tr data-uid="${{u.id}}">
+        <td>${{u.id}}</td>
+        <td>${{esc(u.username || '')}}</td>
         <td>
-          <input class="cap" type="number" inputmode="numeric" placeholder="(none)" value="${cap}">
+          <input class="cap" type="number" inputmode="numeric" placeholder="(none)" value="${{cap}}">
           <button class="setcap">Save</button>
         </td>
-        <td>${pill}</td>
+        <td>${{pill}}</td>
         <td>
-          <button class="toggle" data-active="${toggleNext}">${toggleLabel}</button>
+          <button class="toggle" data-active="${{toggleNext}}">${{toggleLabel}}</button>
         </td>
       </tr>`;
-    }
+    }}
     $('#usersBody').innerHTML = html;
-  }
+  }}
 
   // Create user
-  document.getElementById('cu_btn')?.addEventListener('click', async () => {
+  document.getElementById('cu_btn')?.addEventListener('click', async () => {{
     const u = ($('#cu_u')?.value || '').trim();
     const p = ($('#cu_p')?.value || '').trim();
     const seed = ($('#cu_seed')?.value || '').trim();
     const msg = $('#cu_msg');
-    if (!u || !p) { msg.textContent = 'Username and password are required.'; return; }
+    if (!u || !p) {{ msg.textContent = 'Username and password are required.'; return; }}
     msg.textContent = 'Working…';
-    try {
-      const qs = new URLSearchParams({ u, p });
+    try {{
+      const qs = new URLSearchParams({{ u, p }});
       if (seed) qs.set('seed', String(Number(seed)));
       const res = await fetch('/director/api/create-user?' + qs.toString());
       const js = await res.json();
-      if (!res.ok || !js.ok) { msg.textContent = 'Failed: ' + (js.error || res.status); return; }
+      if (!res.ok || !js.ok) {{ msg.textContent = 'Failed: ' + (js.error || res.status); return; }}
       msg.textContent = 'User created (id ' + js.user_id + ').';
       $('#cu_u').value = ''; $('#cu_p').value = ''; $('#cu_seed').value = '';
       await loadUsers(); await loadDashboard();
-    } catch (e) {
+    }} catch (e) {{
       msg.textContent = 'Network error';
-    }
-  });
+    }}
+  }});
 
   // Reset password
-  document.getElementById('rp_btn')?.addEventListener('click', async () => {
+  document.getElementById('rp_btn')?.addEventListener('click', async () => {{
     const uid = ($('#rp_uid')?.value || '').trim();
     const pw  = ($('#rp_pw')?.value || '').trim();
     const msg = $('#rp_msg');
-    if (!uid || !pw) { msg.textContent = 'Please enter both User ID and a new password.'; return; }
+    if (!uid || !pw) {{ msg.textContent = 'Please enter both User ID and a new password.'; return; }}
     msg.textContent = 'Working…';
-    try {
-      const res = await fetch('/director/api/user/reset-password', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ user_id: Number(uid), new_password: pw })
-      });
+    try {{
+      const res = await fetch('/director/api/user/reset-password', {{
+        method: 'POST', headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{ user_id: Number(uid), new_password: pw }})
+      }});
       const js = await res.json();
-      if (!res.ok || !js.ok) { msg.textContent = 'Failed: ' + (js.error || res.status); return; }
+      if (!res.ok || !js.ok) {{ msg.textContent = 'Failed: ' + (js.error || res.status); return; }}
       msg.textContent = 'Password updated for user #' + js.user_id + ' (' + (js.username || '') + ')';
       $('#rp_pw').value = '';
-    } catch (e) {
+    }} catch (e) {{
       msg.textContent = 'Network error';
-    }
-  });
+    }}
+  }});
 
   // Row actions: enable/disable + set cap
-  document.addEventListener('click', async (ev) => {
+  document.addEventListener('click', async (ev) => {{
     const row = ev.target.closest('tr[data-uid]');
     if (!row) return;
 
     // Toggle active
-    if (ev.target.closest('button.toggle')) {
+    if (ev.target.closest('button.toggle')) {{
       const btn = ev.target.closest('button.toggle');
       const uid = row.getAttribute('data-uid');
       const newActive = btn.getAttribute('data-active'); // "1" or "0"
       btn.disabled = true;
-      try {
-        const res = await fetch(`/director/api/user/set-active?user_id=${encodeURIComponent(uid)}&active=${encodeURIComponent(newActive)}`);
+      try {{
+        const res = await fetch(`/director/api/user/set-active?user_id=${{encodeURIComponent(uid)}}&active=${{encodeURIComponent(newActive)}}`);
         const js = await res.json();
-        if (!res.ok || !js.ok) { alert('Failed: ' + (js.error || res.status)); }
-        else { await loadUsers(); }
-      } finally { btn.disabled = false; }
+        if (!res.ok || !js.ok) {{ alert('Failed: ' + (js.error || res.status)); }}
+        else {{ await loadUsers(); }}
+      }} finally {{ btn.disabled = false; }}
       return;
-    }
+    }}
 
     // Save monthly cap
-    if (ev.target.closest('button.setcap')) {
+    if (ev.target.closest('button.setcap')) {{
       const capInput = row.querySelector('input.cap');
       const raw = (capInput?.value || '').trim();
       const uid = row.getAttribute('data-uid');
       const cap = raw === '' ? 'null' : String(Number(raw));
       const btn = ev.target.closest('button.setcap');
       btn.disabled = true;
-      try {
-        const res = await fetch(`/director/api/user/set-monthly-cap?user_id=${encodeURIComponent(uid)}&cap=${encodeURIComponent(cap)}`);
+      try {{
+        const res = await fetch(`/director/api/user/set-monthly-cap?user_id=${{encodeURIComponent(uid)}}&cap=${{encodeURIComponent(cap)}}`);
         const js = await res.json();
-        if (!res.ok || !js.ok) { alert('Failed: ' + (js.error || res.status)); }
-        else { alert('Saved'); }
-      } finally { btn.disabled = false; }
+        if (!res.ok || !js.ok) {{ alert('Failed: ' + (js.error || res.status)); }}
+        else {{ alert('Saved'); }}
+      }} finally {{ btn.disabled = false; }}
       return;
-    }
-  });
+    }}
+  }});
 
   // initial load
-  (async () => { await loadUsers(); await loadDashboard(); })();
+  (async () => {{ await loadUsers(); await loadDashboard(); }})();
   </script>
 </body>
 </html>
@@ -5807,6 +5814,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

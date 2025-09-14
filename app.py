@@ -5343,24 +5343,6 @@ def director_ui():
       return;
     }
 
-    // Save monthly cap
-    if (ev.target.closest('button.setcap')) {
-      const capInput = row.querySelector('input.cap');
-      const raw = (capInput?.value || '').trim();
-      const uid = row.getAttribute('data-uid');
-      const cap = raw === '' ? 'null' : String(Number(raw));
-      const btn = ev.target.closest('button.setcap');
-      btn.disabled = true;
-      try {
-        const res = await fetch(`/director/api/user/set-monthly-cap?user_id=${encodeURIComponent(uid)}&cap=${encodeURIComponent(cap)}`);
-        const js = await res.json();
-        if (!res.ok || !js.ok) { alert('Failed: ' + (js.error || res.status)); }
-        else { alert('Saved'); }
-      } finally { btn.disabled = false; }
-      return;
-    }
-  });
-</script>
 
     // Save monthly cap
     if (ev.target.closest('button.setcap')) {{
@@ -5671,189 +5653,6 @@ def owner_console():
     """
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
-# ---------- Owner (admin) console ----------
-@app.get("/owner/console")
-def owner_console():
-    # admin-only
-    if not (session.get("is_admin")
-            or (session.get("username","").lower() == "admin")
-            or (session.get("user","").lower() == "admin")):
-        return make_response("forbidden", 403)
-
-    # Make sure orgs table has plan column (safe if it already exists)
-    db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS plan_credits_month INTEGER DEFAULT 0")
-
-    # Pull org list with balance and month-to-date usage
-    rows = db_query_all("""
-        SELECT
-          o.id,
-          COALESCE(NULLIF(o.name,''), 'org '||o.id) AS name,
-          COALESCE(o.plan_credits_month, 0) AS plan,
-          COALESCE((
-            SELECT SUM(CASE WHEN l.delta < 0 THEN -l.delta ELSE 0 END)
-            FROM org_credits_ledger l
-            WHERE l.org_id = o.id
-              AND date_trunc('month', l.created_at) = date_trunc('month', now())
-          ), 0) AS used_mtd,
-          COALESCE((
-            SELECT SUM(l.delta) FROM org_credits_ledger l WHERE l.org_id = o.id
-          ), 0) AS balance
-        FROM orgs o
-        ORDER BY o.id ASC
-    """, None) or []
-
-    # Simple HTML (server-rendered) + tiny JS for actions
-    html = """
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Owner Console</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <style>
-    :root {{ --line:#e6e6e6; --muted:#666; --ok:#0a7f14; --bad:#b00020; }}
-    body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }}
-    header {{ display:flex; gap:12px; align-items:center; margin-bottom:16px; }}
-    header a {{ text-decoration:none; padding:8px 10px; border:1px solid var(--line); border-radius:10px; }}
-    h1 {{ margin:0; font-size:22px; }}
-    table {{ border-collapse:collapse; width:100%; }}
-    th, td {{ border:1px solid var(--line); padding:8px; text-align:left; vertical-align:middle; }}
-    th {{ background:#fafafa; }}
-    .muted {{ color: var(--muted); }}
-    .n {{ text-align:right; min-width:80px; }}
-    .small {{ font-size:12px; color: var(--muted); }}
-    .rowbtn {{ padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:#f7f7f7; cursor:pointer; }}
-    .inputs input {{ padding:8px; border:1px solid var(--line); border-radius:8px; }}
-    .inputs button {{ padding:8px 12px; border:1px solid var(--line); border-radius:10px; background:#f7f7f7; cursor:pointer; }}
-  </style>
-</head>
-<body>
-  <header>
-    <a href="/app" onclick="if(history.length>1){{history.back();return false;}}">← Back</a>
-    <h1>Owner Console</h1>
-  </header>
-
-  <div class="inputs" style="margin:12px 0 16px; border:1px solid var(--line); border-radius:12px; padding:12px;">
-    <div style="font-weight:600; margin-bottom:6px;">Create Org</div>
-    <input id="new_name" placeholder="Org name" style="min-width:220px">
-    <input id="new_plan" placeholder="Plan credits/month (e.g. 200)" inputmode="numeric" style="min-width:200px">
-    <button id="create_btn">Create</button>
-    <span id="create_msg" class="small" style="margin-left:8px;"></span>
-  </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th style="width:70px;">Org ID</th>
-        <th>Name</th>
-        <th class="n" style="width:110px;">Balance</th>
-        <th class="n" style="width:120px;">Usage MTD</th>
-        <th class="n" style="width:120px;">Plan / mo</th>
-        <th class="n" style="width:120px;">% of Plan</th>
-        <th style="width:320px;">Actions</th>
-      </tr>
-    </thead>
-    <tbody id="orgBody">
-      {''.join(f'''
-        <tr data-orgid="{{r[0]}}">
-          <td>{{r[0]}}</td>
-          <td><input class="orgname" value="{{r[1] or ''}}" style="width:100%; padding:6px; border:1px solid var(--line); border-radius:8px;"></td>
-          <td class="n">{{int(r[4] or 0)}}</td>
-          <td class="n">{{int(r[3] or 0)}}</td>
-          <td class="n">
-            <input class="plan" type="number" inputmode="numeric" value="{{int(r[2] or 0)}}" style="width:90px; padding:6px; border:1px solid var(--line); border-radius:8px;">
-          </td>
-          <td class="n">{{
-            ('—' if (int(r[2] or 0) <= 0) else
-             f'{{ round(100.0 * (int(r[3] or 0)) / max(1,int(r[2] or 0)), 1) }}%')
-          }}</td>
-          <td>
-            <button class="rowbtn save">Save</button>
-            <button class="rowbtn topup" data-d="20">+20</button>
-            <button class="rowbtn topup" data-d="100">+100</button>
-            <a class="rowbtn" href="/director/ui?org_id={{r[0]}}" target="_blank">Open Director</a>
-          </td>
-        </tr>
-      ''' for r in rows)}
-    </tbody>
-  </table>
-
-  <p class="small" style="margin-top:10px;">Totals are live from the database (org_credits_ledger). “Usage MTD” counts credits consumed this month.</p>
-
-  <script>
-    const $ = s => document.querySelector(s);
-
-    // Top up buttons (calls existing admin endpoint)
-    document.addEventListener('click', async (ev) => {
-      const btn = ev.target.closest('button.topup');
-      if (!btn) return;
-      const tr = btn.closest('tr[data-orgid]');
-      const org = tr.getAttribute('data-orgid');
-      const d = btn.getAttribute('data-d');
-      btn.disabled = true;
-      try {
-        const res = await fetch(`/__admin/org/grant-credits?org_id=${encodeURIComponent(org)}&delta=${encodeURIComponent(d)}&reason=topup`);
-        const js = await res.json();
-        if (!res.ok || !js.ok) { alert('Top-up failed: ' + (js.error || res.status)); }
-        else { location.reload(); }
-      } catch (e) {
-        alert('Network error');
-      } finally {
-        btn.disabled = false;
-      }
-    });
-
-    // Save row (name + plan)
-    document.addEventListener('click', async (ev) => {
-      const btn = ev.target.closest('button.save');
-      if (!btn) return;
-      const tr = btn.closest('tr[data-orgid]');
-      const org = tr.getAttribute('data-orgid');
-      const name = tr.querySelector('.orgname')?.value || '';
-      const plan = tr.querySelector('.plan')?.value || '0';
-      btn.disabled = true;
-      try {
-        const res = await fetch('/owner/api/update-org', {{
-          method:'POST',
-          headers:{{'Content-Type':'application/json'}},
-          body: JSON.stringify({{ org_id:Number(org), name, plan:Number(plan) }})
-        }});
-        const js = await res.json();
-        if (!res.ok || !js.ok) {{ alert('Save failed: ' + (js.error || res.status)); }}
-        else {{ location.reload(); }}
-      }} catch (e) {{
-        alert('Network error');
-      }} finally {{
-        btn.disabled = false;
-      }}
-    });
-
-    // Create org
-    document.getElementById('create_btn')?.addEventListener('click', async () => {
-      const name = ($('#new_name')?.value || '').trim();
-      const plan = Number(($('#new_plan')?.value || '0').trim() || '0');
-      const msg = $('#create_msg');
-      if (!name) {{ msg.textContent = 'Name required'; return; }}
-      msg.textContent = 'Creating…';
-      try {
-        const res = await fetch('/owner/api/create-org', {{
-          method:'POST',
-          headers:{{'Content-Type':'application/json'}},
-          body: JSON.stringify({{ name, plan }})
-        }});
-        const js = await res.json();
-        if (!res.ok || !js.ok) {{ msg.textContent = 'Failed: ' + (js.error || res.status); return; }}
-        msg.textContent = 'Created org #' + js.org_id;
-        setTimeout(() => location.reload(), 600);
-      }} catch (e) {{
-        msg.textContent = 'Network error';
-      }}
-    });
-  </script>
-</body>
-</html>
-    """
-    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 @app.post("/owner/api/update-org")
 def owner_api_update_org():
@@ -6079,6 +5878,234 @@ def _protect_root_admin_from_mutation():
         # Never take the site down because of the guard
         pass
 
+# ---------- Owner (admin) console ----------
+@app.get("/owner/console")
+def owner_console():
+    # admin-only UI
+    if not (session.get("is_admin")
+            or (session.get("username","").lower() == "admin")
+            or (session.get("user","").lower() == "admin")):
+        return redirect("/login")
+
+    # Make sure orgs table has plan column (safe if it already exists)
+    db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS plan_credits_month INTEGER DEFAULT 0")
+
+    # Pull org list with balance and month-to-date usage
+    rows = db_query_all("""
+        SELECT
+          o.id,
+          COALESCE(NULLIF(o.name,''), 'org '||o.id) AS name,
+          COALESCE(o.plan_credits_month, 0) AS plan,
+          COALESCE((
+            SELECT SUM(CASE WHEN l.delta < 0 THEN -l.delta ELSE 0 END)
+            FROM org_credits_ledger l
+            WHERE l.org_id = o.id
+              AND date_trunc('month', l.created_at) = date_trunc('month', now())
+          ), 0) AS used_mtd,
+          COALESCE((
+            SELECT SUM(l.delta) FROM org_credits_ledger l WHERE l.org_id = o.id
+          ), 0) AS balance
+        FROM orgs o
+        ORDER BY o.id ASC
+    """, None) or []
+
+    html = """
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Owner Console</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    :root { --line:#e6e6e6; --muted:#666; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 20px; }
+    header { display:flex; gap:12px; align-items:center; margin-bottom:16px; }
+    header a { text-decoration:none; padding:8px 10px; border:1px solid var(--line); border-radius:10px; }
+    h1 { margin:0; font-size:22px; }
+    table { border-collapse:collapse; width:100%; }
+    th, td { border:1px solid var(--line); padding:8px; text-align:left; vertical-align:middle; }
+    th { background:#fafafa; }
+    .n { text-align:right; min-width:80px; }
+    .rowbtn { padding:6px 8px; border:1px solid var(--line); border-radius:8px; background:#f7f7f7; cursor:pointer; }
+    .inputs input { padding:8px; border:1px solid var(--line); border-radius:8px; }
+    .inputs button { padding:8px 12px; border:1px solid var(--line); border-radius:10px; background:#f7f7f7; cursor:pointer; }
+    .small { font-size:12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="/app" onclick="if(history.length>1){history.back();return false;}">← Back</a>
+    <h1>Owner Console</h1>
+  </header>
+
+  <div class="inputs" style="margin:12px 0 16px; border:1px solid var(--line); border-radius:12px; padding:12px;">
+    <div style="font-weight:600; margin-bottom:6px;">Create Org</div>
+    <input id="new_name" placeholder="Org name" style="min-width:220px">
+    <input id="new_plan" placeholder="Plan credits/month (e.g. 200)" inputmode="numeric" style="min-width:200px">
+    <button id="create_btn">Create</button>
+    <span id="create_msg" class="small" style="margin-left:8px;"></span>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:70px;">Org ID</th>
+        <th>Name</th>
+        <th class="n" style="width:110px;">Balance</th>
+        <th class="n" style="width:120px;">Usage MTD</th>
+        <th class="n" style="width:120px;">Plan / mo</th>
+        <th class="n" style="width:120px;">% of Plan</th>
+        <th style="width:320px;">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="orgBody">
+      {rows}
+    </tbody>
+  </table>
+
+  <p class="small" style="margin-top:10px;">Totals are live from the database (org_credits_ledger). “Usage MTD” counts credits consumed this month.</p>
+
+  <script>
+    // Top up buttons
+    document.addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('button.topup');
+      if (!btn) return;
+      const tr = btn.closest('tr[data-orgid]');
+      const org = tr.getAttribute('data-orgid');
+      const d = btn.getAttribute('data-d');
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/__admin/org/grant-credits?org_id=${encodeURIComponent(org)}&delta=${encodeURIComponent(d)}&reason=topup`);
+        const js = await res.json();
+        if (!res.ok || !js.ok) { alert('Top-up failed: ' + (js.error || res.status)); }
+        else { location.reload(); }
+      } catch (e) {
+        alert('Network error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Save row (name + plan)
+    document.addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('button.save');
+      if (!btn) return;
+      const tr = btn.closest('tr[data-orgid]');
+      const org = tr.getAttribute('data-orgid');
+      const name = tr.querySelector('.orgname')?.value || '';
+      const plan = tr.querySelector('.plan')?.value || '0';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/owner/api/update-org', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ org_id:Number(org), name, plan:Number(plan) })
+        });
+        const js = await res.json();
+        if (!res.ok || !js.ok) { alert('Save failed: ' + (js.error || res.status)); }
+        else { location.reload(); }
+      } catch (e) {
+        alert('Network error');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // Create org
+    document.getElementById('create_btn')?.addEventListener('click', async () => {
+      const name = (document.getElementById('new_name')?.value || '').trim();
+      const plan = Number((document.getElementById('new_plan')?.value || '0').trim() || '0');
+      const msg = document.getElementById('create_msg');
+      if (!name) { msg.textContent = 'Name required'; return; }
+      msg.textContent = 'Creating…';
+      try {
+        const res = await fetch('/owner/api/create-org', {
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name, plan })
+        });
+        const js = await res.json();
+        if (!res.ok || !js.ok) { msg.textContent = 'Failed: ' + (js.error || res.status); return; }
+        msg.textContent = 'Created org #' + js.org_id;
+        setTimeout(() => location.reload(), 600);
+      } catch (e) {
+        msg.textContent = 'Network error';
+      }
+    });
+  </script>
+</body>
+</html>
+    """.replace("{rows}", "".join(f"""
+        <tr data-orgid="{r[0]}">
+          <td>{r[0]}</td>
+          <td><input class="orgname" value="{(r[1] or '').replace('"','&quot;')}" style="width:100%; padding:6px; border:1px solid var(--line); border-radius:8px;"></td>
+          <td class="n">{int(r[4] or 0)}</td>
+          <td class="n">{int(r[3] or 0)}</td>
+          <td class="n">
+            <input class="plan" type="number" inputmode="numeric" value="{int(r[2] or 0)}" style="width:90px; padding:6px; border:1px solid var(--line); border-radius:8px;">
+          </td>
+          <td class="n">{
+            ("—" if int(r[2] or 0) <= 0 else f"{round(100.0 * (int(r[3] or 0)) / max(1, int(r[2] or 0)), 1)}%")
+          }</td>
+          <td>
+            <button class="rowbtn save">Save</button>
+            <button class="rowbtn topup" data-d="20">+20</button>
+            <button class="rowbtn topup" data-d="100">+100</button>
+            <a class="rowbtn" href="/director/ui?org_id={r[0]}" target="_blank">Open Director</a>
+          </td>
+        </tr>
+    """ for r in rows))
+
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+
+
+@app.post("/owner/api/update-org")
+def owner_api_update_org():
+    if not (session.get("is_admin")
+            or (session.get("username","").lower() == "admin")
+            or (session.get("user","").lower() == "admin")):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    try:
+        data = request.get_json(force=True) or {}
+        org_id = int(data.get("org_id") or 0)
+        name = (data.get("name") or "").strip()
+        plan = int(data.get("plan") or 0)
+        if org_id <= 0:
+            raise ValueError("bad org_id")
+    except Exception as e:
+        return jsonify({"ok": False, "error": "bad_request"}), 400
+
+    db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS plan_credits_month INTEGER DEFAULT 0")
+    if name:
+        ok1 = db_execute("UPDATE orgs SET name=%s WHERE id=%s", (name, org_id))
+    else:
+        ok1 = True
+    ok2 = db_execute("UPDATE orgs SET plan_credits_month=%s WHERE id=%s", (plan, org_id))
+    if not (ok1 and ok2):
+        return jsonify({"ok": False, "error": "update_failed"}), 500
+    return jsonify({"ok": True})
+
+
+@app.post("/owner/api/create-org")
+def owner_api_create_org():
+    if not (session.get("is_admin")
+            or (session.get("username","").lower() == "admin")
+            or (session.get("user","").lower() == "admin")):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    try:
+        data = request.get_json(force=True) or {}
+        name = (data.get("name") or "").strip()
+        plan = int(data.get("plan") or 0)
+        db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS plan_credits_month INTEGER DEFAULT 0")
+        ok = db_execute("INSERT INTO orgs (name, plan_credits_month) VALUES (%s,%s)", (name or None, plan))
+        if not ok:
+            return jsonify({"ok": False, "error": "insert_failed"}), 500
+        new_id = (db_query_one("SELECT currval(pg_get_serial_sequence('orgs','id'))") or [None])[0]
+        return jsonify({"ok": True, "org_id": int(new_id or 0)})
+    except Exception:
+        return jsonify({"ok": False, "error": "bad_request"}), 400
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
@@ -6329,6 +6356,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -4223,6 +4223,45 @@ def director_set_monthly_cap():
     spent = org_user_spent_this_month(my_org, target_id)
     return jsonify({"ok": True, "user_id": target_id, "monthly_cap": cap_val, "spent_this_month": spent})
 
+# --- Director: reset a user's password (same org) ---
+@app.post("/director/api/user/reset-password")
+def director_reset_password():
+    me_uid = _require_logged_in()
+    if not me_uid:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    my_org = _current_user_org_id()
+    if not my_org:
+        return jsonify({"ok": False, "error": "no_org"}), 400
+
+    # JSON body: { "user_id": N, "new_password": "..." }
+    data = request.get_json(silent=True) or {}
+    try:
+        target_id = int(data.get("user_id") or 0)
+    except Exception:
+        target_id = 0
+    new_pw = (data.get("new_password") or "").strip()
+
+    if target_id <= 0 or not new_pw:
+        return jsonify({"ok": False, "error": "user_id and new_password required"}), 400
+
+    row = db_query_one("SELECT username, org_id FROM users WHERE id=%s", (target_id,))
+    if not row:
+        return jsonify({"ok": False, "error": "user_not_found"}), 404
+    target_username = (row[0] or "").strip().lower()
+    if int(row[1] or 0) != my_org:
+        return jsonify({"ok": False, "error": "not_in_my_org"}), 403
+    if target_username == "admin":
+        return jsonify({"ok": False, "error": "cannot_modify_admin"}), 403
+
+    try:
+        hashed = generate_password_hash(new_pw)
+        ok = db_execute("UPDATE users SET password_hash=%s WHERE id=%s", (hashed, target_id))
+        if not ok:
+            return jsonify({"ok": False, "error": "update_failed"}), 500
+        return jsonify({"ok": True, "user_id": target_id, "username": target_username})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 # --- Director: org credits summary (my org) ---
 @app.get("/director/api/org/credits-summary")
 def director_org_credits_summary():
@@ -5585,6 +5624,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

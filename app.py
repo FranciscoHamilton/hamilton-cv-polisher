@@ -3654,17 +3654,14 @@ def admin_set_credits():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 # --- Admin: org pool credits summary ---
+# --- Admin: org pool credits summary / grant / set (single canonical block) ---
 
-# --- Admin utility: view org credits summary (rows + balance) ---
 @app.get("/__admin/org/credits-summary")
 def admin_org_credits_summary():
     # admin only
-    try:
-        uname = (session.get("user") or "").strip().lower()
-        is_admin = bool(session.get("is_admin")) or uname == "admin"
-    except Exception:
-        is_admin = False
-    if not is_admin:
+    if not (session.get("is_admin")
+            or (session.get("username", "").lower() == "admin")
+            or (session.get("user", "").lower() == "admin")):
         return jsonify({"ok": False, "error": "forbidden"}), 403
     if not DB_POOL:
         return jsonify({"ok": False, "error": "db_unavailable"}), 500
@@ -3676,36 +3673,40 @@ def admin_org_credits_summary():
     if org_id <= 0:
         return jsonify({"ok": False, "error": "org_id required"}), 400
 
-    rows = db_query_all(
-        "SELECT id, delta, reason, created_by, created_at FROM org_credits_ledger WHERE org_id=%s ORDER BY created_at DESC LIMIT 200",
-        (org_id,),
-    )
+    # balance
     bal_row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger WHERE org_id=%s", (org_id,))
     balance = int(bal_row[0]) if bal_row else 0
 
-    out = {
-        "ok": True,
-        "org_id": org_id,
-        "balance": balance,
-        "rows": [
-            {
-                "id": r[0],
-                "delta": int(r[1] or 0),
-                "reason": r[2] or "",
-                "created_by": r[3],
-                "ts": r[4].isoformat(sep=" ", timespec="seconds") if hasattr(r[4], "isoformat") else str(r[4]),
-            } for r in (rows or [])
-        ]
-    }
-    return jsonify(out)
-# --- Admin: grant credits to org (delta) ---
+    # rows (avoid columns that might not exist on older schemas)
+    rows = db_query_all(
+        "SELECT id, delta, reason, created_at "
+        "FROM org_credits_ledger WHERE org_id=%s "
+        "ORDER BY id DESC LIMIT 200",
+        (org_id,),
+    ) or []
+
+    out_rows = []
+    for r in rows:
+        rid, dlt, rsn, ts = r[0], int(r[1] or 0), (r[2] or ""), r[3]
+        ts_txt = ts.isoformat(sep=" ", timespec="seconds") if hasattr(ts, "isoformat") else str(ts)
+        out_rows.append({"id": rid, "delta": dlt, "reason": rsn, "ts": ts_txt})
+
+    return jsonify({"ok": True, "org_id": org_id, "balance": balance, "rows": out_rows})
+
+
 @app.get("/__admin/org/grant-credits")
 def admin_org_grant_credits():
-    if not (session.get("is_admin") or (session.get("username","").lower()=="admin") or (session.get("user","").lower()=="admin")):
+    # admin only
+    if not (session.get("is_admin")
+            or (session.get("username", "").lower() == "admin")
+            or (session.get("user", "").lower() == "admin")):
         return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "db_unavailable"}), 500
+
     try:
         org_id = int(request.args.get("org_id") or "0")
-        delta  = int(request.args.get("delta") or "0")
+        delta = int(request.args.get("delta") or "0")
     except Exception:
         return jsonify({"ok": False, "error": "bad_org_id/delta"}), 400
     reason = (request.args.get("reason") or "admin_grant").strip()
@@ -3713,19 +3714,27 @@ def admin_org_grant_credits():
         return jsonify({"ok": False, "error": "org_id and non-zero delta required"}), 400
 
     ok = db_execute(
-        "INSERT INTO org_credits_ledger (org_id, delta, reason, created_by) VALUES (%s,%s,%s,%s)",
-        (org_id, delta, reason, int(session.get("user_id") or 0))
+        "INSERT INTO org_credits_ledger (org_id, delta, reason) VALUES (%s,%s,%s)",
+        (org_id, delta, reason),
     )
     if not ok:
         return jsonify({"ok": False, "error": "insert_failed"}), 500
 
-    return jsonify({"ok": True, "org_id": org_id, "new_balance": org_balance(org_id)})
+    bal_row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger WHERE org_id=%s", (org_id,))
+    new_bal = int(bal_row[0]) if bal_row else 0
+    return jsonify({"ok": True, "org_id": org_id, "delta": delta, "new_balance": new_bal, "reason": reason})
 
-# --- Admin: set org balance (compute delta to reach target) ---
+
 @app.get("/__admin/org/set-credits")
 def admin_org_set_credits():
-    if not (session.get("is_admin") or (session.get("username","").lower()=="admin") or (session.get("user","").lower()=="admin")):
+    # admin only
+    if not (session.get("is_admin")
+            or (session.get("username", "").lower() == "admin")
+            or (session.get("user", "").lower() == "admin")):
         return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "db_unavailable"}), 500
+
     try:
         org_id = int(request.args.get("org_id") or "0")
         target = int(request.args.get("balance") or "0")
@@ -3733,70 +3742,23 @@ def admin_org_set_credits():
         return jsonify({"ok": False, "error": "bad_org_id/balance"}), 400
     if org_id <= 0:
         return jsonify({"ok": False, "error": "org_id required"}), 400
-    cur = org_balance(org_id)
+
+    bal_row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger WHERE org_id=%s", (org_id,))
+    cur = int(bal_row[0]) if bal_row else 0
     delta = target - cur
     if delta == 0:
         return jsonify({"ok": True, "org_id": org_id, "balance": cur, "note": "no_change"})
+
     ok = db_execute(
-        "INSERT INTO org_credits_ledger (org_id, delta, reason, created_by) VALUES (%s,%s,%s,%s)",
-        (org_id, delta, "admin_set_balance", int(session.get("user_id") or 0))
+        "INSERT INTO org_credits_ledger (org_id, delta, reason) VALUES (%s,%s,%s)",
+        (org_id, delta, "admin_set_balance"),
     )
     if not ok:
         return jsonify({"ok": False, "error": "insert_failed"}), 500
-    return jsonify({"ok": True, "org_id": org_id, "new_balance": org_balance(org_id)})
-# --- Admin utility: create & list DB users (for quick testing) ---
-@app.get("/__admin/list-db-users")
-def admin_list_db_users():
-    # guard: only admin/director
-    try:
-        uname = (session.get("user") or "").strip().lower()
-        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
-    except Exception:
-        is_dir = False
-    if not is_dir:
-        return jsonify({"ok": False, "error": "forbidden"}), 403
 
-    rows = db_query_all("SELECT id, username, COALESCE(active, TRUE) FROM users ORDER BY id ASC")
-    users = [{"id": r[0], "username": r[1], "active": bool(r[2])} for r in rows]
-    return jsonify({"ok": True, "users": users})
-
-@app.get("/__admin/create-db-user")
-def admin_create_db_user():
-    """
-    QUICK helper for dev: create a DB user.
-    Usage (while logged in as admin): /__admin/create-db-user?u=alice&p=secret
-    """
-    # guard: only admin/director
-    try:
-        uname = (session.get("user") or "").strip().lower()
-        is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
-    except Exception:
-        is_dir = False
-    if not is_dir:
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-
-    u = (request.args.get("u") or "").strip()
-    p = request.args.get("p") or ""
-    if not u or not p:
-        return jsonify({"ok": False, "error": "missing u or p"}), 400
-
-    # already exists?
-    row = db_query_one("SELECT id FROM users WHERE username=%s", (u,))
-    if row:
-        return jsonify({"ok": False, "error": "user exists", "id": row[0]}), 409
-
-    try:
-        pw_hash = generate_password_hash(p)
-        ok = db_execute(
-            "INSERT INTO users (username, password_hash, active) VALUES (%s,%s,%s)",
-            (u, pw_hash, True),
-        )
-        if not ok:
-            return jsonify({"ok": False, "error": "insert failed"}), 500
-        row = db_query_one("SELECT id FROM users WHERE username=%s", (u,))
-        return jsonify({"ok": True, "id": (row[0] if row else None), "username": u})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    new_row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger WHERE org_id=%s", (org_id,))
+    new_bal = int(new_row[0]) if new_row else cur + delta
+    return jsonify({"ok": True, "org_id": org_id, "new_balance": new_bal})
 # --- Admin utility: enable/disable a user (protect 'admin') ---
 @app.get("/__admin/set-user-active")
 def admin_set_user_active():
@@ -5681,6 +5643,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

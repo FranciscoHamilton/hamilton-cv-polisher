@@ -5319,25 +5319,43 @@ def director_ui():
     }}
   }});
 
-  // Row actions: enable/disable + set cap
-  document.addEventListener('click', async (ev) => {{
+    // Row actions: enable/disable + set cap
+  document.addEventListener('click', async (ev) => {
     const row = ev.target.closest('tr[data-uid]');
     if (!row) return;
 
     // Toggle active
-    if (ev.target.closest('button.toggle')) {{
+    if (ev.target.closest('button.toggle')) {
       const btn = ev.target.closest('button.toggle');
       const uid = row.getAttribute('data-uid');
       const newActive = btn.getAttribute('data-active'); // "1" or "0"
       btn.disabled = true;
-      try {{
-        const res = await fetch(`/director/api/user/set-active?user_id=${{encodeURIComponent(uid)}}&active=${{encodeURIComponent(newActive)}}`);
+      try {
+        const res = await fetch('/director/api/user/set-active?user_id=' + encodeURIComponent(uid) + '&active=' + encodeURIComponent(newActive));
         const js = await res.json();
-        if (!res.ok || !js.ok) {{ alert('Failed: ' + (js.error || res.status)); }}
-        else {{ await loadUsers(); }}
-      }} finally {{ btn.disabled = false; }}
+        if (!res.ok || !js.ok) { alert('Failed: ' + (js.error || res.status)); }
+        else { await loadUsers(); }
+      } finally { btn.disabled = false; }
       return;
-    }}
+    }
+
+    // Save monthly cap
+    if (ev.target.closest('button.setcap')) {
+      const capInput = row.querySelector('input.cap');
+      const raw = (capInput ? capInput.value : '').trim();
+      const uid = row.getAttribute('data-uid');
+      const cap = raw === '' ? 'null' : String(Number(raw));
+      const btn = ev.target.closest('button.setcap');
+      btn.disabled = true;
+      try {
+        const res = await fetch('/director/api/user/set-monthly-cap?user_id=' + encodeURIComponent(uid) + '&cap=' + encodeURIComponent(cap));
+        const js = await res.json();
+        if (!res.ok || !js.ok) { alert('Failed: ' + (js.error || res.status)); }
+        else { alert('Saved'); }
+      } finally { btn.disabled = false; }
+      return;
+    }
+  });
 
     // Save monthly cap
     if (ev.target.closest('button.setcap')) {{
@@ -6306,6 +6324,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

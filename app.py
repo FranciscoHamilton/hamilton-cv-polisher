@@ -5319,7 +5319,8 @@ def director_ui():
     }}
   }});
 
-    // Row actions: enable/disable + set cap
+    <script>
+  // Row actions: enable/disable + set cap
   document.addEventListener('click', async (ev) => {
     const row = ev.target.closest('tr[data-uid]');
     if (!row) return;
@@ -5331,10 +5332,13 @@ def director_ui():
       const newActive = btn.getAttribute('data-active'); // "1" or "0"
       btn.disabled = true;
       try {
-        const res = await fetch('/director/api/user/set-active?user_id=' + encodeURIComponent(uid) + '&active=' + encodeURIComponent(newActive));
+        const res = await fetch(`/director/api/user/set-active?user_id=${encodeURIComponent(uid)}&active=${encodeURIComponent(newActive)}`);
         const js = await res.json();
         if (!res.ok || !js.ok) { alert('Failed: ' + (js.error || res.status)); }
-        else { await loadUsers(); }
+        else {
+          // refresh users to reflect new state
+          if (typeof loadUsers === 'function') await loadUsers();
+        }
       } finally { btn.disabled = false; }
       return;
     }
@@ -5342,13 +5346,13 @@ def director_ui():
     // Save monthly cap
     if (ev.target.closest('button.setcap')) {
       const capInput = row.querySelector('input.cap');
-      const raw = (capInput ? capInput.value : '').trim();
+      const raw = (capInput?.value || '').trim();
       const uid = row.getAttribute('data-uid');
       const cap = raw === '' ? 'null' : String(Number(raw));
       const btn = ev.target.closest('button.setcap');
       btn.disabled = true;
       try {
-        const res = await fetch('/director/api/user/set-monthly-cap?user_id=' + encodeURIComponent(uid) + '&cap=' + encodeURIComponent(cap));
+        const res = await fetch(`/director/api/user/set-monthly-cap?user_id=${encodeURIComponent(uid)}&cap=${encodeURIComponent(cap)}`);
         const js = await res.json();
         if (!res.ok || !js.ok) { alert('Failed: ' + (js.error || res.status)); }
         else { alert('Saved'); }
@@ -5356,6 +5360,7 @@ def director_ui():
       return;
     }
   });
+</script>
 
     // Save monthly cap
     if (ev.target.closest('button.setcap')) {{
@@ -5698,7 +5703,7 @@ def owner_console():
     """, None) or []
 
     # Simple HTML (server-rendered) + tiny JS for actions
-    html = f"""
+    html = """
 <!doctype html>
 <html>
 <head>
@@ -6324,6 +6329,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

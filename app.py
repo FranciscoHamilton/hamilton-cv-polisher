@@ -5732,7 +5732,13 @@ def owner_api_overview():
          GROUP BY org_id
     """) or []
     total_rows = db_query_all("SELECT org_id, COUNT(*) FROM usage_events GROUP BY org_id") or []
-    users_rows = db_query_all("SELECT org_id, COUNT(*) FROM users GROUP BY org_id") or []
+    users_rows = db_query_all("""
+    SELECT org_id, COUNT(*)
+      FROM users
+     WHERE COALESCE(active, TRUE) = TRUE
+       AND LOWER(username) <> 'admin'
+     GROUP BY org_id
+""") or []
 
     cred = {r[0]: int(r[1] or 0) for r in cred_rows}
     usem = {r[0]: int(r[1] or 0) for r in month_rows}
@@ -6111,6 +6117,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -4597,7 +4597,74 @@ def admin_set_user_org():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
+# --- Admin: create a user (optionally into a specific org) ---
+@app.get("/__admin/create-user")
+def admin_create_user():
+    """
+    Usage (admin only):
+      /__admin/create-user?u=jane&p=Temp1234!&org_id=2&email=jane@acme.com
 
+    - Creates an active user with the given username/password.
+    - If org_id is provided (>0), assigns the user to that org on creation.
+    - Idempotent on username: returns {already:true} if it exists.
+    """
+    # guard
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_admin = bool(session.get("is_admin")) or (uname == "admin")
+    except Exception:
+        is_admin = False
+    if not is_admin:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "DB pool not initialized"}), 500
+
+    u = (request.args.get("u") or "").strip()
+    p = request.args.get("p") or ""
+    email = (request.args.get("email") or "").strip()
+    try:
+        org_id = int(request.args.get("org_id") or "0")
+    except Exception:
+        org_id = 0
+
+    if not u or not p:
+        return jsonify({"ok": False, "error": "username and password required"}), 400
+    if u.lower() == "admin":
+        return jsonify({"ok": False, "error": "cannot create/modify 'admin' this way"}), 400
+
+    # if username exists, return its id
+    row = db_query_one("SELECT id FROM users WHERE LOWER(username)=LOWER(%s)", (u,))
+    if row and row[0]:
+        return jsonify({"ok": True, "already": True, "id": int(row[0])})
+
+    # optional org validation
+    if org_id > 0:
+        if not db_query_one("SELECT 1 FROM orgs WHERE id=%s", (org_id,)):
+            return jsonify({"ok": False, "error": "org not found"}), 404
+
+    # create user
+    try:
+        hashed = generate_password_hash(p)
+        if org_id > 0:
+            ok = db_execute(
+                "INSERT INTO users (username, password_hash, email, active, org_id) VALUES (%s,%s,%s,TRUE,%s)",
+                (u, hashed, (email or None), org_id),
+            )
+        else:
+            ok = db_execute(
+                "INSERT INTO users (username, password_hash, email, active) VALUES (%s,%s,%s,TRUE)",
+                (u, hashed, (email or None)),
+            )
+        if not ok:
+            return jsonify({"ok": False, "error": "insert failed"}), 500
+
+        row = db_query_one("SELECT id, org_id FROM users WHERE LOWER(username)=LOWER(%s)", (u,))
+        new_id = int(row[0]) if row and row[0] else None
+        new_org = (int(row[1]) if row and row[1] is not None else None)
+        return jsonify({"ok": True, "id": new_id, "username": u, "org_id": new_org})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 # --- Admin: backfill org_id onto historical rows for that user ---
 @app.get("/__admin/backfill-user-org-data")
 def admin_backfill_user_org_data():
@@ -5650,7 +5717,12 @@ async function load(){
           <button type="button">Grant</button>
         </div>
       </td>
-      <td><a class="btn" href="/director?org_id=${o.id}">Open</a></td>
+      <td>
+  <div class="row">
+    <a class="btn" href="/owner/console">Owner</a>
+    <a class="btn" href="/director">Usage</a>
+  </div>
+</td>
     `;
     // auto-save on blur
     tr.querySelectorAll('input[data-k]').forEach(inp=>{
@@ -6117,6 +6189,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

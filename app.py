@@ -5945,6 +5945,7 @@ def owner_console():
   <a class="btn" href="/director">Usage</a>
   <a class="btn" href="/__admin/upload-org-template">Upload template</a>
   <a class="btn" href="/__admin/new-user">Create user</a>
+  <a class="btn" href="/__admin/new-org">New org</a>
 </div>
   </div>
 
@@ -6497,6 +6498,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -4026,6 +4026,22 @@ def ensure_orgs_schema():
                 DB_POOL.putconn(conn)
         except Exception:
             pass
+
+# --- Admin: ensure org template columns (idempotent) ---
+@app.get("/__admin/ensure-template-schema")
+def __admin_ensure_template_schema():
+    if not is_admin():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    try:
+        db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS template_path TEXT")
+        db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS template_updated_at TIMESTAMPTZ")
+        return jsonify({
+            "ok": True,
+            "orgs_template_path": True,
+            "orgs_template_updated_at": True
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500        
             # --- Helper: org of the current session user (or None) ---
 def _current_user_org_id():
     try:
@@ -6304,6 +6320,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

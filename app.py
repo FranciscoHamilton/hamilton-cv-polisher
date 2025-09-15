@@ -6453,20 +6453,24 @@ def polish():
         # ---- Polishing logic (unchanged) ----
         data = ai_or_heuristic_structuring(text)
         data["skills"] = extract_top_skills(text)  # keywords-only list as before
-        # Optional per-org DOCX template (falls back to default if none)
-template_override = None
-try:
-    oid = _current_user_org_id()
-    if oid:
-        row = db_query_one("SELECT template_path FROM orgs WHERE id=%s", (oid,))
-        if row and row[0]:
-            pth = Path(row[0])
-            if pth.exists():
-                template_override = str(pth)
-except Exception as e:
-    print("template resolve failed:", e)
 
-out = build_cv_document(data, template_override=template_override)
+        # Optional per-org DOCX template (falls back to default if none)
+        template_override = None
+        try:
+            oid = _current_user_org_id()
+            if oid:
+                row = db_query_one("SELECT template_path FROM orgs WHERE id=%s", (oid,))
+                if row and row[0]:
+                    pth = Path(row[0])
+                    if pth.exists():
+                        template_override = str(pth)
+        except Exception as e:
+            print("template resolve failed:", e)
+
+        out = build_cv_document(data, template_override=template_override)
+
+        # ---- Update legacy JSON stats (for continuity) ----
+        candidate_name = (data.get("personal_info") or {}).get("full_name")
 
         # ---- Update legacy JSON stats (for continuity) ----
         candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
@@ -6517,6 +6521,7 @@ out = build_cv_document(data, template_override=template_override)
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

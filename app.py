@@ -2994,6 +2994,86 @@ def app_page():
             '}catch(e){console.log("stats css enforce failed",e);} })();</script></body>'
         )
     )
+        # Force smaller values + history inside Session Stats (titles untouched)
+    html = html.replace(
+        "</body>",
+        (
+            '<script>(function(){try{'
+            '  var hs=document.querySelectorAll("h2"), card=null;'
+            '  for(var i=0;i<hs.length;i++){'
+            '    var t=(hs[i].textContent||"").trim().toLowerCase();'
+            '    if(t==="session stats"){ card=hs[i].closest(".card")||hs[i].parentElement; break; }'
+            '  }'
+            '  if(!card){return;}'
+            '  function shrink(el){ try{el.style.fontSize="13px"; el.style.lineHeight="1.3";}catch(e){} }'
+            '  var titles=["Downloads this month","Last Candidate","Last Polished","Credits Used"];'
+            '  titles.forEach(function(title){'
+            '    var nodes=card.querySelectorAll("*"), label=null;'
+            '    for(var i=0;i<nodes.length;i++){'
+            '      var n=nodes[i];'
+            '      if(n.children.length===0){'
+            '        var txt=(n.textContent||"").trim();'
+            '        if(txt.toLowerCase()===title.toLowerCase()){ label=n; break; }'
+            '      }'
+            '    }'
+            '    if(label){'
+            '      var parent=label.parentElement;'
+            '      if(parent){'
+            '        var kids=parent.children;'
+            '        for(var k=0;k<kids.length;k++){ if(kids[k]!==label){ shrink(kids[k]); } }'
+            '      }'
+            '    }'
+            '  });'
+            '  var hist=document.getElementById("history");'
+            '  if(hist){'
+            '    shrink(hist);'
+            '    var items=hist.querySelectorAll("*");'
+            '    for(var i=0;i<items.length;i++){ try{items[i].style.fontSize="13px";}catch(e){} }'
+            '  }'
+            '}catch(e){console.log("stats font tweak failed",e);} })();</script></body>'
+        )
+    )
+
+        # Force smaller values + history inside Session Stats (titles untouched)
+    html = html.replace(
+        "</body>",
+        (
+            '<script>(function(){try{'
+            '  var hs=document.querySelectorAll("h2"), card=null;'
+            '  for(var i=0;i<hs.length;i++){'
+            '    var t=(hs[i].textContent||"").trim().toLowerCase();'
+            '    if(t==="session stats"){ card=hs[i].closest(".card")||hs[i].parentElement; break; }'
+            '  }'
+            '  if(!card){return;}'
+            '  function shrink(el){ try{el.style.fontSize="13px"; el.style.lineHeight="1.3";}catch(e){} }'
+            '  var titles=["Downloads this month","Last Candidate","Last Polished","Credits Used"];'
+            '  titles.forEach(function(title){'
+            '    var nodes=card.querySelectorAll("*"), label=null;'
+            '    for(var i=0;i<nodes.length;i++){'
+            '      var n=nodes[i];'
+            '      if(n.children.length===0){'
+            '        var txt=(n.textContent||"").trim();'
+            '        if(txt.toLowerCase()===title.toLowerCase()){ label=n; break; }'
+            '      }'
+            '    }'
+            '    if(label){'
+            '      var parent=label.parentElement;'
+            '      if(parent){'
+            '        var kids=parent.children;'
+            '        for(var k=0;k<kids.length;k++){ if(kids[k]!==label){ shrink(kids[k]); } }'
+            '      }'
+            '    }'
+            '  });'
+            '  var hist=document.getElementById("history");'
+            '  if(hist){'
+            '    shrink(hist);'
+            '    var items=hist.querySelectorAll("*");'
+            '    for(var i=0;i<items.length;i++){ try{items[i].style.fontSize="13px";}catch(e){} }'
+            '  }'
+            '}catch(e){console.log("stats font tweak failed",e);} })();</script></body>'
+        )
+    )
+
     # Inject Uploading/Processing/Downloading overlay + XHR downloader
     html = html.replace(
         "</body>",
@@ -6224,6 +6304,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

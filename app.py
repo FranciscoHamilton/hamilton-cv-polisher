@@ -5363,7 +5363,7 @@ def director_ui():
 </body>
 </html>
     """
-    
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 # --- Friendly 402 page (Out of credits) ---
 def _render_out_of_credits(reason_text=None):
@@ -5525,105 +5525,6 @@ def __admin_ensure_core_columns():
         results["plans_table_present"] = False
 
     return jsonify({"ok": True, "applied": results})
-
-# ---------- Owner (admin) console APIs ----------
-
-@app.get("/owner/api/overview")
-def owner_api_overview():
-    # admin-only
-    if not (session.get("is_admin")
-            or (session.get("username","").lower() == "admin")
-            or (session.get("user","").lower() == "admin")):
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-    if not DB_POOL:
-        return jsonify({"ok": False, "error": "db_unavailable"}), 500
-
-    # KPIs
-    try:
-        r = db_query_one("SELECT COUNT(*) FROM orgs", None)
-        total_orgs = int(r[0]) if r else 0
-    except Exception:
-        total_orgs = 0
-
-    try:
-        r = db_query_one("SELECT COUNT(*) FROM users", None)
-        total_users = int(r[0]) if r else 0
-    except Exception:
-        total_users = 0
-
-    try:
-        r = db_query_one("""
-            SELECT COALESCE(COUNT(DISTINCT user_id),0)
-            FROM org_credits_ledger
-            WHERE created_at >= now() - interval '7 days'
-              AND delta < 0
-              AND user_id IS NOT NULL
-        """, None)
-        active_7d = int(r[0]) if r else 0
-    except Exception:
-        active_7d = 0
-
-    try:
-        r = db_query_one("""
-            SELECT COALESCE(SUM(CASE WHEN delta < 0 THEN -delta ELSE 0 END),0)
-            FROM org_credits_ledger
-            WHERE date_trunc('month', created_at) = date_trunc('month', now())
-        """, None)
-        month_usage = int(r[0]) if r else 0
-    except Exception:
-        month_usage = 0
-
-    try:
-        r = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger", None)
-        pool_balance_sum = int(r[0]) if r else 0
-    except Exception:
-        pool_balance_sum = 0
-
-    kpis = {
-        "total_orgs": total_orgs,
-        "total_users": total_users,
-        "active_7d": active_7d,
-        "month_usage": month_usage,
-        "pool_balance_sum": pool_balance_sum,
-    }
-
-    # Orgs table data
-    try:
-        orgs = db_query_all("""
-            SELECT
-              o.id,
-              COALESCE(NULLIF(o.name,''), 'org '||o.id) AS name,
-              COALESCE(o.plan_credits_month, 0) AS plan_credits_month,
-              COALESCE(o.plan_name, '') AS plan_name,
-              COALESCE((
-                SELECT SUM(CASE WHEN l.delta < 0 THEN -l.delta ELSE 0 END)
-                  FROM org_credits_ledger l
-                 WHERE l.org_id = o.id
-                   AND date_trunc('month', l.created_at) = date_trunc('month', now())
-              ), 0) AS month_usage,
-              COALESCE((
-                SELECT SUM(l.delta)
-                  FROM org_credits_ledger l
-                 WHERE l.org_id = o.id
-              ), 0) AS balance
-            FROM orgs o
-            ORDER BY o.id ASC
-        """, None) or []
-    except Exception:
-        orgs = []
-
-    org_list = [{
-        "org_id": r[0],
-        "name": r[1],
-        "plan_credits_month": int(r[2] or 0),
-        "plan_name": r[3] or "",
-        "month_usage": int(r[4] or 0),
-        "balance": int(r[5] or 0),
-    } for r in orgs]
-
-    return jsonify({"ok": True, "kpis": kpis, "orgs": org_list})
-
-
 # ---- Quick diagnostic (no secrets) ----
 
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
@@ -5662,326 +5563,7 @@ def _protect_root_admin_from_mutation():
         # Never take the site down because of the guard
         pass
 
-# === BEGIN: OWNER CONSOLE (UI + APIs) + BOOT FIX COLUMNS ======================
-
-# Boot-time safety: make sure columns exist so startup never dies on "active" missing
-def _boot_fix_core_columns():
-    try:
-        if DB_POOL:
-            db_execute("ALTER TABLE orgs  ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE")
-            db_execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE")
-            db_execute("ALTER TABLE orgs  ADD COLUMN IF NOT EXISTS plan_credits_month INTEGER")
-            db_execute("ALTER TABLE orgs  ADD COLUMN IF NOT EXISTS plan_name TEXT")
-    except Exception as e:
-        # Non-fatal on boot; just log. The admin endpoints can still repair later.
-        print("boot ensure columns (non-fatal):", e)
-
-_boot_fix_core_columns()
-
-
-# ---------- Owner (admin) console ----------
-@app.get("/owner/console")
-def owner_console():
-    # admin-only UI
-    if not (session.get("is_admin")
-            or (session.get("username","").lower() == "admin")
-            or (session.get("user","").lower() == "admin")):
-        return redirect("/login")
-
-    html = """
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>Owner Console</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    :root { --bg:#fff; --ink:#111; --muted:#666; --line:#e6e6e6; --ok:#0a7f14; --warn:#d28500; --bad:#b00020; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:var(--bg); color:var(--ink); margin:0; padding:20px; }
-    header { display:flex; gap:12px; align-items:center; margin-bottom:14px; }
-    header a { text-decoration:none; padding:8px 10px; border:1px solid var(--line); border-radius:10px; }
-    h1 { font-size:22px; margin:0; }
-    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin:12px 0 18px; }
-    .card { border:1px solid var(--line); border-radius:12px; padding:12px; }
-    .big { font-size:22px; font-weight:700; margin-top:6px; }
-    .muted { color:var(--muted); font-size:13px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { border:1px solid var(--line); padding:8px; text-align:left; vertical-align:middle; }
-    th { background:#fafafa; }
-    .pct { font-variant-numeric: tabular-nums; }
-    .ok   { color:var(--ok); }
-    .warn { color:var(--warn); }
-    .bad  { color:var(--bad); }
-    input[type="number"], input[type="text"] { padding:6px; border:1px solid var(--line); border-radius:8px; min-width:90px; }
-    button { padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:#f7f7f7; cursor:pointer; }
-    .actions { display:flex; gap:6px; align-items:center; }
-    .small { font-size:12px; color:var(--muted); }
-  </style>
-</head>
-<body>
-  <header>
-    <a href="/app" onclick="if(history.length>1){history.back();return false;}">Back</a>
-    <h1>Owner Console</h1>
-  </header>
-
-  <section class="grid" id="kpis">
-    <div class="card"><div>Total orgs</div><div class="big" id="k_orgs">-</div></div>
-    <div class="card"><div>Total users</div><div class="big" id="k_users">-</div></div>
-    <div class="card"><div>Active users (7d)</div><div class="big" id="k_active7">-</div></div>
-    <div class="card"><div>Usage this month</div><div class="big" id="k_musage">-</div></div>
-    <div class="card"><div>Pool balance sum</div><div class="big" id="k_poolsum">-</div></div>
-  </section>
-
-  <div class="card">
-    <div style="display:flex;justify-content:space-between;align-items:center;">
-      <h2 style="margin:0;">Orgs</h2>
-      <div class="small">Tip: open a director view with <code>/director/ui?org_id=NN</code> while logged in as admin.</div>
-    </div>
-    <table id="orgTable" style="margin-top:10px;">
-      <thead>
-        <tr>
-          <th>Org ID</th>
-          <th>Name</th>
-          <th>Plan (credits/month)</th>
-          <th>Plan name</th>
-          <th>Usage MTD</th>
-          <th>% of plan</th>
-          <th>Pool balance</th>
-          <th>Top up</th>
-          <th>Links</th>
-        </tr>
-      </thead>
-      <tbody><tr><td colspan="9" class="muted">Loading...</td></tr></tbody>
-    </table>
-  </div>
-
-  <script>
-    const $ = s => document.querySelector(s);
-    const esc = s => (s==null ? "" : String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])));
-
-    function pctClass(p){
-      if (p == null) return "";
-      if (p < 70) return "ok";
-      if (p < 100) return "warn";
-      return "bad";
-    }
-
-    async function loadAll(){
-      const res = await fetch('/owner/api/overview');
-      if(!res.ok){ alert('Failed to load overview'); return; }
-      const d = await res.json();
-      $('#k_orgs').textContent   = d.kpis?.total_orgs ?? '-';
-      $('#k_users').textContent  = d.kpis?.total_users ?? '-';
-      $('#k_active7').textContent= d.kpis?.active_7d ?? '-';
-      $('#k_musage').textContent = d.kpis?.month_usage ?? '-';
-      $('#k_poolsum').textContent= d.kpis?.pool_balance_sum ?? '-';
-
-      const tbody = document.querySelector('#orgTable tbody');
-      const orgs = d.orgs || [];
-      if(!orgs.length){ tbody.innerHTML = '<tr><td colspan="9" class="muted">No orgs.</td></tr>'; return; }
-
-      let html = '';
-      for(const o of orgs){
-        const plan = (o.plan_credits_month == null ? '' : o.plan_credits_month);
-        const used = o.month_usage || 0;
-        const pct = (o.plan_credits_month ? Math.round(100*used/o.plan_credits_month) : null);
-        const pctTxt = (pct==null ? '—' : pct+'%');
-        html += `
-        <tr data-org="${o.org_id}">
-          <td>${o.org_id}</td>
-          <td>${esc(o.name||'')}</td>
-          <td><input class="plan" type="number" min="0" placeholder="(unset)" value="${plan}"></td>
-          <td><input class="pname" type="text" placeholder="(optional)" value="${esc(o.plan_name||'')}"></td>
-          <td>${used}</td>
-          <td class="pct ${pctClass(pct)}">${pctTxt}</td>
-          <td>${o.balance}</td>
-          <td class="actions">
-            <input class="topup" type="number" step="1" placeholder="+credits" style="width:110px">
-            <button class="grant">Grant</button>
-          </td>
-          <td>
-            <a href="/director/ui?org_id=${encodeURIComponent(o.org_id)}" target="_blank">Director UI</a>
-          </td>
-        </tr>`;
-      }
-      tbody.innerHTML = html;
-    }
-
-    document.addEventListener('click', async (ev)=>{
-      const row = ev.target.closest('tr[data-org]');
-      if(!row) return;
-      const orgId = row.getAttribute('data-org');
-
-      if(ev.target.closest('button.grant')){
-        const inp = row.querySelector('input.topup');
-        const delta = (inp?.value||'').trim();
-        if(!delta){ alert('Enter credits to grant'); return; }
-        try{
-          const res = await fetch(`/__admin/org/grant-credits?org_id=${encodeURIComponent(orgId)}&delta=${encodeURIComponent(delta)}&reason=owner_ui`);
-          const js = await res.json();
-          if(!res.ok || !js.ok){ alert('Grant failed: ' + (js.error || res.status)); return; }
-          await loadAll();
-        }catch(e){ alert('Network error'); }
-        return;
-      }
-    });
-
-    // Save plan when you change inputs
-    document.addEventListener('change', async (ev)=>{
-      const row = ev.target.closest('tr[data-org]');
-      if(!row) return;
-      const orgId = row.getAttribute('data-org');
-      const plan  = row.querySelector('input.plan')?.value || '';
-      const pname = row.querySelector('input.pname')?.value || '';
-
-      if(ev.target.matches('input.plan') || ev.target.matches('input.pname')){
-        const qs = new URLSearchParams({ org_id: orgId });
-        if(plan !== '') qs.set('monthly_credits', plan);
-        if(pname !== '') qs.set('plan_name', pname);
-        if(Array.from(qs.keys()).length <= 1) return; // nothing to update
-        try{
-          const res = await fetch('/owner/api/set-org-plan?' + qs.toString());
-          const js = await res.json();
-          if(!res.ok || !js.ok){ alert('Save failed: ' + (js.error || res.status)); return; }
-          await loadAll();
-        }catch(e){ alert('Network error'); }
-      }
-    });
-
-    (async()=>{ await loadAll(); })();
-  </script>
-</body>
-</html>
-    """
-    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
-
-
-# ---------- Owner (admin) console APIs ----------
-@app.get("/owner/api/overview")
-def owner_api_overview():
-    # admin-only
-    if not (session.get("is_admin")
-            or (session.get("username","").lower() == "admin")
-            or (session.get("user","").lower() == "admin")):
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-
-    # KPIs
-    row = db_query_one("SELECT COUNT(*) FROM orgs", None);          total_orgs = int(row[0]) if row else 0
-    row = db_query_one("SELECT COUNT(*) FROM users", None);         total_users = int(row[0]) if row else 0
-    row = db_query_one("""
-        SELECT COUNT(DISTINCT user_id)
-          FROM org_credits_ledger
-         WHERE created_at >= NOW() - INTERVAL '7 days' AND COALESCE(delta,0) < 0
-    """, None); active_7d = int(row[0]) if row else 0
-    row = db_query_one("""
-        SELECT COALESCE(SUM(CASE WHEN delta < 0 THEN -delta ELSE 0 END), 0)
-          FROM org_credits_ledger
-         WHERE date_trunc('month', created_at) = date_trunc('month', NOW())
-    """, None); month_usage = int(row[0]) if row else 0
-    row = db_query_one("""
-        SELECT COALESCE(SUM(bal),0) FROM (
-          SELECT org_id, SUM(delta) AS bal
-            FROM org_credits_ledger
-           GROUP BY org_id
-        ) t
-    """, None); pool_balance_sum = int(row[0]) if row else 0
-
-    # Per-org rollup
-    orgs = db_query_all("""
-        SELECT
-          o.id AS org_id,
-          COALESCE(NULLIF(o.name,''), 'org '||o.id) AS name,
-          COALESCE(o.plan_credits_month, 0) AS plan_credits_month,
-          COALESCE(o.plan_name, '') AS plan_name,
-          COALESCE(bal.balance, 0) AS balance,
-          COALESCE(usage_m.usage_mtd, 0) AS month_usage
-        FROM orgs o
-        LEFT JOIN (
-          SELECT org_id, SUM(delta) AS balance
-            FROM org_credits_ledger
-           GROUP BY org_id
-        ) bal ON bal.org_id = o.id
-        LEFT JOIN (
-          SELECT org_id,
-                 SUM(CASE WHEN delta < 0 THEN -delta ELSE 0 END) AS usage_mtd
-            FROM org_credits_ledger
-           WHERE date_trunc('month', created_at) = date_trunc('month', NOW())
-           GROUP BY org_id
-        ) usage_m ON usage_m.org_id = o.id
-        ORDER BY o.id ASC
-    """, None) or []
-
-    return jsonify({
-        "ok": True,
-        "kpis": {
-            "total_orgs": total_orgs,
-            "total_users": total_users,
-            "active_7d": active_7d,
-            "month_usage": month_usage,
-            "pool_balance_sum": pool_balance_sum,
-        },
-        "orgs": [
-            {
-                "org_id": r[0],
-                "name": r[1],
-                "plan_credits_month": int(r[2] or 0),
-                "plan_name": r[3] or "",
-                "balance": int(r[4] or 0),
-                "month_usage": int(r[5] or 0),
-            } for r in orgs
-        ]
-    })
-
-
-@app.get("/owner/api/set-org-plan")
-def owner_api_set_org_plan():
-    # admin-only
-    if not (session.get("is_admin")
-            or (session.get("username","").lower() == "admin")
-            or (session.get("user","").lower() == "admin")):
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-
-    try:
-        org_id = int(request.args.get("org_id") or "0")
-    except Exception:
-        return jsonify({"ok": False, "error": "bad_org_id"}), 400
-    if org_id <= 0:
-        return jsonify({"ok": False, "error": "org_id required"}), 400
-
-    # Optional fields
-    monthly_credits = request.args.get("monthly_credits", None)
-    plan_name = request.args.get("plan_name", None)
-
-    # Columns may not exist on older DBs; ensure here too (idempotent)
-    try:
-        db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS plan_credits_month INTEGER")
-        db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS plan_name TEXT")
-    except Exception:
-        pass
-
-    sets = []
-    vals = []
-    if monthly_credits is not None and monthly_credits != "":
-        try:
-            sets.append("plan_credits_month = %s")
-            vals.append(int(monthly_credits))
-        except Exception:
-            return jsonify({"ok": False, "error": "bad_monthly_credits"}), 400
-    if plan_name is not None:
-        sets.append("plan_name = %s")
-        vals.append(plan_name.strip())
-
-    if not sets:
-        return jsonify({"ok": True, "note": "nothing_to_update"})
-
-    vals.append(org_id)
-    ok = db_execute(f"UPDATE orgs SET {', '.join(sets)} WHERE id = %s", tuple(vals))
-    if not ok:
-        return jsonify({"ok": False, "error": "update_failed"}), 500
-    return jsonify({"ok": True})
-
-# === END: OWNER CONSOLE (UI + APIs) + BOOT FIX COLUMNS ========================
-
+# ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
     try:
@@ -6231,6 +5813,214 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -4122,6 +4122,62 @@ input,select,button{{padding:8px;border:1px solid #e5e7eb;border-radius:8px}}
     size_bytes = os.path.getsize(canonical_path) if os.path.exists(canonical_path) else None
     return jsonify({"ok": True, "org_id": org_id, "template_path": canonical_path, "size": size_bytes})
 
+# --- Admin: simple form to create a user and assign to an org (GET -> calls /__admin/create-user) ---
+@app.get("/__admin/new-user")
+def __admin_new_user():
+    # admin guard
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_admin_flag = bool(session.get("is_admin")) or (uname == "admin")
+    except Exception:
+        is_admin_flag = False
+    if not is_admin_flag:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # orgs for dropdown
+    opts = []
+    try:
+        rows = db_query_all("SELECT id, COALESCE(name,'') FROM orgs ORDER BY id") or []
+        for oid, oname in rows:
+            opts.append(f'<option value="{int(oid)}">{int(oid)} — {oname or "org "+str(int(oid))}</option>')
+    except Exception:
+        pass
+    org_select = (
+        f'<select name="org_id" required>{"".join(opts)}</select>'
+        if opts else
+        '<input type="number" name="org_id" placeholder="Org ID" required min="1" />'
+    )
+
+    # tiny form that submits to /__admin/create-user (GET)
+    html = f"""
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Create user</title>
+<style>
+  body{{font:14px/1.4 system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:20px}}
+  form{{display:grid;gap:10px;max-width:520px}}
+  input,select,button{{padding:8px;border:1px solid #e5e7eb;border-radius:8px}}
+  .btn{{display:inline-block;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;text-decoration:none;color:#0f172a}}
+  .row{{display:flex;gap:8px;align-items:center}}
+</style></head>
+<body>
+  <h1>Create user</h1>
+  <p>Fill the fields and submit. The form calls <code>/__admin/create-user</code> and shows its JSON.</p>
+
+  <form method="GET" action="/__admin/create-user" target="_blank">
+    <label>Username <input type="text" name="u" placeholder="e.g. acme1" required></label>
+    <label>Password <input type="text" name="p" placeholder="Temp1234!" required></label>
+    <label>Email (optional) <input type="email" name="email" placeholder="user@example.com"></label>
+    <label>Organisation {org_select}</label>
+    <div class="row">
+      <button type="submit">Create user</button>
+      <a class="btn" href="/owner/console">Owner</a>
+      <a class="btn" href="/app">App</a>
+    </div>
+  </form>
+</body></html>
+"""
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+
             # --- Helper: org of the current session user (or None) ---
 def _current_user_org_id():
     try:
@@ -6401,6 +6457,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

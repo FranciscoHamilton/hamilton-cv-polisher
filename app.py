@@ -4041,7 +4041,87 @@ def __admin_ensure_template_schema():
             "orgs_template_updated_at": True
         })
     except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500        
+        return jsonify({"ok": False, "error": str(e)}), 500  
+
+# --- Admin: upload a DOCX template for an org (GET=form, POST=upload) ---
+@app.route("/__admin/upload-org-template", methods=["GET", "POST"])
+def __admin_upload_org_template():
+    # admin guard
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_admin_flag = bool(session.get("is_admin")) or (uname == "admin")
+    except Exception:
+        is_admin_flag = False
+    if not is_admin_flag:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # GET: tiny HTML form
+    if request.method == "GET":
+        opts = []
+        try:
+            rows = db_query_all("SELECT id, COALESCE(name,'') FROM orgs ORDER BY id") or []
+            for oid, oname in rows:
+                opts.append(f'<option value="{int(oid)}">{int(oid)} — {oname or "org "+str(int(oid))}</option>')
+        except Exception:
+            pass
+        org_select = (
+            f'<select name="org_id" required>{"".join(opts)}</select>'
+            if opts else
+            '<input type="number" name="org_id" placeholder="Org ID" required min="1" />'
+        )
+        html = f"""<!doctype html><html><head><meta charset="utf-8"><title>Upload Org Template</title>
+<style>body{{font:14px/1.4 system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:20px}}
+form{{display:grid;gap:10px;max-width:520px}}
+input,select,button{{padding:8px;border:1px solid #e5e7eb;border-radius:8px}}
+.btn{{display:inline-block;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;text-decoration:none;color:#0f172a}}
+</style></head><body>
+  <h1>Upload DOCX template (per org)</h1>
+  <p>Choose an organisation and upload a <strong>.docx</strong> file.</p>
+  <form method="POST" enctype="multipart/form-data">
+    <label>Organisation: {org_select}</label>
+    <label>Template (.docx): <input type="file" name="file" accept=".docx" required></label>
+    <button type="submit">Upload</button>
+  </form>
+  <p style="margin-top:14px">
+    <a class="btn" href="/owner/console">Owner</a>
+    <a class="btn" href="/app">App</a>
+  </p>
+</body></html>"""
+        return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+
+    # POST: handle upload
+    file = request.files.get("file")
+    org_id_raw = request.form.get("org_id") or request.args.get("org_id")
+    try:
+        org_id = int(org_id_raw or "0")
+    except Exception:
+        org_id = 0
+    if not (file and org_id):
+        return jsonify({"ok": False, "error": "missing file or org_id"}), 400
+    if not db_query_one("SELECT 1 FROM orgs WHERE id=%s", (org_id,)):
+        return jsonify({"ok": False, "error": "org not found"}), 404
+
+    filename = getattr(file, "filename", "") or ""
+    if not filename.lower().endswith(".docx"):
+        return jsonify({"ok": False, "error": "must be a .docx file"}), 400
+
+    from werkzeug.utils import secure_filename
+    import os, time
+    base_dir = "/mnt/data/org_templates"
+    os.makedirs(base_dir, exist_ok=True)
+    org_dir = os.path.join(base_dir, str(org_id))
+    os.makedirs(org_dir, exist_ok=True)
+    ts = int(time.time())
+    safe = secure_filename(filename) or f"template_{ts}.docx"
+    canonical_path = os.path.join(org_dir, "template.docx")
+    file.save(canonical_path)
+    db_execute(
+        "UPDATE orgs SET template_path=%s, template_updated_at=NOW() WHERE id=%s",
+        (canonical_path, org_id),
+    )
+    size_bytes = os.path.getsize(canonical_path) if os.path.exists(canonical_path) else None
+    return jsonify({"ok": True, "org_id": org_id, "template_path": canonical_path, "size": size_bytes})
+
             # --- Helper: org of the current session user (or None) ---
 def _current_user_org_id():
     try:
@@ -6320,6 +6400,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

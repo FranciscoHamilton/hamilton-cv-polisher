@@ -6629,7 +6629,6 @@ def polish():
         out = build_cv_document(data, template_override=template_override)
 
         # ---- Update legacy JSON stats (for continuity) ----
-        candidate_name = (data.get("personal_info") or {}).get("full_name")
 
         # ---- Update legacy JSON stats (for continuity) ----
         candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
@@ -6641,32 +6640,25 @@ def polish():
         STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
         _save_stats()
 
-        # --- DB logging + org-aware debit (single source of truth) ---
+        # --- Log usage + debit one org credit (best-effort; never blocks) ---
         try:
             uid = int(session.get("user_id") or 0)
-        except Exception:
-            uid = 0
-
-        # 1) Always record usage if we can
-        try:
             if uid:
+                # record usage
                 log_usage_event(uid, f.filename, candidate_name)
-        except Exception as e:
-            print("usage log failed:", e)
 
-        # 2) Charge exactly one credit from the correct pool
-        #    (org_credits_ledger if user has an org, else personal credits_ledger).
-        if DB_POOL and uid and not can_bypass:
-            ok, err = charge_credit_for_polish(uid, 1, candidate_name, f.filename)
-            if not ok:
-                # If the charge failed post-generation (e.g., a race depleted credits),
-                # fail gracefully with a clear message.
-                msg = {
-                    "insufficient_org_credits": "No credits remaining for your organization. Please top up to continue.",
-                    "user_monthly_cap_reached": "Your monthly polish limit has been reached. Ask your director to raise your cap.",
-                    "insufficient_user_credits": "No credits remaining for this account. Please top up to continue.",
-                }.get(err, "Unable to charge a credit for this polish. Please try again.")
-                raise PaymentRequired(msg)
+                # debit org pool unless admin bypass
+                can_bypass = (session.get("user","").strip().lower() == "admin") or bool(session.get("is_admin"))
+                if not can_bypass:
+                    oid = _current_user_org_id()
+                    if DB_POOL and oid:
+                        db_execute(
+                            "INSERT INTO org_credits_ledger (org_id, delta, reason, created_by) VALUES (%s, -1, %s, %s)",
+                            (oid, 'polish', uid),
+                        )
+        except Exception as e:
+            # Never block the download if this fails
+            print("post-polish usage/credit write failed:", e)        
 
         # ---- Optional: decrement trial credits (legacy session) ----
         try:
@@ -6680,6 +6672,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

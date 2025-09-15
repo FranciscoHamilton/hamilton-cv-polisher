@@ -5636,7 +5636,8 @@ def owner_console():
     <div class="row">
       <a class="btn" href="/">Home</a>
       <a class="btn" href="/app">App</a>
-      <a class="btn" href="/director">Director</a>
+      <a class="btn" href="/owner/console">Owner</a>
+<a class="btn" href="/director">Usage</a>
     </div>
   </div>
 
@@ -6189,6 +6190,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

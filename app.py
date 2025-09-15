@@ -5844,11 +5844,12 @@ def owner_console():
   <div class="top">
     <h1>Owner Console</h1>
     <div class="row">
-      <a class="btn" href="/">Home</a>
-      <a class="btn" href="/app">App</a>
-      <a class="btn" href="/owner/console">Owner</a>
-<a class="btn" href="/director">Usage</a>
-    </div>
+  <a class="btn" href="/">Home</a>
+  <a class="btn" href="/app">App</a>
+  <a class="btn" href="/owner/console">Owner</a>
+  <a class="btn" href="/director">Usage</a>
+  <a class="btn" href="/__admin/upload-org-template">Upload template</a>
+</div>
   </div>
 
   <div class="grid">
@@ -6400,6 +6401,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

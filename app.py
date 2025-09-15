@@ -4178,6 +4178,45 @@ def __admin_new_user():
 """
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
+# --- Admin: simple form to create a new organisation (GET -> calls /__admin/create-org) ---
+@app.get("/__admin/new-org")
+def __admin_new_org():
+    # admin guard
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_admin_flag = bool(session.get("is_admin")) or (uname == "admin")
+    except Exception:
+        is_admin_flag = False
+    if not is_admin_flag:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # tiny form that submits to /__admin/create-org (GET)
+    html = """
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Create organisation</title>
+<style>
+  body{font:14px/1.4 system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:20px}
+  form{display:grid;gap:10px;max-width:520px}
+  input,button{padding:8px;border:1px solid #e5e7eb;border-radius:8px}
+  .btn{display:inline-block;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;text-decoration:none;color:#0f172a}
+  .row{display:flex;gap:8px;align-items:center}
+</style></head>
+<body>
+  <h1>Create organisation</h1>
+  <p>Fill the name and submit. The form calls <code>/__admin/create-org</code> and shows its JSON.</p>
+
+  <form method="GET" action="/__admin/create-org" target="_blank">
+    <label>Name <input type="text" name="name" placeholder="e.g. Acme" required></label>
+    <div class="row">
+      <button type="submit">Create org</button>
+      <a class="btn" href="/owner/console">Owner</a>
+      <a class="btn" href="/app">App</a>
+    </div>
+  </form>
+</body></html>
+"""
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+
             # --- Helper: org of the current session user (or None) ---
 def _current_user_org_id():
     try:
@@ -6458,6 +6497,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

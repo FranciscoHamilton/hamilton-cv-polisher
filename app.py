@@ -5526,7 +5526,186 @@ def __admin_ensure_core_columns():
 
     return jsonify({"ok": True, "applied": results})
 # ---- Quick diagnostic (no secrets) ----
+# ---------- Owner (admin) console ----------
+@app.get("/owner/console")
+def owner_console():
+    if not is_admin():
+        return redirect("/login")
 
+    html = """
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Owner Console — Lustra</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{--ink:#0f172a;--muted:#64748b;--line:#e5e7eb;--bg:#f6f8fb;--card:#fff;--brand:#2563eb}
+    *{box-sizing:border-box}
+    body{font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:18px}
+    .top{display:flex;justify-content:space-between;align-items:center;margin:0 0 14px}
+    .top h1{margin:0;font-size:20px}
+    a.btn{display:inline-block;padding:8px 10px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--ink);background:#fff}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+    .k .t{font-size:11px;color:var(--muted);font-weight:700}
+    .k .v{font-size:18px;font-weight:900}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:8px;border-bottom:1px solid #f1f5f9;text-align:left;vertical-align:middle}
+    th{background:#f8fafc;font-size:12px;color:#334155;position:sticky;top:0}
+    input[type="text"],input[type="number"]{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+    .row{display:flex;gap:8px}
+    .small{font-size:12px;color:var(--muted)}
+    .pill{display:inline-block;padding:3px 7px;border:1px solid var(--line);border-radius:999px;font-weight:700;font-size:11px;background:#fff}
+    .grant{display:flex;gap:6px}
+    .grant input{max-width:110px}
+    .saveState{font-size:12px;color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>Owner Console</h1>
+    <div class="row">
+      <a class="btn" href="/">Home</a>
+      <a class="btn" href="/app">App</a>
+      <a class="btn" href="/director">Director</a>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="kpis">
+      <div class="card k"><div class="t">Orgs</div><div class="v" id="k_orgs">—</div></div>
+      <div class="card k"><div class="t">Active orgs</div><div class="v" id="k_orgs_active">—</div></div>
+      <div class="card k"><div class="t">Users</div><div class="v" id="k_users">—</div></div>
+      <div class="card k"><div class="t">Usage (30d)</div><div class="v" id="k_usage30">—</div></div>
+      <div class="card k"><div class="t">Credits (sum)</div><div class="v" id="k_creds">—</div></div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:8px">
+        <h2 style="margin:0;font-size:16px">Organisations</h2>
+        <div class="saveState" id="saveState"></div>
+      </div>
+      <div class="small" style="margin-bottom:8px">Edit <strong>Name</strong>, <strong>Plan</strong> (plan_name) and <strong>Plan credits</strong> (plan_credits_month). Use <em>Grant</em> to top up org credits now. Changes auto-save on blur.</div>
+      <div style="overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:10px">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th style="min-width:200px">Name</th>
+              <th>Active</th>
+              <th style="min-width:160px">Plan</th>
+              <th>Plan credits/mo</th>
+              <th>Balance</th>
+              <th>Usage (month)</th>
+              <th>Usage (total)</th>
+              <th>Users</th>
+              <th>Grant</th>
+              <th>Director</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+function qs(el,sel){return el.querySelector(sel)}
+function fmt(n){return new Intl.NumberFormat('en-GB').format(n||0)}
+
+let data=null, saveTimer=null;
+
+async function load(){
+  const r = await fetch('/owner/api/overview', {cache:'no-store'});
+  if(!r.ok){ alert('Failed to load overview'); return; }
+  data = await r.json();
+  if(!data.ok){ alert(data.error||'Overview error'); return; }
+
+  // KPIs
+  document.getElementById('k_orgs').textContent = fmt(data.kpis.total_orgs);
+  document.getElementById('k_orgs_active').textContent = fmt(data.kpis.active_orgs);
+  document.getElementById('k_users').textContent = fmt(data.kpis.total_users);
+  document.getElementById('k_usage30').textContent = fmt(data.kpis.usage_30d);
+  document.getElementById('k_creds').textContent = fmt(data.kpis.credits_balance_sum);
+
+  // Table
+  const tb = document.getElementById('tbody'); tb.innerHTML='';
+  (data.orgs||[]).forEach(o=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${o.id}</td>
+      <td><input type="text" value="${(o.name||'').replaceAll('"','&quot;')}" data-k="name"></td>
+      <td>${o.active ? 'Yes' : 'No'}</td>
+      <td><input type="text" value="${(o.plan_name||'').replaceAll('"','&quot;')}" data-k="plan_name"></td>
+      <td><input type="number" value="${o.plan_credits_month||0}" min="0" step="1" data-k="plan_credits_month"></td>
+      <td><span class="pill" data-k="credits_balance">${fmt(o.credits_balance||0)}</span></td>
+      <td>${fmt(o.usage_month||0)}</td>
+      <td>${fmt(o.usage_total||0)}</td>
+      <td>${fmt(o.users_count||0)}</td>
+      <td>
+        <div class="grant">
+          <input type="number" placeholder="+100" step="1" />
+          <button type="button">Grant</button>
+        </div>
+      </td>
+      <td><a class="btn" href="/director?org_id=${o.id}">Open</a></td>
+    `;
+    // auto-save on blur
+    tr.querySelectorAll('input[data-k]').forEach(inp=>{
+      inp.addEventListener('blur', ()=> saveRow(o.id, tr));
+    });
+    // grant handler
+    const gBtn = tr.querySelector('.grant button');
+    const gInp = tr.querySelector('.grant input');
+    gBtn.addEventListener('click', async ()=>{
+      const delta = parseInt(gInp.value||'0',10);
+      if(!delta) return;
+      await saveRow(o.id, tr, delta);
+      gInp.value='';
+    });
+
+    tb.appendChild(tr);
+  });
+}
+
+async function saveRow(id, tr, grantDelta){
+  const name  = qs(tr,'input[data-k="name"]').value;
+  const plan  = qs(tr,'input[data-k="plan_name"]').value;
+  const creds = parseInt(qs(tr,'input[data-k="plan_credits_month"]').value||'0',10);
+  const qsParams = new URLSearchParams({ id: String(id), name, plan_name: plan, plan_credits_month: String(creds) });
+  if (grantDelta) qsParams.set('grant', String(grantDelta));
+
+  setSaveState('Saving…');
+  const r = await fetch('/owner/api/set-org-plan?' + qsParams.toString(), { method:'GET' });
+  const j = await r.json().catch(()=>({ok:false}));
+  if(j && j.ok){
+    const bal = j.credits_balance;
+    if (typeof bal === 'number') {
+      const chip = qs(tr,'[data-k="credits_balance"]');
+      if (chip) chip.textContent = new Intl.NumberFormat('en-GB').format(bal);
+    }
+    setSaveState('Saved');
+  }else{
+    setSaveState('Error');
+    alert(j && j.error ? j.error : 'Save failed');
+  }
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>setSaveState(''), 1200);
+}
+
+function setSaveState(t){
+  const el = document.getElementById('saveState');
+  if(el) el.textContent = t||'';
+}
+
+document.addEventListener('DOMContentLoaded', load);
+</script>
+</body>
+</html>
+    """
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
 def _is_admin_session():
     try:
@@ -5813,6 +5992,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -2975,7 +2975,7 @@ def app_page():
         )
     )
 
-        # Tweak Session Stats fonts (smaller values + history)
+            # Tweak Session Stats fonts (force smaller values + history; keep titles bigger)
     html = html.replace(
         "</body>",
         (
@@ -2985,15 +2985,29 @@ def app_page():
             '   var t=(hs[i].textContent||"").trim().toLowerCase();'
             '   if(t==="session stats"){ box=hs[i].closest(".card")||hs[i].parentElement; break; }'
             ' }'
-            ' if(box){'
-            '   box.id="sessionStats";'
-            '   var s=document.createElement("style");'
-            '   s.textContent='
-            '     "#sessionStats strong,#sessionStats b,#sessionStats .v{font-size:14px !important;}"'
-            '    + "#sessionStats td,#sessionStats li,#history{font-size:13px !important;}";'
-            '   document.head.appendChild(s);'
-            ' }'
-            '}catch(e){console.log(\\"stats css inject failed\\",e);}})();</script></body>'
+            ' if(!box){return;}'
+            ' box.id="sessionStats";'
+            ' var s=document.createElement("style");'
+            ' s.textContent='
+            '   "#sessionStats *{font-size:12px !important;}"'  /* base = smaller */
+            ' + "#sessionStats h2{font-size:20px !important;}"' /* keep big section title */
+            ' + "#sessionStats .btn, #sessionStats button{font-size:12px !important;}"'
+            ' ;'
+            ' document.head.appendChild(s);'
+            ' var titles=["Downloads this month","Last Candidate","Last Polished","Credits Used","Full history"];'
+            ' var nodes=box.querySelectorAll("*");'
+            ' titles.forEach(function(tt){'
+            '   var tgt=null;'
+            '   for(var i=0;i<nodes.length;i++){'
+            '     var n=nodes[i];'
+            '     if(n.children.length===0){'
+            '       var txt=(n.textContent||"").trim();'
+            '       if(txt.toLowerCase()===tt.toLowerCase()){tgt=n;break;}'
+            '     }'
+            '   }'
+            '   if(tgt){tgt.style.setProperty("font-size","13px","important");tgt.style.setProperty("font-weight","700","important");tgt.style.setProperty("color","#334155","important");}'
+            ' });'
+            '}catch(e){console.log(\\"stats css enforce failed\\",e);}})();</script></body>'
         )
     )
     # Inject Uploading/Processing/Downloading overlay + XHR downloader
@@ -6226,6 +6240,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

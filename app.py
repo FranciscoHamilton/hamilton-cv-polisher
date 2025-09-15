@@ -2723,13 +2723,19 @@ def _ensure_primary_header_spacer(doc: Docx):
         pass
 
 # ---------- Compose CV ----------
-def build_cv_document(cv: dict) -> Path:
-    template_path = None
-    for pth in [PROJECT_DIR / "hamilton_template.docx",
-                PROJECT_DIR / "HAMILTON TEMPLATE.docx",
-                PROJECT_DIR / "master_template.docx"]:
-        if pth.exists():
-            template_path = pth; break
+def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
+    # Prefer an explicit override (per-org), otherwise fall back to bundled templates
+    tpath = Path(template_override) if template_override else None
+    if tpath and tpath.exists():
+        template_path = tpath
+    else:
+        template_path = None
+        for pth in [PROJECT_DIR / "hamilton_template.docx",
+                    PROJECT_DIR / "HAMILTON TEMPLATE.docx",
+                    PROJECT_DIR / "master_template.docx"]:
+            if pth.exists():
+                template_path = pth
+                break
 
     if template_path:
         doc = Docx(str(template_path))
@@ -6447,7 +6453,20 @@ def polish():
         # ---- Polishing logic (unchanged) ----
         data = ai_or_heuristic_structuring(text)
         data["skills"] = extract_top_skills(text)  # keywords-only list as before
-        out = build_cv_document(data)
+        # Optional per-org DOCX template (falls back to default if none)
+template_override = None
+try:
+    oid = _current_user_org_id()
+    if oid:
+        row = db_query_one("SELECT template_path FROM orgs WHERE id=%s", (oid,))
+        if row and row[0]:
+            pth = Path(row[0])
+            if pth.exists():
+                template_override = str(pth)
+except Exception as e:
+    print("template resolve failed:", e)
+
+out = build_cv_document(data, template_override=template_override)
 
         # ---- Update legacy JSON stats (for continuity) ----
         candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
@@ -6498,6 +6517,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

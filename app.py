@@ -4049,6 +4049,21 @@ def __admin_ensure_template_schema():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500  
 
+# --- Admin: ensure per-org profile column (idempotent) ---
+@app.get("/__admin/ensure-org-profile")
+def __admin_ensure_org_profile():
+    if not is_admin():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    try:
+        # Prefer JSONB; if not available, fall back to TEXT
+        try:
+            db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS profile_json JSONB")
+        except Exception:
+            db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS profile_json TEXT")
+        return jsonify({"ok": True, "applied": {"orgs.profile_json": True}})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 # --- Admin: upload a DOCX template for an org (GET=form, POST=upload) ---
 @app.route("/__admin/upload-org-template", methods=["GET", "POST"])
 def __admin_upload_org_template():
@@ -6521,6 +6536,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -5714,14 +5714,14 @@ def owner_api_overview():
 
     # Orgs base info
     org_rows = db_query_all("""
-    SELECT id,
-           name,
-           COALESCE(active, TRUE) AS active,
-           COALESCE(plan_name, '') AS plan_name,
-           COALESCE(plan_credits_month, 0) AS plan_credits_month
-      FROM orgs
-     ORDER BY id
-""") or []
+        SELECT id,
+               name,
+               COALESCE(active, TRUE) AS active,
+               COALESCE(plan_name, '') AS plan_name,
+               COALESCE(plan_credits_month, 0) AS plan_credits_month
+          FROM orgs
+         ORDER BY id
+    """) or []
 
     # Aggregates (credits, usage, users) by org
     cred_rows  = db_query_all("SELECT org_id, COALESCE(SUM(delta),0) FROM org_credits_ledger GROUP BY org_id") or []
@@ -5740,20 +5740,19 @@ def owner_api_overview():
     ucnt = {r[0]: int(r[1] or 0) for r in users_rows}
 
     orgs = []
-for r in org_rows:
-    oid = r[0]
-    orgs.append({
-        "id": oid,
-        "name": r[1],
-        "active": bool(r[2]),
-        "plan_name": r[3],
-        "plan_credits_month": int(r[4] or 0),
-        "credits_balance": cred.get(oid, 0),
-        "usage_month": usem.get(oid, 0),
-        "usage_total": uset.get(oid, 0),
-        "users_count": ucnt.get(oid, 0),
-    })
-
+    for r in org_rows:
+        oid = r[0]
+        orgs.append({
+            "id": oid,
+            "name": r[1],
+            "active": bool(r[2]),
+            "plan_name": r[3],
+            "plan_credits_month": int(r[4] or 0),
+            "credits_balance": cred.get(oid, 0),
+            "usage_month": usem.get(oid, 0),
+            "usage_total": uset.get(oid, 0),
+            "users_count": ucnt.get(oid, 0),
+        })
 
     # KPIs
     k_total_orgs = len(orgs)
@@ -6112,6 +6111,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

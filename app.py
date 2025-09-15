@@ -2975,6 +2975,27 @@ def app_page():
         )
     )
 
+        # Tweak Session Stats fonts (smaller values + history)
+    html = html.replace(
+        "</body>",
+        (
+            '<script>(function(){try{'
+            ' var hs=document.querySelectorAll("h2");var box=null;'
+            ' for(var i=0;i<hs.length;i++){'
+            '   var t=(hs[i].textContent||"").trim().toLowerCase();'
+            '   if(t==="session stats"){ box=hs[i].closest(".card")||hs[i].parentElement; break; }'
+            ' }'
+            ' if(box){'
+            '   box.id="sessionStats";'
+            '   var s=document.createElement("style");'
+            '   s.textContent='
+            '     "#sessionStats strong,#sessionStats b,#sessionStats .v{font-size:14px !important;}"'
+            '    + "#sessionStats td,#sessionStats li,#history{font-size:13px !important;}";'
+            '   document.head.appendChild(s);'
+            ' }'
+            '}catch(e){console.log(\\"stats css inject failed\\",e);}})();</script></body>'
+        )
+    )
     # Inject Uploading/Processing/Downloading overlay + XHR downloader
     html = html.replace(
         "</body>",
@@ -6205,6 +6226,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

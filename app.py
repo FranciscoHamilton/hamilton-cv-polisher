@@ -5774,6 +5774,59 @@ def owner_api_overview():
         },
         "orgs": orgs,
     })
+
+@app.get("/owner/api/set-org-plan")
+def owner_api_set_org_plan():
+    if not is_admin():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # Inputs
+    try:
+        org_id = int(request.args.get("id", "0"))
+    except Exception:
+        org_id = 0
+    if not org_id:
+        return jsonify({"ok": False, "error": "missing id"}), 400
+
+    name  = (request.args.get("name") or "").strip()
+    plan  = (request.args.get("plan_name") or "").strip()
+    try:
+        plan_credits = int(request.args.get("plan_credits_month", "0") or 0)
+    except Exception:
+        plan_credits = 0
+
+    # Optional grant/top-up to the org credits pool
+    try:
+        grant = int(request.args.get("grant", "0") or 0)
+    except Exception:
+        grant = 0
+
+    # Update org fields
+    if name:
+        db_execute("UPDATE orgs SET name=%s WHERE id=%s", (name, org_id))
+    db_execute("UPDATE orgs SET plan_name=%s, plan_credits_month=%s WHERE id=%s",
+               (plan or None, plan_credits, org_id))
+
+    # Record credit grant if provided
+    if grant:
+        admin_user = session.get("user") or ""
+        created_by = None
+        try:
+            u = get_user_db(admin_user)
+            if u and u.get("id"):
+                created_by = int(u["id"])
+        except Exception:
+            pass
+        db_execute(
+            "INSERT INTO org_credits_ledger (org_id, delta, reason, created_by) VALUES (%s,%s,%s,%s)",
+            (org_id, grant, "grant", created_by)
+        )
+
+    # Return fresh balance
+    row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger WHERE org_id=%s", (org_id,))
+    balance = int(row[0] or 0) if row else 0
+
+    return jsonify({"ok": True, "id": org_id, "credits_balance": balance})
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
 def _is_admin_session():
     try:
@@ -6060,6 +6113,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

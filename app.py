@@ -5706,6 +5706,74 @@ document.addEventListener('DOMContentLoaded', load);
 </html>
     """
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+
+@app.get("/owner/api/overview")
+def owner_api_overview():
+    if not is_admin():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # Orgs base info
+    org_rows = db_query_all("""
+        SELECT id,
+               name,
+               COALESCE(active, TRUE) AS active,
+               COALESCE(plan_name, '') AS plan_name,
+               COALESCE(plan_credits_month, 0) AS plan_credits_month,
+               created_at
+          FROM orgs
+         ORDER BY id
+    """) or []
+
+    # Aggregates (credits, usage, users) by org
+    cred_rows  = db_query_all("SELECT org_id, COALESCE(SUM(delta),0) FROM org_credits_ledger GROUP BY org_id") or []
+    month_rows = db_query_all("""
+        SELECT org_id, COUNT(*)
+          FROM usage_events
+         WHERE date_trunc('month', ts) = date_trunc('month', now())
+         GROUP BY org_id
+    """) or []
+    total_rows = db_query_all("SELECT org_id, COUNT(*) FROM usage_events GROUP BY org_id") or []
+    users_rows = db_query_all("SELECT org_id, COUNT(*) FROM users GROUP BY org_id") or []
+
+    cred = {r[0]: int(r[1] or 0) for r in cred_rows}
+    usem = {r[0]: int(r[1] or 0) for r in month_rows}
+    uset = {r[0]: int(r[1] or 0) for r in total_rows}
+    ucnt = {r[0]: int(r[1] or 0) for r in users_rows}
+
+    orgs = []
+    for r in org_rows:
+        oid = r[0]
+        orgs.append({
+            "id": oid,
+            "name": r[1],
+            "active": bool(r[2]),
+            "plan_name": r[3],
+            "plan_credits_month": int(r[4] or 0),
+            "created_at": (r[5].isoformat() if hasattr(r[5], "isoformat") else str(r[5])),
+            "credits_balance": cred.get(oid, 0),
+            "usage_month": usem.get(oid, 0),
+            "usage_total": uset.get(oid, 0),
+            "users_count": ucnt.get(oid, 0),
+        })
+
+    # KPIs
+    k_total_orgs = len(orgs)
+    k_active_orgs = sum(1 for o in orgs if o["active"])
+    k_total_users = sum(ucnt.values()) if ucnt else 0
+    k_usage_30d = db_query_one("SELECT COUNT(*) FROM usage_events WHERE ts >= now() - interval '30 days'")[0] or 0
+    k_cred_sum  = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger")[0] or 0
+
+    return jsonify({
+        "ok": True,
+        "kpis": {
+            "total_orgs": k_total_orgs,
+            "active_orgs": k_active_orgs,
+            "total_users": int(k_total_users),
+            "usage_30d": int(k_usage_30d),
+            "credits_balance_sum": int(k_cred_sum),
+        },
+        "orgs": orgs,
+    })
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
 def _is_admin_session():
     try:
@@ -5992,6 +6060,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

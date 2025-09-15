@@ -2902,6 +2902,21 @@ def app_page():
             )
         )
 
+        # Inject Owner link (admins only)
+    if is_admin():
+        html = html.replace(
+            "</body>",
+            (
+                '<a href="/owner/console" class="owner-link" title="Owner console">Owner</a>'
+                '<style>'
+                '.owner-link{position:fixed;right:100px;bottom:16px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;'
+                'background:#fff;color:#0f172a;text-decoration:none;box-shadow:0 1px 2px rgba(0,0,0,0.06);'
+                'font:14px/1.2 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}'
+                '.owner-link:hover{box-shadow:0 2px 6px rgba(0,0,0,0.12)}'
+                '</style>'
+                '</body>'
+            )
+        )
     # Inject Full History toggle
     html = html.replace(
         "</body>",
@@ -6190,6 +6205,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

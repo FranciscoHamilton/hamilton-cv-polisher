@@ -4238,6 +4238,149 @@ def __admin_new_org():
 """
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
+# --- Admin: edit per-org profile (JSON) for structure/labels/tone (GET=form, POST=save) ---
+@app.route("/__admin/org-profile", methods=["GET", "POST"])
+def __admin_org_profile():
+    # admin guard
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_admin_flag = bool(session.get("is_admin")) or (uname == "admin")
+    except Exception:
+        is_admin_flag = False
+    if not is_admin_flag:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # load orgs for dropdown
+    opts = []
+    try:
+        rows = db_query_all("SELECT id, COALESCE(name,'') FROM orgs ORDER BY id") or []
+        for oid, oname in rows:
+            opts.append(f'<option value="{int(oid)}">{int(oid)} — {oname or ("org "+str(int(oid)))}</option>')
+    except Exception:
+        pass
+
+    import json
+    # org_id from query or form
+    org_id_raw = request.values.get("org_id") or ""
+    try:
+        org_id = int(org_id_raw) if org_id_raw else 0
+    except Exception:
+        org_id = 0
+
+    if request.method == "POST":
+        if not org_id:
+            return jsonify({"ok": False, "error": "missing org_id"}), 400
+        profile_text = request.form.get("profile") or ""
+        try:
+            # validate JSON, then store canonical JSON string
+            obj = json.loads(profile_text)
+            canon = json.dumps(obj, ensure_ascii=False)
+            db_execute("UPDATE orgs SET profile_json=%s WHERE id=%s", (canon, org_id))
+            return jsonify({"ok": True, "org_id": org_id, "saved": True, "bytes": len(canon)})
+        except Exception as e:
+            return jsonify({"ok": False, "error": f"invalid json or save failed: {e}"}), 400
+
+    # GET: render small editor
+    selected = ""
+    if org_id and opts:
+        # re-render options with selected
+        new_opts = []
+        for o in opts:
+            val = o.split('value="',1)[1].split('"',1)[0] if 'value="' in o else ""
+            if val and int(val) == org_id:
+                new_opts.append(o.replace('value="'+val+'"', 'value="'+val+'" selected'))
+            else:
+                new_opts.append(o)
+        opts = new_opts
+
+    # fetch current profile (if org selected)
+    current_json = ""
+    if org_id:
+        try:
+            row = db_query_one("SELECT profile_json FROM orgs WHERE id=%s", (org_id,))
+            if row and row[0]:
+                # row may be text or json; stringify nicely
+                if isinstance(row[0], (dict, list)):
+                    current_json = json.dumps(row[0], indent=2, ensure_ascii=False)
+                else:
+                    # already a string in DB
+                    current_json = str(row[0])
+        except Exception:
+            pass
+
+    # simple example profile (you can tweak later per client)
+    example_profile = json.dumps({
+        "sections_order": [
+            "name_and_contact",
+            "executive_summary",
+            "skills",
+            "experience",
+            "education",
+            "certifications"
+        ],
+        "labels": {
+            "executive_summary": "Executive Summary",
+            "skills": "Key Skills",
+            "experience": "Professional Experience",
+            "education": "Education"
+        },
+        "content": {
+            "summary_tone": "concise, outcome-focused",
+            "bullet_style": "impact-first",
+            "date_format": "MMM yyyy",
+            "experience_bullets_max": 6
+        }
+    }, indent=2)
+
+    org_select = (
+        f'<select name="org_id" onchange="location.search=`?org_id=`+this.value" required>{"".join(opts)}</select>'
+        if opts else
+        '<input type="number" name="org_id" placeholder="Org ID" required min="1" />'
+    )
+
+    # build HTML
+    html = f"""
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Org profile (JSON)</title>
+<style>
+  body{{font:14px/1.45 system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:20px}}
+  textarea,input,select,button{{padding:8px;border:1px solid #e5e7eb;border-radius:8px;font-family:ui-monospace,Menlo,Consolas,monospace}}
+  .row{{display:flex;gap:8px;align-items:center;flex-wrap:wrap}}
+  .cols{{display:grid;grid-template-columns:1fr 1fr;gap:16px}}
+  .card{{border:1px solid #e5e7eb;border-radius:10px;padding:14px}}
+  .btn{{display:inline-block;padding:8px 12px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;text-decoration:none;color:#0f172a}}
+  .muted{{color:#64748b}}
+</style></head>
+<body>
+  <h1>Organisation profile (JSON)</h1>
+  <div class="row" style="margin-bottom:12px">
+    <label>Organisation: {org_select}</label>
+    <a class="btn" href="/owner/console">Owner</a>
+    <a class="btn" href="/app">App</a>
+  </div>
+
+  <div class="cols">
+    <div class="card">
+      <h3 style="margin-top:0">Current profile</h3>
+      <form method="POST">
+        <input type="hidden" name="org_id" value="{org_id or ''}">
+        <textarea name="profile" rows="22" style="width:100%" placeholder='{{}}'>{json.dumps(current_json, ensure_ascii=False)[1:-1]}</textarea>
+        <div class="row" style="margin-top:10px">
+          <button type="submit">Save</button>
+          <button type="button" onclick="document.querySelector('textarea[name=profile]').value={json.dumps(example_profile)}">Load example</button>
+        </div>
+      </form>
+      <p class="muted" style="margin-top:10px">Tip: leave empty to use the default Hamilton structure. Saving any JSON here will override structure/labels for this org when we wire it in.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Example (starter)</h3>
+      <pre style="white-space:pre-wrap">{example_profile}</pre>
+    </div>
+  </div>
+</body></html>
+"""
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+
             # --- Helper: org of the current session user (or None) ---
 def _current_user_org_id():
     try:

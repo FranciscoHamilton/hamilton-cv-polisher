@@ -6111,8 +6111,19 @@ def owner_console():
   <a class="btn" href="/__admin/new-user">Create user</a>
   <a class="btn" href="/__admin/new-org">New org</a>
   <a class="btn" href="/__admin/org-profile">Org profile</a>
+  <a class="btn" href="/owner/api/export" title="Download last 30 days (all orgs)">Export CSV</a>
+  <a class="btn" id="exportOrgBtn" href="#" title="Export a single org">Export CSV (org)</a>
 </div>
   </div>
+
+<script>
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('#exportOrgBtn'); if(!btn) return;
+  e.preventDefault();
+  var id = prompt('Org ID to export? (e.g., 1)');
+  if(id){ window.location.href = '/owner/api/export?org_id='+encodeURIComponent(id); }
+});
+</script>
 
   <div class="grid">
     <div class="kpis">
@@ -6763,6 +6774,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

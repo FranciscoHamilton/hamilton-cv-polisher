@@ -6302,20 +6302,29 @@ def owner_api_overview():
     uset = {r[0]: int(r[1] or 0) for r in total_rows}
     ucnt = {r[0]: int(r[1] or 0) for r in users_rows}
 
-    orgs = []
-    for r in org_rows:
-        oid = r[0]
-        orgs.append({
-            "id": oid,
-            "name": r[1],
-            "active": bool(r[2]),
-            "plan_name": r[3],
-            "plan_credits_month": int(r[4] or 0),
-            "credits_balance": cred.get(oid, 0),
-            "usage_month": usem.get(oid, 0),
-            "usage_total": uset.get(oid, 0),
-            "users_count": ucnt.get(oid, 0),
-        })
+        cap = int(r[4] or 0)
+    usage_m = int(usem.get(oid, 0))
+    exceeded = (cap > 0 and usage_m > cap)
+    remaining = (cap - usage_m) if cap > 0 else None
+    if remaining is not None and remaining < 0:
+        remaining = 0
+
+    orgs.append({
+        "id": oid,
+        "name": r[1],
+        "active": bool(r[2]),
+        "plan_name": r[3],
+        "plan_credits_month": cap,
+        "created_at": (r[5].isoformat() if hasattr(r[5], "isoformat") else str(r[5])),
+        "credits_balance": int(cred.get(oid, 0)),
+        "usage_month": usage_m,
+        "usage_total": int(uset.get(oid, 0)),
+        "users_count": int(ucnt.get(oid, 0)),
+        # NEW soft-cap fields:
+        "cap": cap,
+        "cap_exceeded": bool(exceeded),
+        "cap_remaining": (int(remaining) if remaining is not None else None),
+    })
 
     # KPIs
     k_total_orgs = len(orgs)
@@ -6774,6 +6783,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

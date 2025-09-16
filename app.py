@@ -6111,19 +6111,8 @@ def owner_console():
   <a class="btn" href="/__admin/new-user">Create user</a>
   <a class="btn" href="/__admin/new-org">New org</a>
   <a class="btn" href="/__admin/org-profile">Org profile</a>
-  <a class="btn" href="/owner/api/export" title="Download last 30 days (all orgs)">Export CSV</a>
-  <a class="btn" id="exportOrgBtn" href="#" title="Export a single org">Export CSV (org)</a>
 </div>
   </div>
-
-<script>
-document.addEventListener('click', function(e){
-  var btn = e.target.closest('#exportOrgBtn'); if(!btn) return;
-  e.preventDefault();
-  var id = prompt('Org ID to export? (e.g., 1)');
-  if(id){ window.location.href = '/owner/api/export?org_id='+encodeURIComponent(id); }
-});
-</script>
 
   <div class="grid">
     <div class="kpis">
@@ -6302,29 +6291,20 @@ def owner_api_overview():
     uset = {r[0]: int(r[1] or 0) for r in total_rows}
     ucnt = {r[0]: int(r[1] or 0) for r in users_rows}
 
-        cap = int(r[4] or 0)
-    usage_m = int(usem.get(oid, 0))
-    exceeded = (cap > 0 and usage_m > cap)
-    remaining = (cap - usage_m) if cap > 0 else None
-    if remaining is not None and remaining < 0:
-        remaining = 0
-
-    orgs.append({
-        "id": oid,
-        "name": r[1],
-        "active": bool(r[2]),
-        "plan_name": r[3],
-        "plan_credits_month": cap,
-        "created_at": (r[5].isoformat() if hasattr(r[5], "isoformat") else str(r[5])),
-        "credits_balance": int(cred.get(oid, 0)),
-        "usage_month": usage_m,
-        "usage_total": int(uset.get(oid, 0)),
-        "users_count": int(ucnt.get(oid, 0)),
-        # NEW soft-cap fields:
-        "cap": cap,
-        "cap_exceeded": bool(exceeded),
-        "cap_remaining": (int(remaining) if remaining is not None else None),
-    })
+    orgs = []
+    for r in org_rows:
+        oid = r[0]
+        orgs.append({
+            "id": oid,
+            "name": r[1],
+            "active": bool(r[2]),
+            "plan_name": r[3],
+            "plan_credits_month": int(r[4] or 0),
+            "credits_balance": cred.get(oid, 0),
+            "usage_month": usem.get(oid, 0),
+            "usage_total": uset.get(oid, 0),
+            "users_count": ucnt.get(oid, 0),
+        })
 
     # KPIs
     k_total_orgs = len(orgs)
@@ -6397,97 +6377,6 @@ def owner_api_set_org_plan():
     balance = int(row[0] or 0) if row else 0
 
     return jsonify({"ok": True, "id": org_id, "credits_balance": balance})
-
-    # --- Owner: export usage CSV (admin-only) ---
-@app.get("/owner/api/export")
-def owner_api_export():
-    # Guard
-    if not is_admin():
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-
-    # Params: ?org_id=1&start=YYYY-MM-DD&end=YYYY-MM-DD
-    import io, csv
-    from datetime import datetime, timedelta
-
-    org_id = request.args.get("org_id", "").strip()
-    try:
-        org_id = int(org_id) if org_id else None
-    except Exception:
-        org_id = None
-
-    def _parse_date(s):
-        try:
-            return datetime.strptime(s, "%Y-%m-%d")
-        except Exception:
-            return None
-
-    start = _parse_date(request.args.get("start", ""))
-    end   = _parse_date(request.args.get("end", ""))
-
-    # Default to last 30 days if not provided
-    if not end:
-        end = datetime.utcnow()
-    if not start:
-        start = end - timedelta(days=30)
-
-    # Make end exclusive (+1 day if start==end)
-    if end <= start:
-        end = start + timedelta(days=1)
-
-    rows = []
-    try:
-        if org_id:
-            rows = db_query_all("""
-                SELECT
-                    ue.created_at,
-                    u.org_id,
-                    COALESCE(o.name, '') AS org_name,
-                    u.id AS user_id,
-                    COALESCE(u.username, '') AS username,
-                    COALESCE(ue.candidate_name, '') AS candidate_name,
-                    COALESCE(ue.filename, '') AS filename
-                FROM usage_events ue
-                LEFT JOIN users u ON u.id = ue.user_id
-                LEFT JOIN orgs  o ON o.id = u.org_id
-                WHERE ue.created_at >= %s AND ue.created_at < %s
-                  AND (u.org_id = %s)
-                ORDER BY ue.created_at DESC
-            """, (start, end, org_id)) or []
-        else:
-            rows = db_query_all("""
-                SELECT
-                    ue.created_at,
-                    u.org_id,
-                    COALESCE(o.name, '') AS org_name,
-                    u.id AS user_id,
-                    COALESCE(u.username, '') AS username,
-                    COALESCE(ue.candidate_name, '') AS candidate_name,
-                    COALESCE(ue.filename, '') AS filename
-                FROM usage_events ue
-                LEFT JOIN users u ON u.id = ue.user_id
-                LEFT JOIN orgs  o ON o.id = u.org_id
-                WHERE ue.created_at >= %s AND ue.created_at < %s
-                ORDER BY ue.created_at DESC
-            """, (start, end)) or []
-    except Exception as e:
-        return jsonify({"ok": False, "error": f"query failed: {e}"}), 500
-
-    # Build CSV
-    sio = io.StringIO()
-    w = csv.writer(sio)
-    w.writerow(["timestamp_utc", "org_id", "org_name", "user_id", "username", "candidate", "filename"])
-    for r in rows:
-        ts = r[0]
-        ts_str = ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
-        w.writerow([ts_str, r[1], r[2], r[3], r[4], r[5], r[6]])
-
-    csv_bytes = sio.getvalue().encode("utf-8")
-    fname = f'usage_export_{datetime.utcnow().strftime("%Y%m%d")}.csv'
-    resp = make_response(csv_bytes, 200, {
-        "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": f'attachment; filename="{fname}"'
-    })
-    return resp
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
 def _is_admin_session():
     try:
@@ -6783,6 +6672,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

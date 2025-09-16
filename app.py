@@ -6097,6 +6097,10 @@ def owner_console():
     .grant{display:flex;gap:6px}
     .grant input{max-width:110px}
     .saveState{font-size:12px;color:var(--muted)}
+    /* cap badges */
+    .badge{display:inline-block;font-size:12px;padding:2px 6px;border-radius:999px;border:1px solid #e5e7eb;margin-left:6px}
+    .badge.ok{background:#f0fdf4;border-color:#dcfce7}
+    .badge.bad{background:#fef2f2;border-color:#fee2e2}
   </style>
 </head>
 <body>
@@ -6111,8 +6115,53 @@ def owner_console():
   <a class="btn" href="/__admin/new-user">Create user</a>
   <a class="btn" href="/__admin/new-org">New org</a>
   <a class="btn" href="/__admin/org-profile">Org profile</a>
+  <a class="btn" href="/owner/api/export" title="Download last 30 days (all orgs)">Export CSV</a>
+  <a class="btn" id="exportOrgBtn" href="#" title="Export a single org">Export CSV (org)</a>
 </div>
   </div>
+
+<script>
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('#exportOrgBtn'); if(!btn) return;
+  e.preventDefault();
+  var id = prompt('Org ID to export? (e.g., 1)');
+  if(id){ window.location.href = '/owner/api/export?org_id='+encodeURIComponent(id); }
+});
+</script>
+
+<script>
+(async function(){
+  try{
+    const r = await fetch('/owner/api/overview', {cache:'no-store'});
+    const j = await r.json();
+    if(!j.ok) return;
+    const orgs = j.orgs || [];
+    const tbody = document.getElementById('orgs_tbody');
+    if(!tbody) return;
+
+    orgs.forEach(o=>{
+      const tr = tbody.querySelector(`tr[data-oid="${o.id}"]`);
+      if(!tr) return;
+      const capCell = tr.children[3]; // 0:id, 1:name, 2:plan_name, 3:plan_credits_month
+      if(!capCell) return;
+
+      // remove old badge if present
+      const old = capCell.querySelector('.badge'); if(old) old.remove();
+
+      if(o.cap && o.cap > 0){
+        const span = document.createElement('span');
+        span.className = 'badge ' + (o.cap_exceeded ? 'bad' : 'ok');
+        span.title = `Monthly cap is ${o.cap}; used ${o.usage_month}`;
+        span.textContent = o.cap_exceeded ? 'Cap exceeded' : `${(o.cap_remaining ?? 0)} left`;
+        span.style.marginLeft = '6px';
+        capCell.appendChild(span);
+      }
+    });
+  }catch(e){
+    console.log('cap badge render failed', e);
+  }
+})();
+</script>
 
   <div class="grid">
     <div class="kpis">
@@ -6269,7 +6318,7 @@ def owner_api_overview():
          ORDER BY id
     """) or []
 
-    # Aggregates (credits, usage, users) by org
+    # Aggregates by org
     cred_rows  = db_query_all("SELECT org_id, COALESCE(SUM(delta),0) FROM org_credits_ledger GROUP BY org_id") or []
     month_rows = db_query_all("""
         SELECT org_id, COUNT(*)
@@ -6279,12 +6328,12 @@ def owner_api_overview():
     """) or []
     total_rows = db_query_all("SELECT org_id, COUNT(*) FROM usage_events GROUP BY org_id") or []
     users_rows = db_query_all("""
-    SELECT org_id, COUNT(*)
-      FROM users
-     WHERE COALESCE(active, TRUE) = TRUE
-       AND LOWER(username) <> 'admin'
-     GROUP BY org_id
-""") or []
+        SELECT org_id, COUNT(*)
+          FROM users
+         WHERE COALESCE(active, TRUE) = TRUE
+           AND LOWER(username) <> 'admin'
+         GROUP BY org_id
+    """) or []
 
     cred = {r[0]: int(r[1] or 0) for r in cred_rows}
     usem = {r[0]: int(r[1] or 0) for r in month_rows}
@@ -6377,6 +6426,97 @@ def owner_api_set_org_plan():
     balance = int(row[0] or 0) if row else 0
 
     return jsonify({"ok": True, "id": org_id, "credits_balance": balance})
+
+    # --- Owner: export usage CSV (admin-only) ---
+@app.get("/owner/api/export")
+def owner_api_export():
+    # Guard
+    if not is_admin():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # Params: ?org_id=1&start=YYYY-MM-DD&end=YYYY-MM-DD
+    import io, csv
+    from datetime import datetime, timedelta
+
+    org_id = request.args.get("org_id", "").strip()
+    try:
+        org_id = int(org_id) if org_id else None
+    except Exception:
+        org_id = None
+
+    def _parse_date(s):
+        try:
+            return datetime.strptime(s, "%Y-%m-%d")
+        except Exception:
+            return None
+
+    start = _parse_date(request.args.get("start", ""))
+    end   = _parse_date(request.args.get("end", ""))
+
+    # Default to last 30 days if not provided
+    if not end:
+        end = datetime.utcnow()
+    if not start:
+        start = end - timedelta(days=30)
+
+    # Make end exclusive (+1 day if start==end)
+    if end <= start:
+        end = start + timedelta(days=1)
+
+    rows = []
+    try:
+        if org_id:
+            rows = db_query_all("""
+                SELECT
+                    ue.created_at,
+                    u.org_id,
+                    COALESCE(o.name, '') AS org_name,
+                    u.id AS user_id,
+                    COALESCE(u.username, '') AS username,
+                    COALESCE(ue.candidate_name, '') AS candidate_name,
+                    COALESCE(ue.filename, '') AS filename
+                FROM usage_events ue
+                LEFT JOIN users u ON u.id = ue.user_id
+                LEFT JOIN orgs  o ON o.id = u.org_id
+                WHERE ue.created_at >= %s AND ue.created_at < %s
+                  AND (u.org_id = %s)
+                ORDER BY ue.created_at DESC
+            """, (start, end, org_id)) or []
+        else:
+            rows = db_query_all("""
+                SELECT
+                    ue.created_at,
+                    u.org_id,
+                    COALESCE(o.name, '') AS org_name,
+                    u.id AS user_id,
+                    COALESCE(u.username, '') AS username,
+                    COALESCE(ue.candidate_name, '') AS candidate_name,
+                    COALESCE(ue.filename, '') AS filename
+                FROM usage_events ue
+                LEFT JOIN users u ON u.id = ue.user_id
+                LEFT JOIN orgs  o ON o.id = u.org_id
+                WHERE ue.created_at >= %s AND ue.created_at < %s
+                ORDER BY ue.created_at DESC
+            """, (start, end)) or []
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"query failed: {e}"}), 500
+
+    # Build CSV
+    sio = io.StringIO()
+    w = csv.writer(sio)
+    w.writerow(["timestamp_utc", "org_id", "org_name", "user_id", "username", "candidate", "filename"])
+    for r in rows:
+        ts = r[0]
+        ts_str = ts.isoformat() if hasattr(ts, "isoformat") else str(ts)
+        w.writerow([ts_str, r[1], r[2], r[3], r[4], r[5], r[6]])
+
+    csv_bytes = sio.getvalue().encode("utf-8")
+    fname = f'usage_export_{datetime.utcnow().strftime("%Y%m%d")}.csv'
+    resp = make_response(csv_bytes, 200, {
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": f'attachment; filename="{fname}"'
+    })
+    return resp
 # --- Hard block: non-admins cannot modify the 'admin' user via any toggle/enable/disable/delete route ---
 def _is_admin_session():
     try:
@@ -6672,455 +6812,5 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -6097,10 +6097,6 @@ def owner_console():
     .grant{display:flex;gap:6px}
     .grant input{max-width:110px}
     .saveState{font-size:12px;color:var(--muted)}
-    /* cap badges */
-    .badge{display:inline-block;font-size:12px;padding:2px 6px;border-radius:999px;border:1px solid #e5e7eb;margin-left:6px}
-    .badge.ok{background:#f0fdf4;border-color:#dcfce7}
-    .badge.bad{background:#fef2f2;border-color:#fee2e2}
   </style>
 </head>
 <body>
@@ -6127,74 +6123,6 @@ document.addEventListener('click', function(e){
   var id = prompt('Org ID to export? (e.g., 1)');
   if(id){ window.location.href = '/owner/api/export?org_id='+encodeURIComponent(id); }
 });
-</script>
-
-<script>
-(async function(){
-  try{
-    const r = await fetch('/owner/api/overview', {cache:'no-store'});
-    const j = await r.json();
-    if(!j.ok) return;
-    const orgs = j.orgs || [];
-    const tbody = document.getElementById('orgs_tbody');
-    if(!tbody) return;
-
-    orgs.forEach(o=>{
-      const tr = tbody.querySelector(`tr[data-oid="${o.id}"]`);
-      if(!tr) return;
-      const capCell = tr.children[3]; // 0:id, 1:name, 2:plan_name, 3:plan_credits_month
-      if(!capCell) return;
-
-      // remove old badge if present
-      const old = capCell.querySelector('.badge'); if(old) old.remove();
-
-      if(o.cap && o.cap > 0){
-        const span = document.createElement('span');
-        span.className = 'badge ' + (o.cap_exceeded ? 'bad' : 'ok');
-        span.title = `Monthly cap is ${o.cap}; used ${o.usage_month}`;
-        span.textContent = o.cap_exceeded ? 'Cap exceeded' : `${(o.cap_remaining ?? 0)} left`;
-        span.style.marginLeft = '6px';
-        capCell.appendChild(span);
-      }
-    });
-  }catch(e){
-    console.log('cap badge render failed', e);
-  }
-})();
-</script>
-
-<script>
-(async function(){
-  try{
-    const r = await fetch('/owner/api/overview', {cache:'no-store'});
-    const j = await r.json();
-    if(!j.ok) return;
-    const orgs = j.orgs || [];
-    const tbody = document.getElementById('orgs_tbody');
-    if(!tbody) return;
-
-    orgs.forEach(o=>{
-      const tr = tbody.querySelector(`tr[data-oid="${o.id}"]`);
-      if(!tr) return;
-      const capCell = tr.children[3]; // 0:id, 1:name, 2:plan_name, 3:plan_credits_month
-      if(!capCell) return;
-
-      // remove old badge if present
-      const old = capCell.querySelector('.badge'); if(old) old.remove();
-
-      if(o.cap && o.cap > 0){
-        const span = document.createElement('span');
-        span.className = 'badge ' + (o.cap_exceeded ? 'bad' : 'ok');
-        span.title = `Monthly cap is ${o.cap}; used ${o.usage_month}`;
-        span.textContent = o.cap_exceeded ? 'Cap exceeded' : `${(o.cap_remaining ?? 0)} left`;
-        span.style.marginLeft = '6px';
-        capCell.appendChild(span);
-      }
-    });
-  }catch(e){
-    console.log('cap badge render failed', e);
-  }
-})();
 </script>
 
   <div class="grid">
@@ -6374,50 +6302,36 @@ def owner_api_overview():
     uset = {r[0]: int(r[1] or 0) for r in total_rows}
     ucnt = {r[0]: int(r[1] or 0) for r in users_rows}
 
-        # Build response array
-    orgs = []
-    for r in org_rows:
-        oid = r[0]
         cap = int(r[4] or 0)
-        usage_m = int(usem.get(oid, 0))
-        exceeded = (cap > 0 and usage_m > cap)
-        remaining = (cap - usage_m) if cap > 0 else None
-        if remaining is not None and remaining < 0:
-            remaining = 0
+    usage_m = int(usem.get(oid, 0))
+    exceeded = (cap > 0 and usage_m > cap)
+    remaining = (cap - usage_m) if cap > 0 else None
+    if remaining is not None and remaining < 0:
+        remaining = 0
 
-        orgs.append({
-            "id": oid,
-            "name": r[1],
-            "active": bool(r[2]),
-            "plan_name": r[3],
-            "plan_credits_month": cap,
-            "created_at": (r[5].isoformat() if hasattr(r[5], "isoformat") else str(r[5])),
-            "credits_balance": int(cred.get(oid, 0)),
-            "usage_month": usage_m,
-            "usage_total": int(uset.get(oid, 0)),
-            "users_count": int(ucnt.get(oid, 0)),
-            # soft-cap fields
-            "cap": cap,
-            "cap_exceeded": bool(exceeded),
-            "cap_remaining": (int(remaining) if remaining is not None else None),
-        })
+    orgs.append({
+        "id": oid,
+        "name": r[1],
+        "active": bool(r[2]),
+        "plan_name": r[3],
+        "plan_credits_month": cap,
+        "created_at": (r[5].isoformat() if hasattr(r[5], "isoformat") else str(r[5])),
+        "credits_balance": int(cred.get(oid, 0)),
+        "usage_month": usage_m,
+        "usage_total": int(uset.get(oid, 0)),
+        "users_count": int(ucnt.get(oid, 0)),
+        # NEW soft-cap fields:
+        "cap": cap,
+        "cap_exceeded": bool(exceeded),
+        "cap_remaining": (int(remaining) if remaining is not None else None),
+    })
 
-    # KPIs (safe)
-k_total_orgs = len(orgs)
-k_active_orgs = sum(1 for o in orgs if o.get("active"))
-k_total_users = int(sum(ucnt.values())) if ucnt else 0
-try:
-    k_usage_30d = int(db_query_one(
-        "SELECT COUNT(*) FROM usage_events WHERE created_at >= now() - interval '30 days'"
-    )[0] or 0)
-except Exception:
-    k_usage_30d = 0
-try:
-    k_cred_sum = int(db_query_one(
-        "SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger"
-    )[0] or 0)
-except Exception:
-    k_cred_sum = 0
+    # KPIs
+    k_total_orgs = len(orgs)
+    k_active_orgs = sum(1 for o in orgs if o["active"])
+    k_total_users = sum(ucnt.values()) if ucnt else 0
+    k_usage_30d = db_query_one("SELECT COUNT(*) FROM usage_events WHERE ts >= now() - interval '30 days'")[0] or 0
+    k_cred_sum  = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger")[0] or 0
 
     return jsonify({
         "ok": True,
@@ -6869,7 +6783,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
-
 
 
 

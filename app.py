@@ -6402,12 +6402,22 @@ def owner_api_overview():
             "cap_remaining": (int(remaining) if remaining is not None else None),
         })
 
-    # KPIs
-    k_total_orgs = len(orgs)
-    k_active_orgs = sum(1 for o in orgs if o["active"])
-    k_total_users = sum(ucnt.values()) if ucnt else 0
-    k_usage_30d = db_query_one("SELECT COUNT(*) FROM usage_events WHERE ts >= now() - interval '30 days'")[0] or 0
-    k_cred_sum  = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger")[0] or 0
+    # KPIs (safe)
+k_total_orgs = len(orgs)
+k_active_orgs = sum(1 for o in orgs if o.get("active"))
+k_total_users = int(sum(ucnt.values())) if ucnt else 0
+try:
+    k_usage_30d = int(db_query_one(
+        "SELECT COUNT(*) FROM usage_events WHERE created_at >= now() - interval '30 days'"
+    )[0] or 0)
+except Exception:
+    k_usage_30d = 0
+try:
+    k_cred_sum = int(db_query_one(
+        "SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger"
+    )[0] or 0)
+except Exception:
+    k_cred_sum = 0
 
     return jsonify({
         "ok": True,
@@ -6859,6 +6869,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -6555,7 +6555,7 @@ def owner_api_overview():
     if not is_admin():
         return jsonify({"ok": False, "error": "forbidden"}), 403
 
-    # Orgs base info
+    # --- Orgs base info (keep columns minimal + stable) ---
     org_rows = db_query_all("""
         SELECT id,
                name,
@@ -6566,7 +6566,7 @@ def owner_api_overview():
          ORDER BY id
     """) or []
 
-    # Aggregates by org
+    # --- Aggregates by org ---
     cred_rows  = db_query_all("SELECT org_id, COALESCE(SUM(delta),0) FROM org_credits_ledger GROUP BY org_id") or []
     month_rows = db_query_all("""
         SELECT org_id, COUNT(*)
@@ -6588,49 +6588,60 @@ def owner_api_overview():
     uset = {r[0]: int(r[1] or 0) for r in total_rows}
     ucnt = {r[0]: int(r[1] or 0) for r in users_rows}
 
-    # template status per org (does not change existing SELECT indexes)
+    # --- Template status per org (optional UI badges) ---
     tpl_rows = db_query_all("""
         SELECT id,
                (CASE WHEN COALESCE(template_path,'') <> '' THEN TRUE ELSE FALSE END) AS has_template,
                template_updated_at
           FROM orgs
     """) or []
-    tpl_has = {r[0]: bool(r[1]) for r in tpl_rows}
+    tpl_has  = {r[0]: bool(r[1]) for r in tpl_rows}
     tpl_when = {r[0]: (r[2].isoformat() if hasattr(r[2], "isoformat") else (str(r[2]) if r[2] else None)) for r in tpl_rows}
 
+    # --- Build response rows (no stray indents, no created_at index mismatch) ---
     orgs = []
     for r in org_rows:
         oid = r[0]
-            orgs.append({
-        "id": oid,
-        "name": r[1],
-        "active": bool(r[2]),
-        "plan_name": r[3],
-        "plan_credits_month": int(r[4] or 0),
-        "credits_balance": cred.get(oid, 0),
-        "usage_month": usem.get(oid, 0),
-        "usage_total": uset.get(oid, 0),
-        "users_count": ucnt.get(oid, 0),
-        # NEW:
-        "has_template": bool(tpl_has.get(oid, False)),
-        "template_updated_at": tpl_when.get(oid),
-    })
+        cap = int(r[4] or 0)
+        usage_m = int(usem.get(oid, 0))
+        exceeded = (cap > 0 and usage_m > cap)
+        remaining = (cap - usage_m) if cap > 0 else None
+        if remaining is not None and remaining < 0:
+            remaining = 0
 
-    # KPIs
+        orgs.append({
+            "id": oid,
+            "name": r[1],
+            "active": bool(r[2]),
+            "plan_name": r[3],
+            "plan_credits_month": cap,
+            "credits_balance": int(cred.get(oid, 0)),
+            "usage_month": usage_m,
+            "usage_total": int(uset.get(oid, 0)),
+            "users_count": int(ucnt.get(oid, 0)),
+            # extra badges for UI:
+            "has_template": bool(tpl_has.get(oid, False)),
+            "template_updated_at": tpl_when.get(oid),
+            "cap": cap,
+            "cap_exceeded": bool(exceeded),
+            "cap_remaining": (int(remaining) if remaining is not None else None),
+        })
+
+    # --- KPIs ---
     k_total_orgs = len(orgs)
     k_active_orgs = sum(1 for o in orgs if o["active"])
     k_total_users = sum(ucnt.values()) if ucnt else 0
-    k_usage_30d = db_query_one("SELECT COUNT(*) FROM usage_events WHERE ts >= now() - interval '30 days'")[0] or 0
-    k_cred_sum  = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger")[0] or 0
+    k_usage_30d   = int((db_query_one("SELECT COUNT(*) FROM usage_events WHERE ts >= now() - interval '30 days'")[0]) or 0)
+    k_cred_sum    = int((db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger")[0]) or 0)
 
     return jsonify({
         "ok": True,
         "kpis": {
             "total_orgs": k_total_orgs,
             "active_orgs": k_active_orgs,
-            "total_users": int(k_total_users),
-            "usage_30d": int(k_usage_30d),
-            "credits_balance_sum": int(k_cred_sum),
+            "total_users": k_total_users,
+            "usage_30d": k_usage_30d,
+            "credits_balance_sum": k_cred_sum,
         },
         "orgs": orgs,
     })
@@ -7073,6 +7084,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

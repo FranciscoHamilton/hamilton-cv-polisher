@@ -6170,6 +6170,17 @@ document.addEventListener('click', function(e){
         a.style.marginLeft = '6px';
         actions.appendChild(a);
       }
+      
+      // ---- Per-row Profile button (opens JSON profile editor)
+if (actions && !actions.querySelector('.profile-org-row')) {
+  const p = document.createElement('a');
+  p.className = 'btn profile-org-row';
+  p.href = `/__admin/org-profile?org_id=${o.id}`;
+  p.textContent = 'Profile';
+  p.title = `Open org ${o.id} profile`;
+  p.style.marginLeft = '6px';
+  actions.appendChild(p);
+}
     });
   }catch(e){
     console.log('cap badge / export add failed', e);
@@ -6850,6 +6861,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

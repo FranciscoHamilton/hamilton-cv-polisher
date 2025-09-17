@@ -6203,6 +6203,23 @@ if (actions && !actions.querySelector('.template-org-row')) {
   t.style.marginLeft = '6px';
   actions.appendChild(t);
 }
+
+// ---- Low-credit badge in the Credits column (index 7) ----
+// columns: 0:id 1:name 2:plan 3:cap 4:users 5:usage_m 6:usage_total 7:balance 8:actions
+const balCell = tr.children[7];
+if (balCell) {
+  const old = balCell.querySelector('.low-badge');
+  if (old) old.remove();
+  const bal = Number(o.credits_balance || 0);
+  if (!Number.isNaN(bal) && bal <= 5) {
+    const b = document.createElement('span');
+    b.className = 'badge bad low-badge';
+    b.textContent = 'Low';
+    b.title = `Only ${bal} credits left`;
+    b.style.marginLeft = '6px';
+    balCell.appendChild(b);
+  }
+}
     });
   }catch(e){
     console.log('cap badge / export add failed', e);
@@ -7084,6 +7101,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

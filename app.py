@@ -4110,6 +4110,55 @@ input,select,button{{padding:8px;border:1px solid #e5e7eb;border-radius:8px}}
 </body></html>"""
         return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
+    # --- Owner: credits audit (admin-only, read-only) ---
+@app.get("/owner/api/credits-ledger")
+def owner_api_credits_ledger():
+    if not is_admin():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # params
+    try:
+        org_id = int(request.args.get("org_id", "0"))
+    except Exception:
+        org_id = 0
+    limit = request.args.get("limit", "200").strip()
+    try:
+        limit = max(1, min(1000, int(limit)))
+    except Exception:
+        limit = 200
+
+    # org filter
+    where = ""
+    args = []
+    if org_id > 0:
+        where = "WHERE ocl.org_id = %s"
+        args.append(org_id)
+
+    # Prefer org_credits_ledger (top-ups)
+    rows = db_query_all(f"""
+        SELECT ocl.id, ocl.org_id, o.name AS org_name, ocl.delta, ocl.reason,
+               COALESCE(ocl.created_at, ocl.ts) AS ts
+          FROM org_credits_ledger ocl
+          JOIN orgs o ON o.id = ocl.org_id
+          {where}
+         ORDER BY ts DESC
+         LIMIT %s
+    """, (*args, limit)) or []
+
+    out = [
+        {
+            "id": r[0],
+            "org_id": r[1],
+            "org_name": r[2],
+            "delta": int(r[3] or 0),
+            "reason": (r[4] or "").strip(),
+            "ts": (r[5].isoformat() if hasattr(r[5], "isoformat") else str(r[5])),
+        }
+        for r in rows
+    ]
+
+    return jsonify({"ok": True, "items": out})
+
     # POST: handle upload
     file = request.files.get("file")
     org_id_raw = request.form.get("org_id") or request.args.get("org_id")
@@ -6567,6 +6616,63 @@ def owner_new_client():
 """
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
+# --- Owner: daily usage series (admin-only, read-only) ---
+@app.get("/owner/api/usage-series")
+def owner_api_usage_series():
+    if not is_admin():
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # params
+    try:
+        days = int(request.args.get("days", "30"))
+    except Exception:
+        days = 30
+    if days < 1 or days > 365:
+        days = 30
+
+    org_id = request.args.get("org_id", "").strip()
+    try:
+        org_id = int(org_id) if org_id else None
+    except Exception:
+        org_id = None
+
+    # Build range (uses 'ts', keep consistent)
+    if org_id:
+        rows = db_query_all("""
+            SELECT date_trunc('day', ue.ts)::date AS d, COUNT(*)
+              FROM usage_events ue
+              JOIN users u ON u.id = ue.user_id
+             WHERE ue.ts >= now() - (%s || ' days')::interval
+               AND u.org_id = %s
+             GROUP BY 1
+             ORDER BY 1
+        """, (days, org_id)) or []
+    else:
+        rows = db_query_all("""
+            SELECT date_trunc('day', ts)::date AS d, COUNT(*)
+              FROM usage_events
+             WHERE ts >= now() - (%s || ' days')::interval
+             GROUP BY 1
+             ORDER BY 1
+        """, (days,)) or []
+
+    # Fill gaps with 0s
+    from datetime import datetime, timedelta
+    today = datetime.utcnow().date()
+    start = today - timedelta(days=days - 1)
+    by_day = {
+        (r[0].isoformat() if hasattr(r[0], "isoformat") else str(r[0])): int(r[1] or 0)
+        for r in rows
+    }
+    out = []
+    cur = start
+    while cur <= today:
+        key = cur.isoformat()
+        out.append({"date": key, "count": by_day.get(key, 0)})
+        cur += timedelta(days=1)
+
+    return jsonify({"ok": True, "days": days, "series": out})
+
 @app.get("/owner/api/overview")
 def owner_api_overview():
     if not is_admin():
@@ -7101,6 +7207,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

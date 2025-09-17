@@ -6182,6 +6182,17 @@ if (actions && !actions.querySelector('.profile-org-row')) {
   p.style.marginLeft = '6px';
   actions.appendChild(p);
 }
+
+// ---- Per-row Template button (opens DOCX upload form)
+if (actions && !actions.querySelector('.template-org-row')) {
+  const t = document.createElement('a');
+  t.className = 'btn template-org-row';
+  t.href = `/__admin/upload-org-template?org_id=${o.id}`;
+  t.textContent = 'Template';
+  t.title = `Upload/replace DOCX template for org ${o.id}`;
+  t.style.marginLeft = '6px';
+  actions.appendChild(t);
+}
     });
   }catch(e){
     console.log('cap badge / export add failed', e);
@@ -7039,6 +7050,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

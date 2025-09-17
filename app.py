@@ -983,7 +983,7 @@ PRICING_HTML = r"""
     <h1>Plans</h1>
     <p class="sub">Three simple plans for small, mid and larger agencies — plus Enterprise for high volume. No rollovers; clean monthly usage.</p>
 
-    <!-- 3 core plans -->
+        <!-- 3 core plans -->
     <div class="grid3">
       <!-- Starter -->
       <div class="card">
@@ -998,7 +998,7 @@ PRICING_HTML = r"""
           <ul class="feat">
             <li><span class="tick">✓</span><span>1 CV Template</span></li>
             <li><span class="tick">✓</span><span>Up to 5 Users</span></li>
-            <li><span class="tick">✓</span><span>Overage: <strong>£1.60</strong> per CV</span></li>
+            <li><span class="tick">✓</span><span>Overage: <strong>£1.70</strong> per CV</span></li>
           </ul>
           <a class="btn primary" href="/start">Choose Starter</a>
         </div>
@@ -1009,16 +1009,16 @@ PRICING_HTML = r"""
         <div class="badge">RECOMMENDED</div>
         <div class="inner">
           <div class="name">Growth</div>
-          <div class="qty">300 CVs<span class="per">/mo</span></div>
+          <div class="qty">250 CVs<span class="per">/mo</span></div>
           <span class="chip">
-            <span class="price-month">£360/mo</span>
+            <span class="price-month">£350/mo</span>
             <span class="dot">·</span>
-            <span class="price-cv">£1.20 per CV</span>
+            <span class="price-cv">£1.40 per CV</span>
           </span>
           <ul class="feat">
             <li><span class="tick">✓</span><span>1 CV Template</span></li>
             <li><span class="tick">✓</span><span>Up to 10 Users</span></li>
-            <li><span class="tick">✓</span><span>Overage: <strong>£1.30</strong> per CV</span></li>
+            <li><span class="tick">✓</span><span>Overage: <strong>£1.60</strong> per CV</span></li>
           </ul>
           <a class="btn primary" href="/start">Choose Growth</a>
         </div>
@@ -1028,16 +1028,16 @@ PRICING_HTML = r"""
       <div class="card">
         <div class="inner">
           <div class="name">Scale</div>
-          <div class="qty">750 CVs<span class="per">/mo</span></div>
+          <div class="qty">500 CVs<span class="per">/mo</span></div>
           <span class="chip">
-            <span class="price-month">£750/mo</span>
+            <span class="price-month">£650/mo</span>
             <span class="dot">·</span>
-            <span class="price-cv">£1.00 per CV</span>
+            <span class="price-cv">£1.30 per CV</span>
           </span>
           <ul class="feat">
             <li><span class="tick">✓</span><span>1 CV Template</span></li>
             <li><span class="tick">✓</span><span>Up to 20 Users</span></li>
-            <li><span class="tick">✓</span><span>Overage: <strong>£0.95</strong> per CV</span></li>
+            <li><span class="tick">✓</span><span>Overage: <strong>£1.50</strong> per CV</span></li>
           </ul>
           <a class="btn primary" href="/start">Choose Scale</a>
         </div>
@@ -1049,18 +1049,73 @@ PRICING_HTML = r"""
       <div class="card">
         <div class="inner">
           <div class="name">Enterprise</div>
-          <div class="qty">2,000+ CVs<span class="per">/mo</span></div>
+          <div class="qty">700–1,500+ CVs<span class="per">/mo</span></div>
           <span class="chip">
-            <span class="price-month">From £1,600/mo</span>
+            <span class="price-month">Custom</span>
             <span class="dot">·</span>
-            <span class="price-cv">£0.80 per CV (first 2,000)</span>
+            <span class="price-cv">Target £1.20–£1.30 per CV</span>
           </span>
           <ul class="feat">
-            <li><span class="tick">✓</span><span>Custom Users & Templates</span></li>
-            <li><span class="tick">✓</span><span>Overage: <strong>£0.75</strong> per CV</span></li>
+            <li><span class="tick">✓</span><span>Tailored credits & pricing</span></li>
+            <li><span class="tick">✓</span><span>SSO / SLA available</span></li>
             <li><span class="tick">✓</span><span>Priority setup & support</span></li>
           </ul>
-          <a class="btn" href="/start">Talk to sales</a>
+          <a class="btn" href="/start">Contact us</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Buy Packs (non-expiring) -->
+    <h2 class="sub" style="margin-top:20px">Buy Packs (non-expiring, org-wide)</h2>
+    <div class="grid3">
+      <div class="card">
+        <div class="inner">
+          <div class="name">100-Pack</div>
+          <div class="qty">100 CVs</div>
+          <span class="chip">
+            <span class="price-month">£160</span>
+            <span class="dot">·</span>
+            <span class="price-cv">£1.60 per CV</span>
+          </span>
+          <ul class="feat">
+            <li><span class="tick">✓</span><span>Never expires</span></li>
+            <li><span class="tick">✓</span><span>Org-wide</span></li>
+          </ul>
+          <a class="btn" href="/start">Buy pack</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="inner">
+          <div class="name">250-Pack</div>
+          <div class="qty">250 CVs</div>
+          <span class="chip">
+            <span class="price-month">£375</span>
+            <span class="dot">·</span>
+            <span class="price-cv">£1.50 per CV</span>
+          </span>
+          <ul class="feat">
+            <li><span class="tick">✓</span><span>Never expires</span></li>
+            <li><span class="tick">✓</span><span>Org-wide</span></li>
+          </ul>
+          <a class="btn" href="/start">Buy pack</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="inner">
+          <div class="name">500-Pack</div>
+          <div class="qty">500 CVs</div>
+          <span class="chip">
+            <span class="price-month">£700</span>
+            <span class="dot">·</span>
+            <span class="price-cv">£1.40 per CV</span>
+          </span>
+          <ul class="feat">
+            <li><span class="tick">✓</span><span>Never expires</span></li>
+            <li><span class="tick">✓</span><span>Org-wide</span></li>
+          </ul>
+          <a class="btn" href="/start">Buy pack</a>
         </div>
       </div>
     </div>
@@ -1093,9 +1148,10 @@ PRICING_HTML = r"""
 
     // === New plan model (no PAYG) ===
     const PLANS = [
-      { kind:'Monthly', key:'Starter',  baseCredits:100,  baseCost:150, baseRate:1.50, overRate:1.60 },
-      { kind:'Monthly', key:'Growth',   baseCredits:300,  baseCost:360, baseRate:1.20, overRate:1.30 },
-      { kind:'Monthly', key:'Scale',    baseCredits:750,  baseCost:750, baseRate:1.00, overRate:0.95 },
+        { kind:'Monthly', key:'Starter',  baseCredits:100,  baseCost:150, baseRate:1.50, overRate:1.70 },
+        { kind:'Monthly', key:'Growth',   baseCredits:250,  baseCost:350, baseRate:1.40, overRate:1.60 },
+        { kind:'Monthly', key:'Scale',    baseCredits:500,  baseCost:650, baseRate:1.30, overRate:1.50 },
+
       // Enterprise is special: minimum 2,000 @ £0.80, overage £0.75
       { kind:'Enterprise', key:'Enterprise', minCredits:2000, minCost:1600, baseRate:0.80, overRate:0.75 }
     ];
@@ -7409,6 +7465,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

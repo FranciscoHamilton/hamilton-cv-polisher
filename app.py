@@ -900,16 +900,15 @@ PRICING_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --brand:#2563eb;        /* site blue */
-      --brand-2:#22d3ee;      /* cyan accent */
-      --ink:#0f172a;
-      --muted:#64748b;
-      --line:#e5e7eb;
-      --bg:#f6f9ff;
-      --card:#fff;
+      --brand:#2563eb; --brand-2:#22d3ee;
+      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+      --bg:#f6f9ff; --card:#fff; --shadow:0 10px 24px rgba(13,59,102,.08);
       --ok:#16a34a;
-      --shadow:0 10px 28px rgba(13,59,102,.08);
-      --radius:24px;
+      /* subtle plan accents */
+      --acc-start:#06b6d4;   /* cyan */
+      --acc-growth:#2563eb;  /* blue */
+      --acc-scale:#8b5cf6;   /* violet */
+      --acc-packs:#f59e0b;   /* amber */
     }
     *{box-sizing:border-box}
     html,body{margin:0;padding:0}
@@ -918,24 +917,22 @@ PRICING_HTML = r"""
       background:var(--bg); color:var(--ink);
     }
 
-    /* NAV aligned like your other pages */
+    /* NAV (aligned like site) */
     .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
     .nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
-    .brand{font-weight:900;color:var(--brand);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .brand{font-weight:900;color:var(--ink);text-decoration:none;font-size:22px;letter-spacing:.2px}
     .nav-links a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
 
     /* HERO */
-    .hero{
-      background:linear-gradient(180deg, rgba(34,211,238,.10), rgba(34,211,238,0) 60%);
-      border-bottom:1px solid var(--line);
-    }
-    .hero-inner{padding:28px 0 18px}
-    h1{margin:6px 0 10px;font-size:46px;letter-spacing:-.02em;color:#122033}
-    .lead{margin:0;color:var(--muted);font-size:16px;max-width:900px}
+    .hero{background:linear-gradient(180deg, rgba(34,211,238,.10), rgba(34,211,238,0) 65%);border-bottom:1px solid var(--line)}
+    .hero-inner{padding:26px 0 14px}
+    h1{margin:8px 0 8px;font-size:42px;letter-spacing:-.02em;color:#122033}
+    .lead{margin:0;color:var(--muted);font-size:15.5px;max-width:900px}
 
-    /* GRID of four equal cards */
-    .section{padding:24px 0 40px}
-    .grid4{display:grid;gap:20px;grid-template-columns:repeat(4,1fr)}
+    /* PLANS GRID */
+    .section{padding:20px 0 22px}               /* tighter overall */
+    .plans{padding-top:10px}                    /* margin between hero and cards */
+    .grid4{display:grid;gap:18px;grid-template-columns:repeat(4,1fr);align-items:stretch}
     @media(max-width:1100px){ .grid4{grid-template-columns:repeat(2,1fr)} }
     @media(max-width:680px){ .grid4{grid-template-columns:1fr} }
 
@@ -943,53 +940,63 @@ PRICING_HTML = r"""
     .card{
       background:var(--card);
       border:1px solid var(--line);
-      border-radius:var(--radius);
+      border-radius:20px;
       box-shadow:var(--shadow);
       overflow:hidden;
       display:flex;flex-direction:column;
-      min-height:620px;        /* keep tall so text never clips */
+      min-height:540px;                      /* smaller so no big empty gap */
     }
     .card.reco{border-color:#bfdbfe;border-width:2px;position:relative}
     .badge{
-      position:absolute;left:16px;top:16px;
+      position:absolute;left:14px;top:14px;
       background:linear-gradient(90deg,var(--brand),var(--brand-2));
       color:#fff;font-weight:900;font-size:11px;letter-spacing:.06em;
-      padding:6px 10px;border-radius:999px;box-shadow:0 6px 16px rgba(37,99,235,.25)
+      padding:6px 10px;border-radius:999px;box-shadow:0 6px 14px rgba(37,99,235,.25)
     }
-    .inner{padding:18px 18px 20px;display:flex;flex-direction:column;height:100%}
-    .name{font-weight:900;color:#0b1220;font-size:13px;letter-spacing:.08em;margin:2px 0 8px}
-    .qty{font-size:34px;font-weight:900;letter-spacing:-.01em}
-    .per{font-size:14px;color:var(--muted);font-weight:700;margin-left:6px}
+    .inner{padding:16px 16px 18px;display:flex;flex-direction:column;height:100%}
+    .name{font-weight:900;color:#0b1220;font-size:12px;letter-spacing:.08em;margin:0 0 8px}
+    .qty{font-size:28px;font-weight:900;letter-spacing:-.01em}
+    .per{font-size:13px;color:var(--muted);font-weight:700;margin-left:6px}
+
+    /* per-plan accent on name underline */
+    .card.start  .name{color:var(--acc-start)}
+    .card.growth .name{color:var(--acc-growth)}
+    .card.scale  .name{color:var(--acc-scale)}
+    .card.packs  .name{color:var(--acc-packs)}
 
     /* price chip */
     .chip{
-      display:inline-flex;align-items:baseline;gap:6px;align-self:flex-start;margin-top:12px;
-      padding:10px 14px;border-radius:999px;background:#eef4ff;border:1px solid #dbeafe;color:#132a63;
-      font-weight:600;font-size:13px;
+      display:inline-flex;align-items:baseline;gap:6px;align-self:flex-start;margin-top:10px;
+      padding:8px 12px;border-radius:999px;background:#eef4ff;border:1px solid #dbeafe;color:#132a63;
+      font-weight:700;font-size:12px;
     }
     .chip .price-month{font-size:1.1em;color:#0b1220;font-weight:800}
     .chip .dot{color:#8aa0c4;font-weight:700;line-height:1}
     .chip .price-cv{font-size:.9em;color:#667792;font-weight:600}
 
-    /* Monthly vs Packs block */
-    .mvsp{
-      margin:12px 0 0 0;padding:12px;border:1px dashed #dbeafe;border-radius:14px;
-      background:#f8fbff;
-    }
-    .mvsp .title{font-weight:900;color:#0b1220;font-size:12px;margin-bottom:6px;letter-spacing:.04em}
-    .mvsp ul{margin:0;padding:0 0 0 18px;color:#334155;font-size:13px}
-    .mvsp li{margin:4px 0}
-
     /* features */
-    .feat{margin:14px 0 0 0;padding:0;list-style:none;color:#475569;font-size:13px}
+    .feat{margin:12px 0 0 0;padding:0;list-style:none;color:#475569;font-size:12.5px}
     .feat li{display:flex;align-items:center;gap:8px;margin-top:8px}
     .tick{
       display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
       background:rgba(34,211,238,.18);color:#0891b2;font-weight:900;font-size:12px
     }
 
+    /* packs mini-block */
+    .packs-info{margin:10px 0 0 0;padding:10px;border:1px dashed #dbeafe;border-radius:14px;background:#f8fbff}
+    .packs-info .title{font-weight:900;color:#0b1220;font-size:12px;margin-bottom:6px;letter-spacing:.04em}
+    .packs-info ul{margin:0;padding-left:18px;font-size:12.5px;color:#334155}
+    .packs-info li{margin:4px 0}
+
+    /* Buy packs selector */
+    .select{margin-top:10px}
+    .select select{
+      width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-weight:700
+    }
+
     .btn{
-      margin-top:auto;display:inline-block;padding:14px 18px;border-radius:999px;text-align:center;
+      margin-top:14px;                         /* smaller gap than before */
+      display:inline-block;padding:12px 16px;border-radius:999px;text-align:center;
       font-weight:900;text-decoration:none;border:1px solid var(--line);color:#0b1220;background:#fff
     }
     .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none}
@@ -1008,7 +1015,7 @@ PRICING_HTML = r"""
     .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px;justify-content:flex-start}
     .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
 
-    .note{color:var(--muted);font-size:12px;margin-top:8px}
+    .note{color:var(--muted);font-size:12px;margin:8px 0 6px}  /* closer to calc */
   </style>
 </head>
 
@@ -1029,16 +1036,16 @@ PRICING_HTML = r"""
   <div class="hero">
     <div class="wrap hero-inner">
       <h1>Plans</h1>
-      <p class="lead">Pricing that fits your desk. Pick a predictable monthly plan or add non-expiring packs for bursts — scale up without surprises.</p>
+      <p class="lead">Pricing that fits your desk. Pick a predictable monthly plan, add non-expiring packs when you spike, and keep shipping on-brand CVs without surprises.</p>
     </div>
   </div>
 
-  <!-- PLANS: 4 in one row -->
-  <div class="wrap section">
+  <!-- PLANS -->
+  <div class="wrap section plans">
     <div class="grid4">
 
       <!-- STARTER 100 -->
-      <div class="card">
+      <div class="card start">
         <div class="inner">
           <div class="name">STARTER</div>
           <div class="qty">100 CVs<span class="per">/mo</span></div>
@@ -1048,17 +1055,10 @@ PRICING_HTML = r"""
             <span class="price-cv">£1.50 per CV</span>
           </span>
 
-          <div class="mvsp">
-            <div class="title">Monthly vs Packs</div>
-            <ul>
-              <li><strong>Monthly</strong>: credits reset each month. Overage <strong>£1.70</strong>/CV.</li>
-              <li><strong>Buy Pack</strong>: 100 CVs for <strong>£160</strong> ( £1.60/CV ), never expires; used after monthly pool.</li>
-            </ul>
-          </div>
-
-          <ul class="feat">
+          <ul class="feat" style="margin-top:14px">
             <li><span class="tick">✓</span><span>1 CV Template</span></li>
             <li><span class="tick">✓</span><span>Up to 5 users</span></li>
+            <li><span class="tick">✓</span><span>Overage: <strong>£1.70</strong> per CV</span></li>
             <li><span class="tick">✓</span><span>Email support</span></li>
           </ul>
 
@@ -1067,7 +1067,7 @@ PRICING_HTML = r"""
       </div>
 
       <!-- GROWTH 300 (RECOMMENDED) -->
-      <div class="card reco">
+      <div class="card growth reco">
         <div class="badge">RECOMMENDED</div>
         <div class="inner">
           <div class="name">GROWTH</div>
@@ -1078,17 +1078,10 @@ PRICING_HTML = r"""
             <span class="price-cv">£1.40 per CV</span>
           </span>
 
-          <div class="mvsp">
-            <div class="title">Monthly vs Packs</div>
-            <ul>
-              <li><strong>Monthly</strong>: predictable volume each month. Overage <strong>£1.60</strong>/CV.</li>
-              <li><strong>Buy Pack</strong>: 300 CVs for <strong>£450</strong> ( £1.50/CV ), non-expiring burst capacity.</li>
-            </ul>
-          </div>
-
-          <ul class="feat">
+          <ul class="feat" style="margin-top:14px">
             <li><span class="tick">✓</span><span>1 CV Template</span></li>
             <li><span class="tick">✓</span><span>Up to 10 users</span></li>
+            <li><span class="tick">✓</span><span>Overage: <strong>£1.60</strong> per CV</span></li>
             <li><span class="tick">✓</span><span>Priority support</span></li>
           </ul>
 
@@ -1097,7 +1090,7 @@ PRICING_HTML = r"""
       </div>
 
       <!-- SCALE 500 -->
-      <div class="card">
+      <div class="card scale">
         <div class="inner">
           <div class="name">SCALE</div>
           <div class="qty">500 CVs<span class="per">/mo</span></div>
@@ -1107,17 +1100,10 @@ PRICING_HTML = r"""
             <span class="price-cv">£1.30 per CV</span>
           </span>
 
-          <div class="mvsp">
-            <div class="title">Monthly vs Packs</div>
-            <ul>
-              <li><strong>Monthly</strong>: best value at mid/high volume. Overage <strong>£1.50</strong>/CV.</li>
-              <li><strong>Buy Pack</strong>: 500 CVs for <strong>£700</strong> ( £1.40/CV ), non-expiring; org-wide.</li>
-            </ul>
-          </div>
-
-          <ul class="feat">
+          <ul class="feat" style="margin-top:14px">
             <li><span class="tick">✓</span><span>1 CV Template</span></li>
             <li><span class="tick">✓</span><span>Up to 20 users</span></li>
+            <li><span class="tick">✓</span><span>Overage: <strong>£1.50</strong> per CV</span></li>
             <li><span class="tick">✓</span><span>Priority support</span></li>
           </ul>
 
@@ -1125,32 +1111,41 @@ PRICING_HTML = r"""
         </div>
       </div>
 
-      <!-- PLUS 750+ -->
-      <div class="card">
+      <!-- BUY PACKS -->
+      <div class="card packs">
         <div class="inner">
-          <div class="name">PLUS</div>
-          <div class="qty">750+ CVs<span class="per">/mo</span></div>
+          <div class="name">BUY PACKS</div>
+          <div class="qty">Non-expiring</div>
           <span class="chip">
-            <span class="price-month">from £975/mo</span>
+            <span class="price-month">Org-wide</span>
             <span class="dot">·</span>
-            <span class="price-cv">~£1.30 per CV</span>
+            <span class="price-cv">Use after monthly</span>
           </span>
 
-          <div class="mvsp">
-            <div class="title">Monthly vs Packs</div>
+          <div class="packs-info">
+            <div class="title">Choose your pack</div>
             <ul>
-              <li><strong>Monthly</strong>: starts at 750 ( £1.30/CV ). Overage <strong>£1.45</strong>/CV; volume discounts after 1,000.</li>
-              <li><strong>Buy Pack</strong>: 750 CVs for <strong>£1,050</strong> ( £1.40/CV ), never expires; share across teams.</li>
+              <li><strong>100 CVs</strong> — £160 ( £1.60/CV )</li>
+              <li><strong>300 CVs</strong> — £450 ( £1.50/CV )</li>
+              <li><strong>500 CVs</strong> — £700 ( £1.40/CV )</li>
             </ul>
           </div>
 
-          <ul class="feat">
-            <li><span class="tick">✓</span><span>1 CV Template</span></li>
-            <li><span class="tick">✓</span><span>Up to 30 users</span></li>
-            <li><span class="tick">✓</span><span>SSO/SLA available</span></li>
+          <div class="select">
+            <select id="packSelect">
+              <option value="100">100 CVs — £160</option>
+              <option value="300">300 CVs — £450</option>
+              <option value="500">500 CVs — £700</option>
+            </select>
+          </div>
+
+          <ul class="feat" style="margin-top:12px">
+            <li><span class="tick">✓</span><span>Never expires; consumed after monthly pool</span></li>
+            <li><span class="tick">✓</span><span>Org-wide across users</span></li>
+            <li><span class="tick">✓</span><span><strong>Extra templates £50 each</strong> (1 included per org)</span></li>
           </ul>
 
-          <a class="btn" href="/start">Contact sales</a>
+          <a class="btn" href="/start">Buy pack</a>
         </div>
       </div>
 
@@ -1160,7 +1155,7 @@ PRICING_HTML = r"""
   </div>
 
   <!-- CALCULATOR (unchanged; only plan constants updated) -->
-  <div class="wrap section calc">
+  <div class="wrap section">
     <div class="card calc">
       <div class="inner">
         <div class="name">Savings & best plan</div>
@@ -1185,10 +1180,10 @@ PRICING_HTML = r"""
     function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
     const PLANS = [
-      { kind:'Monthly', key:'Starter',  baseCredits:100,  baseCost:150, baseRate:1.50, overRate:1.70 },
-      { kind:'Monthly', key:'Growth',   baseCredits:300,  baseCost:420, baseRate:1.40, overRate:1.60 },
-      { kind:'Monthly', key:'Scale',    baseCredits:500,  baseCost:650, baseRate:1.30, overRate:1.50 },
-      { kind:'Monthly', key:'Plus',     baseCredits:750,  baseCost:975, baseRate:1.30, overRate:1.45 }
+      { kind:'Monthly', key:'Starter', baseCredits:100, baseCost:150, baseRate:1.50, overRate:1.70 },
+      { kind:'Monthly', key:'Growth',  baseCredits:300, baseCost:420, baseRate:1.40, overRate:1.60 },
+      { kind:'Monthly', key:'Scale',   baseCredits:500, baseCost:650, baseRate:1.30, overRate:1.50 }
+      // Buy Packs are on-demand and not part of the "best monthly plan" picker.
     ];
 
     function costFor(plan, volume){
@@ -7488,6 +7483,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

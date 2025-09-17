@@ -6117,6 +6117,7 @@ def owner_console():
   <a class="btn" href="/__admin/org-profile">Org profile</a>
   <a class="btn" href="/owner/api/export" title="Download last 30 days (all orgs)">Export CSV</a>
   <a class="btn" id="exportOrgBtn" href="#" title="Export a single org">Export CSV (org)</a>
+  <a class="btn" id="exportRangeBtn" href="#" title="Export by date range">Export CSV (range)</a>
 </div>
   </div>
 
@@ -6174,6 +6175,30 @@ document.addEventListener('click', function(e){
     console.log('cap badge / export add failed', e);
   }
 })();
+</script>
+
+<script>
+document.addEventListener('click', function(e){
+  const btn = e.target.closest('#exportRangeBtn'); if(!btn) return;
+  e.preventDefault();
+
+  const org   = prompt('Org ID (leave empty for ALL)');
+  const start = prompt('Start date (YYYY-MM-DD), e.g. 2025-09-01');
+  const end   = prompt('End date (YYYY-MM-DD), e.g. 2025-09-16');
+
+  function ok(d){ return /^\d{4}-\d{2}-\d{2}$/.test(d||''); }
+  if(!ok(start) || !ok(end)){
+    alert('Please enter dates as YYYY-MM-DD.');
+    return;
+  }
+
+  const params = new URLSearchParams();
+  params.set('start', start);
+  params.set('end', end);
+  if((org||'').trim()) params.set('org_id', org.trim());
+
+  window.location.href = '/owner/api/export?' + params.toString();
+});
 </script>
 
   <div class="grid">
@@ -6825,6 +6850,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

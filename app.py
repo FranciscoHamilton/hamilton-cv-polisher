@@ -900,95 +900,143 @@ PRICING_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --brand:#2563eb; --brand-2:#22d3ee;
-      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
-      --bg:#f6f9ff; --card:#fff; --shadow:0 10px 24px rgba(2,6,23,.06);
+      --brand:#2563eb;
+      --brand-2:#22d3ee;
+      --ink:#0f172a;
+      --muted:#64748b;
+      --line:#e5e7eb;
+      --bg:#f6f9ff;
+      --card:#ffffff;
+      --shadow:0 10px 28px rgba(13,59,102,.08);
       --ok:#16a34a;
     }
     *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:980px;margin:28px auto 64px;padding:0 24px}
+    html,body{margin:0;padding:0}
+    body{
+      font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+      background:var(--bg);
+      color:var(--ink);
+    }
 
-    /* top nav */
-    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    /* --- NAV (aligned like Home/About pages) --- */
+    .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+    .nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
     .brand{font-weight:900;color:var(--brand);text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+    .nav-links a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
 
-    h1{margin:6px 0 6px;font-size:46px;letter-spacing:-.01em;color:#122033}
-    .sub{margin:0 0 18px;color:var(--muted)}
+    /* --- HERO --- */
+    .hero{
+      background:linear-gradient(180deg, rgba(34,211,238,.10), rgba(34,211,238,0) 60%);
+      border-bottom:1px solid var(--line);
+    }
+    .hero-inner{padding:28px 0 16px}
+    h1{margin:6px 0 10px;font-size:44px;letter-spacing:-.02em;color:#122033}
+    .sub{margin:0;color:var(--muted);font-size:15px}
 
-    .grid3{display:grid;gap:20px;grid-template-columns:repeat(3,1fr)}
-    .grid1{display:grid;gap:20px;grid-template-columns:1fr;max-width:560px;margin:0 auto}
-    @media(max-width:900px){ .grid3{grid-template-columns:1fr} }
+    /* --- GRID --- */
+    .section{padding:22px 0 40px}
+    .grid3{display:grid;gap:18px;grid-template-columns:repeat(3,1fr)}
+    .grid2{display:grid;gap:18px;grid-template-columns:repeat(2,1fr)}
+    .grid1{display:grid;gap:18px;grid-template-columns:1fr;max-width:720px}
+    @media(max-width:980px){ .grid3{grid-template-columns:1fr} .grid2{grid-template-columns:1fr} }
 
+    /* --- CARD --- */
     .card{
       background:var(--card);
       border:1px solid var(--line);
-      border-radius:16px;
+      border-radius:22px;
       box-shadow:var(--shadow);
       overflow:hidden;
       display:flex;flex-direction:column;
-      min-height:300px;
     }
     .inner{padding:18px 18px 20px;display:flex;flex-direction:column;height:100%}
-    .name{font-weight:900;color:#0b1220;font-size:16px;margin:4px 0 10px}
-    .qty{font-size:28px;font-weight:900;letter-spacing:-.01em}
+    .name{font-weight:900;color:#0b1220;font-size:14px;letter-spacing:.06em;margin:2px 0 8px}
+    .qty{font-size:30px;font-weight:900;letter-spacing:-.01em}
     .per{font-size:14px;color:var(--muted);font-weight:700;margin-left:6px}
+
+    /* price chip */
     .chip{
       display:inline-flex;align-items:baseline;gap:6px;align-self:flex-start;margin-top:10px;
       padding:8px 12px;border-radius:999px;background:#eef4ff;border:1px solid #dbeafe;color:#132a63;
       font-weight:600;font-size:12.5px;
     }
-    .chip .price-month{font-size:1.25em;color:#0b1220;font-weight:800}
+    .chip .price-month{font-size:1.2em;color:#0b1220;font-weight:800}
     .chip .dot{color:#8aa0c4;font-weight:700;line-height:1}
-    .chip .price-cv{font-size:.85em;color:#667792;font-weight:600}
+    .chip .price-cv{font-size:.9em;color:#667792;font-weight:600}
 
-    .btn{margin-top:auto;display:inline-block;padding:12px 16px;border-radius:999px;text-align:center;
-      font-weight:900;text-decoration:none;border:1px solid var(--line);color:#0b1220;background:#fff}
+    .feat{margin:12px 0 0 0;padding:0;list-style:none;color:var(--muted);font-size:13px}
+    .feat li{display:flex;align-items:center;gap:8px;margin-top:8px}
+    .tick{
+      display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
+      background:rgba(34,211,238,.18);color:#0891b2;font-weight:900;font-size:12px
+    }
+
+    /* highlight middle card */
+    .card.reco{position:relative;border-width:2px;border-color:#bfdbfe}
+    .badge{
+      position:absolute;left:14px;top:14px;
+      background:linear-gradient(90deg,var(--brand),var(--brand-2));
+      color:#fff;font-weight:900;font-size:11px;letter-spacing:.06em;
+      padding:6px 10px;border-radius:999px;box-shadow:0 6px 16px rgba(37,99,235,.25)
+    }
+
+    .btn{
+      margin-top:auto;display:inline-block;padding:12px 16px;border-radius:999px;text-align:center;
+      font-weight:900;text-decoration:none;border:1px solid var(--line);color:#0b1220;background:#fff
+    }
     .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none}
     .btn:hover{transform:translateY(-1px)}
 
-    .feat{margin:10px 0 0 0;padding:0;list-style:none;color:var(--muted);font-size:12.5px}
-    .feat li{display:flex;align-items:center;gap:6px;margin-top:6px}
-    .tick{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;
-          background:rgba(34,211,238,.15);color:#0891b2;font-weight:900;font-size:11px}
+    /* enterprise banner */
+    .banner{
+      display:flex;gap:16px;align-items:center;justify-content:space-between;
+      background:linear-gradient(90deg, rgba(37,99,235,.08), rgba(34,211,238,.08));
+      border:1px dashed #cbd5e1;border-radius:18px;padding:16px
+    }
+    .banner .cta{white-space:nowrap}
 
-    .badge{position:absolute;left:0;right:0;top:0;height:32px;display:flex;align-items:center;justify-content:center;
-      background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;font-weight:900;font-size:12px;letter-spacing:.06em}
-    .card.has-badge{padding-top:32px}
-
-    /* Calc */
+    /* calc (kept intact) */
     .card.calc .inner{align-items:stretch;text-align:left}
     .card.calc .name{font-size:18px;color:var(--brand);text-align:left}
     .card.calc .sub{text-align:left}
     .calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    @media(max-width:900px){ .calc-grid{grid-template-columns:1fr} }
+    @media(max-width:980px){ .calc-grid{grid-template-columns:1fr} }
     .calc label{display:block;font-weight:900;margin-bottom:6px}
     .calc input[type=number]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:inset 0 1px 2px rgba(2,6,23,.03)}
     .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px;justify-content:flex-start}
     .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
   </style>
 </head>
+
 <body>
+  <!-- NAV -->
   <div class="wrap">
     <div class="nav">
       <a class="brand" href="/">Lustra</a>
-      <div>
+      <div class="nav-links">
         <a href="/">Home</a>
         <a href="/about">About</a>
         <a href="/login">Sign in</a>
       </div>
     </div>
+  </div>
 
-    <h1>Plans</h1>
-    <p class="sub">Three simple plans for small, mid and larger agencies — plus Enterprise for high volume. No rollovers; clean monthly usage.</p>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="wrap hero-inner">
+      <h1>Plans</h1>
+      <p class="sub">Simple tiers for small, mid and larger agencies — plus tailored Enterprise when you need it.</p>
+    </div>
+  </div>
 
-        <!-- 3 core plans -->
+  <!-- PLANS -->
+  <div class="wrap section">
     <div class="grid3">
-      <!-- Starter -->
+
+      <!-- STARTER -->
       <div class="card">
         <div class="inner">
-          <div class="name">Starter</div>
+          <div class="name">STARTER</div>
           <div class="qty">100 CVs<span class="per">/mo</span></div>
           <span class="chip">
             <span class="price-month">£150/mo</span>
@@ -1004,11 +1052,11 @@ PRICING_HTML = r"""
         </div>
       </div>
 
-      <!-- Growth -->
-      <div class="card has-badge" style="position:relative">
+      <!-- GROWTH (RECOMMENDED) -->
+      <div class="card reco">
         <div class="badge">RECOMMENDED</div>
         <div class="inner">
-          <div class="name">Growth</div>
+          <div class="name">GROWTH</div>
           <div class="qty">250 CVs<span class="per">/mo</span></div>
           <span class="chip">
             <span class="price-month">£350/mo</span>
@@ -1024,10 +1072,10 @@ PRICING_HTML = r"""
         </div>
       </div>
 
-      <!-- Scale -->
+      <!-- SCALE -->
       <div class="card">
         <div class="inner">
-          <div class="name">Scale</div>
+          <div class="name">SCALE</div>
           <div class="qty">500 CVs<span class="per">/mo</span></div>
           <span class="chip">
             <span class="price-month">£650/mo</span>
@@ -1042,117 +1090,89 @@ PRICING_HTML = r"""
           <a class="btn primary" href="/start">Choose Scale</a>
         </div>
       </div>
+
     </div>
 
-    <!-- Enterprise -->
+    <!-- Enterprise CTA banner -->
     <div class="grid1" style="margin-top:20px">
-      <div class="card">
-        <div class="inner">
-          <div class="name">Enterprise</div>
-          <div class="qty">700–1,500+ CVs<span class="per">/mo</span></div>
-          <span class="chip">
-            <span class="price-month">Custom</span>
-            <span class="dot">·</span>
-            <span class="price-cv">Target £1.20–£1.30 per CV</span>
-          </span>
-          <ul class="feat">
-            <li><span class="tick">✓</span><span>Tailored credits & pricing</span></li>
-            <li><span class="tick">✓</span><span>SSO / SLA available</span></li>
-            <li><span class="tick">✓</span><span>Priority setup & support</span></li>
-          </ul>
+      <div class="banner">
+        <div>
+          <strong>Enterprise</strong> — 700–1,500+ CVs/month, SSO/SLA, tailored credits & pricing.
+        </div>
+        <div class="cta">
           <a class="btn" href="/start">Contact us</a>
         </div>
       </div>
     </div>
 
-    <!-- Buy Packs (non-expiring) -->
-    <h2 class="sub" style="margin-top:20px">Buy Packs (non-expiring, org-wide)</h2>
+    <!-- Buy Packs -->
+    <h2 class="sub" style="margin:18px 0 6px">Buy Packs (non-expiring, org-wide)</h2>
     <div class="grid3">
-      <div class="card">
-        <div class="inner">
-          <div class="name">100-Pack</div>
-          <div class="qty">100 CVs</div>
-          <span class="chip">
-            <span class="price-month">£160</span>
-            <span class="dot">·</span>
-            <span class="price-cv">£1.60 per CV</span>
-          </span>
-          <ul class="feat">
-            <li><span class="tick">✓</span><span>Never expires</span></li>
-            <li><span class="tick">✓</span><span>Org-wide</span></li>
-          </ul>
-          <a class="btn" href="/start">Buy pack</a>
-        </div>
-      </div>
+      <div class="card"><div class="inner">
+        <div class="name">100-PACK</div>
+        <div class="qty">100 CVs</div>
+        <span class="chip"><span class="price-month">£160</span><span class="dot">·</span><span class="price-cv">£1.60 per CV</span></span>
+        <ul class="feat">
+          <li><span class="tick">✓</span><span>Never expires</span></li>
+          <li><span class="tick">✓</span><span>Org-wide</span></li>
+        </ul>
+        <a class="btn" href="/start">Buy pack</a>
+      </div></div>
 
-      <div class="card">
-        <div class="inner">
-          <div class="name">250-Pack</div>
-          <div class="qty">250 CVs</div>
-          <span class="chip">
-            <span class="price-month">£375</span>
-            <span class="dot">·</span>
-            <span class="price-cv">£1.50 per CV</span>
-          </span>
-          <ul class="feat">
-            <li><span class="tick">✓</span><span>Never expires</span></li>
-            <li><span class="tick">✓</span><span>Org-wide</span></li>
-          </ul>
-          <a class="btn" href="/start">Buy pack</a>
-        </div>
-      </div>
+      <div class="card"><div class="inner">
+        <div class="name">250-PACK</div>
+        <div class="qty">250 CVs</div>
+        <span class="chip"><span class="price-month">£375</span><span class="dot">·</span><span class="price-cv">£1.50 per CV</span></span>
+        <ul class="feat">
+          <li><span class="tick">✓</span><span>Never expires</span></li>
+          <li><span class="tick">✓</span><span>Org-wide</span></li>
+        </ul>
+        <a class="btn" href="/start">Buy pack</a>
+      </div></div>
 
-      <div class="card">
-        <div class="inner">
-          <div class="name">500-Pack</div>
-          <div class="qty">500 CVs</div>
-          <span class="chip">
-            <span class="price-month">£700</span>
-            <span class="dot">·</span>
-            <span class="price-cv">£1.40 per CV</span>
-          </span>
-          <ul class="feat">
-            <li><span class="tick">✓</span><span>Never expires</span></li>
-            <li><span class="tick">✓</span><span>Org-wide</span></li>
-          </ul>
-          <a class="btn" href="/start">Buy pack</a>
-        </div>
-      </div>
+      <div class="card"><div class="inner">
+        <div class="name">500-PACK</div>
+        <div class="qty">500 CVs</div>
+        <span class="chip"><span class="price-month">£700</span><span class="dot">·</span><span class="price-cv">£1.40 per CV</span></span>
+        <ul class="feat">
+          <li><span class="tick">✓</span><span>Never expires</span></li>
+          <li><span class="tick">✓</span><span>Org-wide</span></li>
+        </ul>
+        <a class="btn" href="/start">Buy pack</a>
+      </div></div>
     </div>
+  </div>
 
-    <!-- Calculator -->
-    <div class="card calc" style="margin-top:20px">
+  <!-- CALCULATOR (kept intact) -->
+  <div class="wrap section">
+    <div class="card calc">
       <div class="inner">
         <div class="name">Savings & best plan</div>
         <div class="sub">Estimate time/payroll savings and see which plan fits your volume (with overage).</div>
-
         <div class="calc-grid" style="margin-top:10px">
           <div><label>CVs per month</label><input id="cvs" type="number" min="0" value="100"></div>
           <div><label>Minutes per CV (manual polish)</label><input id="minManual" type="number" min="0" value="15"></div>
           <div><label>Recruiter hourly cost</label><input id="hourRate" type="number" min="0" value="30"></div>
         </div>
-
         <div class="calc-out">
           <div><span class="n" id="outHours">25.0</span> hours saved / month</div>
           <div><span class="n">£<span id="outMoney">750</span></span> payroll saved / month</div>
         </div>
-
         <div class="sub" id="planPick" style="margin-top:8px"></div>
       </div>
     </div>
   </div>
 
   <script>
+    // keep calc working exactly as before (same IDs & functions)
     function fmt(n){ return new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(n); }
     function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
-    // === New plan model (no PAYG) ===
     const PLANS = [
-        { kind:'Monthly', key:'Starter',  baseCredits:100,  baseCost:150, baseRate:1.50, overRate:1.70 },
-        { kind:'Monthly', key:'Growth',   baseCredits:250,  baseCost:350, baseRate:1.40, overRate:1.60 },
-        { kind:'Monthly', key:'Scale',    baseCredits:500,  baseCost:650, baseRate:1.30, overRate:1.50 },
-
-      // Enterprise is special: minimum 2,000 @ £0.80, overage £0.75
+      { kind:'Monthly', key:'Starter',  baseCredits:100,  baseCost:150, baseRate:1.50, overRate:1.70 },
+      { kind:'Monthly', key:'Growth',   baseCredits:250,  baseCost:350, baseRate:1.40, overRate:1.60 },
+      { kind:'Monthly', key:'Scale',    baseCredits:500,  baseCost:650, baseRate:1.30, overRate:1.50 },
+      // Enterprise suggestion stays opt-in at high volumes (unchanged behaviour)
       { kind:'Enterprise', key:'Enterprise', minCredits:2000, minCost:1600, baseRate:0.80, overRate:0.75 }
     ];
 
@@ -1168,7 +1188,6 @@ PRICING_HTML = r"""
             : `includes ${plan.minCredits} @ £${plan.baseRate.toFixed(2)} + ${over} over @ £${plan.overRate.toFixed(2)}`;
         return { name:'Enterprise', cost, percv, detail };
       }
-
       const included = Math.min(volume, plan.baseCredits);
       const over     = Math.max(0, volume - plan.baseCredits);
       const cost     = plan.baseCost + over * plan.overRate;
@@ -1199,11 +1218,13 @@ PRICING_HTML = r"""
       const best = options[0]?.quote || costFor(PLANS[0], cvs);
       const suffix = (best.name==='Enterprise' ? '/mo (min 2,000)' : '/mo');
       const percv  = best.percv ? ` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)` : '';
-      pickEl.innerHTML = `Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>${suffix}${percv} · ${best.detail}`;
+      pickEl.innerHTML = `Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>${suffix}${percv}<br><span class="sub">${best.detail}</span>`;
     }
 
-    document.addEventListener('input',calc);
-    document.addEventListener('DOMContentLoaded',calc);
+    document.addEventListener('input', (e)=>{
+      if (e.target && (e.target.id==='cvs' || e.target.id==='minManual' || e.target.id==='hourRate')) calc();
+    });
+    document.addEventListener('DOMContentLoaded', calc);
   </script>
 </body>
 </html>
@@ -7465,6 +7486,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

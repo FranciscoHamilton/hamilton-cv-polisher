@@ -6171,6 +6171,16 @@ document.addEventListener('click', function(e){
         a.style.marginLeft = '6px';
         actions.appendChild(a);
       }
+
+            // ---- Show a green "Template set" badge if this org has a DOCX uploaded
+      if (o.has_template && !actions.querySelector('.tpl-badge')) {
+        const b = document.createElement('span');
+        b.className = 'badge ok tpl-badge';
+        b.textContent = 'Template set';
+        b.title = o.template_updated_at ? ('Updated ' + o.template_updated_at) : 'Template present';
+        b.style.marginRight = '6px';
+        actions.insertBefore(b, actions.firstChild);
+      }
       
       // ---- Per-row Profile button (opens JSON profile editor)
 if (actions && !actions.querySelector('.profile-org-row')) {
@@ -7063,6 +7073,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -6351,6 +6351,183 @@ document.addEventListener('DOMContentLoaded', load);
     """
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
+# --- Owner: New Client wizard (admin-only; orchestrates existing admin endpoints) ---
+@app.get("/owner/new-client")
+def owner_new_client():
+    if not is_admin():
+        return redirect("/login")
+
+    html = """
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>New Client Wizard</title>
+  <style>
+    :root{--muted:#64748b}
+    body{font:14px/1.45 system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:20px;color:#0f172a}
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .btn{display:inline-block;padding:8px 12px;border:1px solid #e5e7eb;border-radius:10px;background:#fff;text-decoration:none;color:#0f172a}
+    .card{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-top:12px}
+    label{display:block;margin:8px 0 4px;color:#334155}
+    input,textarea,select{width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:10px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .muted{color:var(--muted)}
+    .ok{color:#15803d}
+    .err{color:#b91c1c}
+    .mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap}
+  </style>
+</head>
+<body>
+  <div class="row" style="margin-bottom:12px">
+    <a class="btn" href="/owner/console">Owner</a>
+    <a class="btn" href="/__admin/new-org">New org (manual)</a>
+    <a class="btn" href="/__admin/new-user">Create user (manual)</a>
+    <a class="btn" href="/__admin/upload-org-template">Upload template (manual)</a>
+    <a class="btn" href="/__admin/org-profile">Org profile (manual)</a>
+  </div>
+
+  <h1 style="margin:0 0 8px">New Client Wizard</h1>
+  <p class="muted" style="margin-top:0">Creates an organisation, a user attached to it, and optionally uploads a DOCX template and saves a per-org profile JSON. Uses your existing admin endpoints.</p>
+
+  <form id="wiz" class="card">
+    <div class="grid">
+      <div class="card">
+        <h3 style="margin-top:0">1) Organisation</h3>
+        <label>Organisation name</label>
+        <input name="org_name" placeholder="e.g., Hamilton Recruitment" required>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">2) User</h3>
+        <label>Username</label>
+        <input name="username" placeholder="e.g., hamilton" required>
+        <label>Email</label>
+        <input name="email" type="email" placeholder="e.g., ops@client.com" required>
+        <label>Password</label>
+        <input name="password" type="password" placeholder="Temporary password" required>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">3) Optional: Template (.docx)</h3>
+        <input name="template" type="file" accept=".docx">
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">4) Optional: Profile JSON</h3>
+        <textarea name="profile" rows="10" class="mono" placeholder='{"sections_order":["name_and_contact","executive_summary","skills","experience","education"]}'></textarea>
+        <p class="muted" style="margin:6px 0 0">Leave empty to inherit the default (Hamilton) structure. This does not change polishing unless we wire it in later.</p>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:12px">
+      <button class="btn" type="submit">Create client</button>
+      <span id="status" class="muted"></span>
+    </div>
+  </form>
+
+  <div id="result" class="card mono" style="display:none"></div>
+
+<script>
+(async function(){
+  const form = document.getElementById('wiz');
+  const statusEl = document.getElementById('status');
+  const resultEl = document.getElementById('result');
+
+  function setStatus(t, cls){ statusEl.textContent=t; statusEl.className = cls||'muted'; }
+  function showResult(obj){
+    resultEl.style.display='block';
+    try{ resultEl.textContent = JSON.stringify(obj, null, 2); }
+    catch(e){ resultEl.textContent = String(obj); }
+  }
+
+  form.addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    setStatus('Working...', 'muted');
+    resultEl.style.display='none';
+
+    const fd = new FormData(form);
+    const orgName = (fd.get('org_name')||'').trim();
+    const username = (fd.get('username')||'').trim();
+    const email = (fd.get('email')||'').trim();
+    const password = (fd.get('password')||'').trim();
+    const template = fd.get('template');
+    const profile  = (fd.get('profile')||'').toString().trim();
+
+    const out = {steps:[]};
+    try{
+      // 1) Create org
+      const r1 = await fetch('/__admin/create-org?name='+encodeURIComponent(orgName), {credentials:'same-origin'});
+      const j1 = await r1.json();
+      out.steps.push({create_org:j1});
+      if(!j1.ok){ setStatus('Failed creating org', 'err'); showResult(out); return; }
+      const org_id = j1.id || j1.org_id;
+      if(!org_id){ setStatus('No org_id returned', 'err'); showResult(out); return; }
+
+      // 2) Create user in that org
+      const uURL = new URL('/__admin/create-user', location.origin);
+      uURL.searchParams.set('u', username);
+      uURL.searchParams.set('p', password);
+      uURL.searchParams.set('org_id', org_id);
+      uURL.searchParams.set('email', email);
+      const r2 = await fetch(uURL.toString(), {credentials:'same-origin'});
+      const j2 = await r2.json();
+      out.steps.push({create_user:j2});
+      if(!j2.ok){ setStatus('Failed creating user', 'err'); showResult(out); return; }
+
+      // 3) Optional: upload template
+      if(template && template.name){
+        const tfd = new FormData();
+        tfd.append('org_id', org_id);
+        tfd.append('template', template);
+        const r3 = await fetch('/__admin/upload-org-template', {method:'POST', body:tfd, credentials:'same-origin'});
+        let j3; try{ j3 = await r3.json(); } catch(e){ j3 = {ok:false, error:'template upload parse fail'}; }
+        out.steps.push({upload_template:j3});
+        if(!j3.ok){ setStatus('Template upload failed (continuing)', 'err'); }
+      }
+
+      // 4) Optional: save profile JSON
+      if(profile){
+        let obj;
+        try{ obj = JSON.parse(profile); }
+        catch(e){ out.steps.push({profile:'invalid JSON — skipped'}); obj = null; }
+        if(obj){
+          const pfd = new URLSearchParams();
+          pfd.set('org_id', org_id);
+          pfd.set('profile', JSON.stringify(obj));
+          const r4 = await fetch('/__admin/org-profile', {
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:pfd.toString(),
+            credentials:'same-origin'
+          });
+          const j4 = await r4.json();
+          out.steps.push({save_profile:j4});
+          if(!j4.ok){ setStatus('Profile save failed (continuing)', 'err'); }
+        }
+      }
+
+      setStatus('Done', 'ok');
+      out.links = {
+        owner_console: '/owner/console',
+        org_profile: '/__admin/org-profile?org_id='+org_id,
+        director: '/director?org_id='+org_id
+      };
+      showResult(out);
+    }catch(e){
+      setStatus('Error', 'err');
+      out.error = String(e);
+      showResult(out);
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
+"""
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+
 @app.get("/owner/api/overview")
 def owner_api_overview():
     if not is_admin():
@@ -6861,6 +7038,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

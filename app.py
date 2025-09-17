@@ -6118,6 +6118,7 @@ def owner_console():
   <a class="btn" href="/owner/api/export" title="Download last 30 days (all orgs)">Export CSV</a>
   <a class="btn" id="exportOrgBtn" href="#" title="Export a single org">Export CSV (org)</a>
   <a class="btn" id="exportRangeBtn" href="#" title="Export by date range">Export CSV (range)</a>
+  <a class="btn" href="/owner/new-client" title="Create org + user (+ optional template/profile)">New Client</a>
 </div>
   </div>
 
@@ -7038,6 +7039,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

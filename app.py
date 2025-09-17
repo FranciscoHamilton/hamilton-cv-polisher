@@ -2743,6 +2743,26 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         doc = Docx()
 
     _remove_all_body_content(doc)
+        # Profile-based labels (optional, per-org)
+    labels = {
+        "summary": "EXECUTIVE SUMMARY",
+        "certifications": "PROFESSIONAL QUALIFICATIONS",
+        "skills": "PROFESSIONAL SKILLS",
+        "experience": "PROFESSIONAL EXPERIENCE",
+        "education": "EDUCATION",
+    }
+    try:
+        oid = _current_user_org_id()
+        if oid:
+            row = db_query_one("SELECT profile_json FROM orgs WHERE id=%s", (oid,))
+            import json
+            prof = json.loads(row[0]) if row and row[0] else None
+            if prof and prof.get("enable_profile") and isinstance(prof.get("labels"), dict):
+                for k, v in prof["labels"].items():
+                    if isinstance(v, str) and v.strip() and k in labels:
+                        labels[k] = v.strip()
+    except Exception as e:
+        print("profile labels failed:", e)
 
     spacer = doc.add_paragraph(); spacer.paragraph_format.space_after = Pt(6)
 
@@ -6171,6 +6191,35 @@ def owner_console():
 </div>
   </div>
 
+  <div class="card" id="usageCard" style="margin:10px 0">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:600">Usage (last 30 days)</div>
+      <a id="usageAllBtn" class="btn" href="#" title="Show all orgs">All</a>
+    </div>
+    <svg id="usageSpark" width="100%" height="60"></svg>
+  </div>
+
+  <div class="card" id="auditCard" style="margin:10px 0">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div style="font-weight:600">Credit Audit</div>
+      <div>
+        <input id="auditOrgId" type="number" min="0" placeholder="org_id (blank=all)" style="width:140px;margin-right:8px" />
+        <button id="auditReload" class="btn">Reload</button>
+      </div>
+    </div>
+    <div style="overflow:auto">
+      <table id="auditTable" class="table" style="width:100%;margin-top:8px">
+        <thead><tr>
+          <th style="text-align:left">When</th>
+          <th style="text-align:left">Org</th>
+          <th style="text-align:right">Δ Credits</th>
+          <th style="text-align:left">Reason</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
 <script>
 document.addEventListener('click', function(e){
   var btn = e.target.closest('#exportOrgBtn'); if(!btn) return;
@@ -6381,6 +6430,10 @@ async function load(){
   <div class="row">
     <a class="btn" href="/owner/console">Owner</a>
     <a class="btn" href="/director">Usage</a>
+    <a class="btn" href="/director?org_id=${o.id}">Director</a>
+    <a class="btn" href="/owner/api/export?org_id=${o.id}">Export</a>
+    <a class="btn" href="/__admin/org-profile?org_id=${o.id}">Profile</a>
+    <a class="btn" href="/__admin/upload-org-template">Template</a>
   </div>
 </td>
     `;
@@ -6614,6 +6667,79 @@ def owner_new_client():
 </body>
 </html>
 """
+    html += """
+    <script>
+    (async function(){
+      const svg = document.getElementById('usageSpark'); if(!svg) return;
+      const btnAll = document.getElementById('usageAllBtn');
+      const q = new URLSearchParams({days:'30'}); // add org_id later for per-org sparkline
+
+      try{
+        const r = await fetch('/owner/api/usage-series?'+q.toString(), {cache:'no-store'});
+        const j = await r.json();
+        if(!j.ok) return;
+
+        const s = j.series || [];
+        const w = svg.clientWidth || 600, h = svg.clientHeight || 60;
+        if (!s.length){ svg.innerHTML=''; return; }
+
+        const xs = s.map((_,i)=>i), ys = s.map(o=>o.count||0);
+        const xmin=0, xmax=xs.length-1, ymin=0, ymax=Math.max(1, ...ys);
+        const x = i => (w-8) * (i - xmin) / Math.max(1,(xmax-xmin)) + 4;
+        const y = v => h - 6 - (h-12) * (v - ymin) / Math.max(1,(ymax - ymin));
+        const d = xs.map((i)=>`${x(i)},${y(ys[i])}`).join(' ');
+
+        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        svg.innerHTML = `
+          <polyline points="${d}" fill="none" stroke="currentColor" stroke-width="2" opacity="0.9"></polyline>
+          <line x1="0" y1="${y(0)}" x2="${w}" y2="${y(0)}" stroke="currentColor" stroke-width="0.5" opacity="0.15"></line>
+        `;
+      }catch(e){
+        console.log('usage spark failed', e);
+      }
+    })();
+    </script>
+    """
+
+    html += """
+    <script>
+    (async function(){
+      const reloadBtn = document.getElementById('auditReload');
+      const orgInput = document.getElementById('auditOrgId');
+      const tbody = document.querySelector('#auditTable tbody');
+      if(!reloadBtn || !tbody) return;
+
+      async function loadAudit(){
+        const q = new URLSearchParams({limit: '200'});
+        const orgVal = (orgInput && orgInput.value || '').trim();
+        if(orgVal) q.set('org_id', orgVal);
+
+        tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+        try{
+          const r = await fetch('/owner/api/credits-ledger?' + q.toString(), {cache:'no-store'});
+          const j = await r.json();
+          if(!j.ok) { tbody.innerHTML = '<tr><td colspan="4">Forbidden</td></tr>'; return; }
+          const items = j.items || [];
+          if(!items.length){ tbody.innerHTML = '<tr><td colspan="4">No entries</td></tr>'; return; }
+          tbody.innerHTML = items.map(it => `
+            <tr>
+              <td>${new Date(it.ts).toLocaleString()}</td>
+              <td>${it.org_name || ('#'+it.org_id)}</td>
+              <td style="text-align:right">${(it.delta>0?'+':'') + it.delta}</td>
+              <td>${(it.reason||'').replace(/</g,'&lt;')}</td>
+            </tr>`).join('');
+        }catch(e){
+          console.log('audit load failed', e);
+          tbody.innerHTML = '<tr><td colspan="4">Error loading</td></tr>';
+        }
+      }
+
+      reloadBtn.addEventListener('click', loadAudit);
+      loadAudit();
+    })();
+    </script>
+    """
+
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 # --- Owner: daily usage series (admin-only, read-only) ---
@@ -7207,6 +7333,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

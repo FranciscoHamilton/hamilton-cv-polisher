@@ -6135,30 +6135,43 @@ document.addEventListener('click', function(e){
     const r = await fetch('/owner/api/overview', {cache:'no-store'});
     const j = await r.json();
     if(!j.ok) return;
-    const orgs = j.orgs || [];
+
+    const orgs  = j.orgs || [];
     const tbody = document.getElementById('orgs_tbody');
     if(!tbody) return;
 
     orgs.forEach(o=>{
       const tr = tbody.querySelector(`tr[data-oid="${o.id}"]`);
       if(!tr) return;
+
+      // ---- Cap badge in the 4th cell (index 3) ----
       const capCell = tr.children[3]; // 0:id, 1:name, 2:plan_name, 3:plan_credits_month
-      if(!capCell) return;
+      if(capCell){
+        const old = capCell.querySelector('.badge'); if(old) old.remove();
+        if (o.cap && o.cap > 0){
+          const span = document.createElement('span');
+          span.className = 'badge ' + (o.cap_exceeded ? 'bad' : 'ok');
+          span.title = `Monthly cap is ${o.cap}; used ${o.usage_month}`;
+          span.textContent = o.cap_exceeded ? 'Cap exceeded' : `${(o.cap_remaining ?? 0)} left`;
+          span.style.marginLeft = '6px';
+          capCell.appendChild(span);
+        }
+      }
 
-      // remove old badge if present
-      const old = capCell.querySelector('.badge'); if(old) old.remove();
-
-      if(o.cap && o.cap > 0){
-        const span = document.createElement('span');
-        span.className = 'badge ' + (o.cap_exceeded ? 'bad' : 'ok');
-        span.title = `Monthly cap is ${o.cap}; used ${o.usage_month}`;
-        span.textContent = o.cap_exceeded ? 'Cap exceeded' : `${(o.cap_remaining ?? 0)} left`;
-        span.style.marginLeft = '6px';
-        capCell.appendChild(span);
+      // ---- Per-row Export button in the actions column (last <td>) ----
+      const actions = tr.querySelector('td:last-child');
+      if (actions && !actions.querySelector('.export-org-row')) {
+        const a = document.createElement('a');
+        a.className = 'btn export-org-row';
+        a.href = `/owner/api/export?org_id=${o.id}`;
+        a.textContent = 'Export';
+        a.title = `Download CSV for org ${o.id}`;
+        a.style.marginLeft = '6px';
+        actions.appendChild(a);
       }
     });
   }catch(e){
-    console.log('cap badge render failed', e);
+    console.log('cap badge / export add failed', e);
   }
 })();
 </script>
@@ -6812,5 +6825,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 

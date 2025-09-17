@@ -2786,7 +2786,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     if links: _add_center_line(doc, " | ".join(links), size=11, bold=False, space_after=6)
 
     if cv.get("summary"):
-        _add_section_heading(doc, "EXECUTIVE SUMMARY")
+        _add_section_heading(doc, labels["summary"])
         p = doc.add_paragraph(cv["summary"]); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
 
     quals = []
@@ -2799,7 +2799,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         line = " | ".join([s for s in [deg, inst, date_span] if s])
         if line: quals.append(line)
     if quals:
-        _add_section_heading(doc, "PROFESSIONAL QUALIFICATIONS")
+        _add_section_heading(doc, labels["certifications"])
         for q in quals:
             p = doc.add_paragraph(q, style="List Bullet")
             p.paragraph_format.space_before = Pt(0); p.paragraph_format.space_after = Pt(0)
@@ -2807,13 +2807,13 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     skills = cv.get("skills") or []
     if skills:
-        _add_section_heading(doc, "PROFESSIONAL SKILLS")
+        _add_section_heading(doc, labels["skills"])
         line = " | ".join(skills)
         p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
 
     exp = cv.get("experience") or []
     if exp:
-        _add_section_heading(doc, "PROFESSIONAL EXPERIENCE")
+        _add_section_heading(doc, labels["experience"])
         first = True
         for role in exp:
             if not first:
@@ -2843,7 +2843,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 rp = doc.add_paragraph(role["raw_text"]); rp.paragraph_format.space_after = Pt(0); _tone_runs(rp, size=11, bold=False)
 
     if edu:
-        _add_section_heading(doc, "EDUCATION")
+        _add_section_heading(doc, labels["education"])
         for ed in edu:
             line = " — ".join([x for x in [ed.get("degree",""), ed.get("institution","")] if x]).strip()
             p = doc.add_paragraph(); rr = p.add_run(line or "Education")
@@ -4267,6 +4267,81 @@ def __admin_new_user():
 </body></html>
 """
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+
+# --- Admin: reset a user's password (GET=form, POST=apply) ---
+@app.route("/__admin/reset-password", methods=["GET", "POST"])
+def __admin_reset_password():
+    # admin guard
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_admin_flag = bool(session.get("is_admin")) or (uname == "admin")
+    except Exception:
+        is_admin_flag = False
+    if not is_admin_flag:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    if request.method == "GET":
+        html = """<!doctype html><html><head><meta charset="utf-8"><title>Reset user password</title>
+<style>body{font:14px/1.4 system-ui,Segoe UI,Roboto,Arial,sans-serif;padding:20px}
+form{display:grid;gap:10px;max-width:520px}
+input,button{padding:8px;border:1px solid #e5e7eb;border-radius:8px}
+.hint{color:#64748b;font-size:12px}
+.btn{display:inline-block;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;text-decoration:none;color:#0f172a}
+.row{display:flex;gap:8px;align-items:center}
+</style></head><body>
+  <h1>Reset user password (admin)</h1>
+  <p class="hint">Enter either a <strong>User ID</strong> <em>or</em> a <strong>Username</strong>, plus the new password.</p>
+  <form method="POST" action="/__admin/reset-password" target="_blank">
+    <label>User ID (number) <input type="number" name="user_id" min="1" placeholder="e.g. 12"></label>
+    <label>Username (text) <input type="text" name="username" placeholder="e.g. hamilton"></label>
+    <label>New password <input type="text" name="new_password" required placeholder="Temp1234!"></label>
+    <div class="row">
+      <button type="submit">Reset password</button>
+      <a class="btn" href="/owner/console">Owner</a>
+      <a class="btn" href="/app">App</a>
+    </div>
+  </form>
+</body></html>"""
+        return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+
+    # POST: apply reset
+    uid_raw = (request.form.get("user_id") or "").strip()
+    uname_raw = (request.form.get("username") or "").strip()
+    new_pw = (request.form.get("new_password") or "").strip()
+
+    try:
+        uid = int(uid_raw) if uid_raw else 0
+    except Exception:
+        uid = 0
+
+    if not new_pw:
+        return jsonify({"ok": False, "error": "new_password required"}), 400
+
+    # resolve user by id or username
+    row = None
+    if uid > 0:
+        row = db_query_one("SELECT id, username FROM users WHERE id=%s", (uid,))
+    elif uname_raw:
+        row = db_query_one("SELECT id, username FROM users WHERE LOWER(username)=LOWER(%s)", (uname_raw,))
+    else:
+        return jsonify({"ok": False, "error": "user_id or username required"}), 400
+
+    if not row:
+        return jsonify({"ok": False, "error": "user_not_found"}), 404
+
+    target_id = int(row[0])
+    target_username = (row[1] or "").strip().lower()
+    if target_username == "admin":
+        return jsonify({"ok": False, "error": "cannot_modify_admin"}), 403
+
+    try:
+        hashed = generate_password_hash(new_pw)
+        ok = db_execute("UPDATE users SET password_hash=%s WHERE id=%s", (hashed, target_id))
+        if not ok:
+            return jsonify({"ok": False, "error": "update_failed"}), 500
+        return jsonify({"ok": True, "user_id": target_id, "username": target_username})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 # --- Admin: simple form to create a new organisation (GET -> calls /__admin/create-org) ---
 @app.get("/__admin/new-org")
@@ -6490,6 +6565,79 @@ document.addEventListener('DOMContentLoaded', load);
 </body>
 </html>
     """
+    
+    html += """
+    <script>
+    (async function(){
+      const svg = document.getElementById('usageSpark'); if(!svg) return;
+      const btnAll = document.getElementById('usageAllBtn');
+      const q = new URLSearchParams({days:'30'}); // add org_id later for per-org sparkline
+
+      try{
+        const r = await fetch('/owner/api/usage-series?'+q.toString(), {cache:'no-store'});
+        const j = await r.json();
+        if(!j.ok) return;
+
+        const s = j.series || [];
+        const w = svg.clientWidth || 600, h = svg.clientHeight || 60;
+        if (!s.length){ svg.innerHTML=''; return; }
+
+        const xs = s.map((_,i)=>i), ys = s.map(o=>o.count||0);
+        const xmin=0, xmax=xs.length-1, ymin=0, ymax=Math.max(1, ...ys);
+        const x = i => (w-8) * (i - xmin) / Math.max(1,(xmax-xmin)) + 4;
+        const y = v => h - 6 - (h-12) * (v - ymin) / Math.max(1,(ymax - ymin));
+        const d = xs.map((i)=>`${x(i)},${y(ys[i])}`).join(' ');
+
+        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        svg.innerHTML = `
+          <polyline points="${d}" fill="none" stroke="currentColor" stroke-width="2" opacity="0.9"></polyline>
+          <line x1="0" y1="${y(0)}" x2="${w}" y2="${y(0)}" stroke="currentColor" stroke-width="0.5" opacity="0.15"></line>
+        `;
+      }catch(e){
+        console.log('usage spark failed', e);
+      }
+    })();
+    </script>
+    """
+
+    html += """
+    <script>
+    (async function(){
+      const reloadBtn = document.getElementById('auditReload');
+      const orgInput = document.getElementById('auditOrgId');
+      const tbody = document.querySelector('#auditTable tbody');
+      if(!reloadBtn || !tbody) return;
+
+      async function loadAudit(){
+        const q = new URLSearchParams({limit: '200'});
+        const orgVal = (orgInput && orgInput.value || '').trim();
+        if(orgVal) q.set('org_id', orgVal);
+
+        tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+        try{
+          const r = await fetch('/owner/api/credits-ledger?' + q.toString(), {cache:'no-store'});
+          const j = await r.json();
+          if(!j.ok) { tbody.innerHTML = '<tr><td colspan="4">Forbidden</td></tr>'; return; }
+          const items = j.items || [];
+          if(!items.length){ tbody.innerHTML = '<tr><td colspan="4">No entries</td></tr>'; return; }
+          tbody.innerHTML = items.map(it => `
+            <tr>
+              <td>${new Date(it.ts).toLocaleString()}</td>
+              <td>${it.org_name || ('#'+it.org_id)}</td>
+              <td style="text-align:right">${(it.delta>0?'+':'') + it.delta}</td>
+              <td>${(it.reason||'').replace(/</g,'&lt;')}</td>
+            </tr>`).join('');
+        }catch(e){
+          console.log('audit load failed', e);
+          tbody.innerHTML = '<tr><td colspan="4">Error loading</td></tr>';
+        }
+      }
+
+      reloadBtn.addEventListener('click', loadAudit);
+      loadAudit();
+    })();
+    </script>
+    """
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 # --- Owner: New Client wizard (admin-only; orchestrates existing admin endpoints) ---
@@ -6667,78 +6815,6 @@ def owner_new_client():
 </body>
 </html>
 """
-    html += """
-    <script>
-    (async function(){
-      const svg = document.getElementById('usageSpark'); if(!svg) return;
-      const btnAll = document.getElementById('usageAllBtn');
-      const q = new URLSearchParams({days:'30'}); // add org_id later for per-org sparkline
-
-      try{
-        const r = await fetch('/owner/api/usage-series?'+q.toString(), {cache:'no-store'});
-        const j = await r.json();
-        if(!j.ok) return;
-
-        const s = j.series || [];
-        const w = svg.clientWidth || 600, h = svg.clientHeight || 60;
-        if (!s.length){ svg.innerHTML=''; return; }
-
-        const xs = s.map((_,i)=>i), ys = s.map(o=>o.count||0);
-        const xmin=0, xmax=xs.length-1, ymin=0, ymax=Math.max(1, ...ys);
-        const x = i => (w-8) * (i - xmin) / Math.max(1,(xmax-xmin)) + 4;
-        const y = v => h - 6 - (h-12) * (v - ymin) / Math.max(1,(ymax - ymin));
-        const d = xs.map((i)=>`${x(i)},${y(ys[i])}`).join(' ');
-
-        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
-        svg.innerHTML = `
-          <polyline points="${d}" fill="none" stroke="currentColor" stroke-width="2" opacity="0.9"></polyline>
-          <line x1="0" y1="${y(0)}" x2="${w}" y2="${y(0)}" stroke="currentColor" stroke-width="0.5" opacity="0.15"></line>
-        `;
-      }catch(e){
-        console.log('usage spark failed', e);
-      }
-    })();
-    </script>
-    """
-
-    html += """
-    <script>
-    (async function(){
-      const reloadBtn = document.getElementById('auditReload');
-      const orgInput = document.getElementById('auditOrgId');
-      const tbody = document.querySelector('#auditTable tbody');
-      if(!reloadBtn || !tbody) return;
-
-      async function loadAudit(){
-        const q = new URLSearchParams({limit: '200'});
-        const orgVal = (orgInput && orgInput.value || '').trim();
-        if(orgVal) q.set('org_id', orgVal);
-
-        tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
-        try{
-          const r = await fetch('/owner/api/credits-ledger?' + q.toString(), {cache:'no-store'});
-          const j = await r.json();
-          if(!j.ok) { tbody.innerHTML = '<tr><td colspan="4">Forbidden</td></tr>'; return; }
-          const items = j.items || [];
-          if(!items.length){ tbody.innerHTML = '<tr><td colspan="4">No entries</td></tr>'; return; }
-          tbody.innerHTML = items.map(it => `
-            <tr>
-              <td>${new Date(it.ts).toLocaleString()}</td>
-              <td>${it.org_name || ('#'+it.org_id)}</td>
-              <td style="text-align:right">${(it.delta>0?'+':'') + it.delta}</td>
-              <td>${(it.reason||'').replace(/</g,'&lt;')}</td>
-            </tr>`).join('');
-        }catch(e){
-          console.log('audit load failed', e);
-          tbody.innerHTML = '<tr><td colspan="4">Error loading</td></tr>';
-        }
-      }
-
-      reloadBtn.addEventListener('click', loadAudit);
-      loadAudit();
-    })();
-    </script>
-    """
 
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
@@ -7333,6 +7409,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

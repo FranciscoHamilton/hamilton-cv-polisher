@@ -6578,20 +6578,33 @@ def owner_api_overview():
     uset = {r[0]: int(r[1] or 0) for r in total_rows}
     ucnt = {r[0]: int(r[1] or 0) for r in users_rows}
 
+    # template status per org (does not change existing SELECT indexes)
+    tpl_rows = db_query_all("""
+        SELECT id,
+               (CASE WHEN COALESCE(template_path,'') <> '' THEN TRUE ELSE FALSE END) AS has_template,
+               template_updated_at
+          FROM orgs
+    """) or []
+    tpl_has = {r[0]: bool(r[1]) for r in tpl_rows}
+    tpl_when = {r[0]: (r[2].isoformat() if hasattr(r[2], "isoformat") else (str(r[2]) if r[2] else None)) for r in tpl_rows}
+
     orgs = []
     for r in org_rows:
         oid = r[0]
-        orgs.append({
-            "id": oid,
-            "name": r[1],
-            "active": bool(r[2]),
-            "plan_name": r[3],
-            "plan_credits_month": int(r[4] or 0),
-            "credits_balance": cred.get(oid, 0),
-            "usage_month": usem.get(oid, 0),
-            "usage_total": uset.get(oid, 0),
-            "users_count": ucnt.get(oid, 0),
-        })
+            orgs.append({
+        "id": oid,
+        "name": r[1],
+        "active": bool(r[2]),
+        "plan_name": r[3],
+        "plan_credits_month": int(r[4] or 0),
+        "credits_balance": cred.get(oid, 0),
+        "usage_month": usem.get(oid, 0),
+        "usage_total": uset.get(oid, 0),
+        "users_count": ucnt.get(oid, 0),
+        # NEW:
+        "has_template": bool(tpl_has.get(oid, False)),
+        "template_updated_at": tpl_when.get(oid),
+    })
 
     # KPIs
     k_total_orgs = len(orgs)
@@ -7050,6 +7063,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

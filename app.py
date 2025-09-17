@@ -1331,7 +1331,7 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 }
 
 .stat .v {
-  font-size: 14px;            /* reduce size of numbers */
+  font-size: 12px;            /* reduce size of numbers */
   font-weight: 600;           /* softer weight */
   margin-top: 2px;            /* tighter spacing */
   color: #333;                /* softer than brand ink */
@@ -7409,6 +7409,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

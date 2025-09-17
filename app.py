@@ -1236,15 +1236,15 @@ HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-  --bg:#f6f8fb;
+  --bg:#f5f8fd;
   --ink:#0f172a;
   --muted:#64748b;
   --line:#e5e7eb;
   --card:#ffffff;
-  --blue:#0f4c81;
-  --blue-2:#1a5fb4;
+  --blue:#2563eb;
+  --blue-2:#22d3ee;;
   --ok:#16a34a;
-  --shadow:0 12px 28px rgba(2,6,23,.06);
+  --shadow:0 10px 28px rgba(13,59,102,.08);
 }
 *{box-sizing:border-box}
 body{
@@ -1279,7 +1279,7 @@ body{
 .card{
   background:var(--card);
   border:1px solid var(--line);
-  border-radius:18px;
+  border-radius:22px;
   padding:18px 20px;
   box-shadow:var(--shadow)
 }
@@ -7409,6 +7409,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

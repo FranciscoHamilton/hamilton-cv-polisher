@@ -1016,6 +1016,10 @@ PRICING_HTML = r"""
     .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
 
     .note{color:var(--muted);font-size:12px;margin:8px 0 6px}  /* closer to calc */
+    /* --- Tweak: hero spacing & subtitle size --- */
+.hero .wrap{ padding-left:40px; padding-right:40px; }  /* pushes both title + sentence in from the left */
+.hero h1{ margin-left:4px; }                            /* tiny visual offset to align with subtitle */
+.hero .lead{ font-size:14px; line-height:1.45; margin-left:4px; } /* smaller sentence + slight indent */
   </style>
 </head>
 
@@ -7483,6 +7487,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

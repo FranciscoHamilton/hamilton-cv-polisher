@@ -982,9 +982,12 @@ PRICING_HTML = r"""
 
     /* Buttons closer to content */
     .btn{
-  margin-top:12px;
-  display:inline-block;padding:10px 14px;border-radius:999px;text-align:center;font-weight:900;font-size:14px;
-  text-decoration:none;border:1px solid var(--line);color:#0b1220;background:#fff
+  margin-top:auto;
+  align-self:center; width:220px;
+  padding:10px 14px; border-radius:18px;
+  text-align:center; font-weight:900; font-size:14px;
+  text-decoration:none; border:1px solid var(--line);
+  color:#0b1220; background:#fff;
 }
     .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none}
     .btn:hover{transform:translateY(-1px)}
@@ -1118,7 +1121,7 @@ PRICING_HTML = r"""
               <li><span class="tick">✓</span><span><strong>Extra templates £50 each</strong> (1 included per org)</span></li>
             </ul>
 
-            <a class="btn" href="/start">Buy pack</a>
+            <a class="btn primary" href="/start">Buy pack</a>
           </div>
         </div>
       </div> <!-- /.grid4 -->
@@ -7450,6 +7453,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

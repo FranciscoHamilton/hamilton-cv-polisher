@@ -982,10 +982,10 @@ PRICING_HTML = r"""
 
     /* Buttons closer to content */
     .btn{
-      margin-top:12px;
-      display:inline-block;padding:12px 16px;border-radius:999px;text-align:center;
-      font-weight:900;text-decoration:none;border:1px solid var(--line);color:#0b1220;background:#fff
-    }
+  margin-top:12px;
+  display:inline-block;padding:10px 14px;border-radius:999px;text-align:center;font-weight:900;font-size:14px;
+  text-decoration:none;border:1px solid var(--line);color:#0b1220;background:#fff
+}
     .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none}
     .btn:hover{transform:translateY(-1px)}
 
@@ -1027,51 +1027,66 @@ PRICING_HTML = r"""
       <div class="grid4">
         <!-- STARTER -->
         <div class="card start">
-          <div class="inner">
-            <div class="name">STARTER</div>
-            <div class="qty">100 CVs<span class="per">/mo</span></div>
-            <span class="chip"><span class="price-month">£150/mo</span><span class="dot">·</span><span class="price-cv">£1.50 per CV</span></span>
-            <ul class="feat" style="margin-top:12px">
-              <li><span class="tick">✓</span><span>1 CV Template</span></li>
-              <li><span class="tick">✓</span><span>Up to 5 users</span></li>
-              <li><span class="tick">✓</span><span>Overage: <strong>£1.70</strong> per CV</span></li>
-              <li><span class="tick">✓</span><span>Email support</span></li>
-            </ul>
-            <a class="btn primary" href="/start">Choose Starter</a>
-          </div>
-        </div>
+  <div class="inner">
+    <div class="name">STARTER</div>
+    <div class="qty">100 polished CVs <span class="per">/ mo</span></div>
+    <span class="chip"><span class="price-month">£150/mo</span><span class="dot">·</span><span class="price-cv">£1.50 per CV</span></span>
+
+    <ul class="feat" style="margin-top:12px">
+      <li><span class="tick">✓</span><span>1 brand template included</span></li>
+      <li><span class="tick">✓</span><span>Up to 10 users</span></li>
+      <li><span class="tick">✓</span><span>Director dashboard</span></li>
+      <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
+      <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
+      <li><span class="tick">✓</span><span>Email support</span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.45/CV</strong></span></li>
+    </ul>
+
+    <a class="btn primary" href="/start">Choose Starter</a>
+  </div>
+</div>
 
         <!-- GROWTH -->
         <div class="card growth">
-          <div class="inner">
-            <div class="name">GROWTH</div>
-            <div class="qty">300 CVs<span class="per">/mo</span></div>
-            <span class="chip"><span class="price-month">£420/mo</span><span class="dot">·</span><span class="price-cv">£1.40 per CV</span></span>
-            <ul class="feat" style="margin-top:12px">
-              <li><span class="tick">✓</span><span>1 CV Template</span></li>
-              <li><span class="tick">✓</span><span>Up to 10 users</span></li>
-              <li><span class="tick">✓</span><span>Overage: <strong>£1.60</strong> per CV</span></li>
-              <li><span class="tick">✓</span><span>Priority support</span></li>
-            </ul>
-            <a class="btn primary" href="/start">Choose Growth</a>
-          </div>
-        </div>
+  <div class="inner">
+    <div class="name">GROWTH</div>
+    <div class="qty">250 polished CVs <span class="per">/ mo</span></div>
+    <span class="chip"><span class="price-month">£350/mo</span><span class="dot">·</span><span class="price-cv">£1.40 per CV</span></span>
+
+    <ul class="feat" style="margin-top:12px">
+      <li><span class="tick">✓</span><span>2 brand template included</span></li>
+      <li><span class="tick">✓</span><span>Up to 20 users</span></li>
+      <li><span class="tick">✓</span><span>Director dashboard</span></li>
+      <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
+      <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
+      <li><span class="tick">✓</span><span>Priority support</span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.35/CV</strong></span></li>
+    </ul>
+
+    <a class="btn primary" href="/start">Choose Growth</a>
+  </div>
+</div>
 
         <!-- SCALE -->
         <div class="card scale">
-          <div class="inner">
-            <div class="name">SCALE</div>
-            <div class="qty">500 CVs<span class="per">/mo</span></div>
-            <span class="chip"><span class="price-month">£650/mo</span><span class="dot">·</span><span class="price-cv">£1.30 per CV</span></span>
-            <ul class="feat" style="margin-top:12px">
-              <li><span class="tick">✓</span><span>1 CV Template</span></li>
-              <li><span class="tick">✓</span><span>Up to 20 users</span></li>
-              <li><span class="tick">✓</span><span>Overage: <strong>£1.50</strong> per CV</span></li>
-              <li><span class="tick">✓</span><span>Priority support</span></li>
-            </ul>
-            <a class="btn primary" href="/start">Choose Scale</a>
-          </div>
-        </div>
+  <div class="inner">
+    <div class="name">SCALE</div>
+    <div class="qty">500 polished CVs <span class="per">/ mo</span></div>
+    <span class="chip"><span class="price-month">£650/mo</span><span class="dot">·</span><span class="price-cv">£1.30 per CV</span></span>
+
+    <ul class="feat" style="margin-top:12px">
+      <li><span class="tick">✓</span><span>3 brand template included</span></li>
+      <li><span class="tick">✓</span><span>Up to 30 users</span></li>
+      <li><span class="tick">✓</span><span>Director dashboard</span></li>
+      <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
+      <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
+      <li><span class="tick">✓</span><span>Priority support</span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.25/CV</strong></span></li>
+    </ul>
+
+    <a class="btn primary" href="/start">Choose Scale</a>
+  </div>
+</div>
 
         <!-- BUY PACKS -->
         <div class="card packs">
@@ -7435,6 +7450,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

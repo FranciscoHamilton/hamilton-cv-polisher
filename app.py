@@ -1393,13 +1393,13 @@ button[disabled]{opacity:.6;cursor:not-allowed}
   color:var(--blue);background:#fff
 }
 .pill{
-  display:inline-flex;align-items:center;gap:4px;
+  display:inline-flex;align-items:center;gap:6px;
   padding:3px 8px;border:1px solid var(--line);border-radius:999px;
-  margin:3px 6px 0 0;font-weight:700;font-size:11px;background:#fff;line-height:1.1
+  margin:3px 6px 0 0;font-weight:600;font-size:10.5px;background:#fff;line-height:1.1;color:#0f172a
 }
 .pill .x{
   cursor:pointer;border:none;background:transparent;font-weight:900;
-  font-size:12px;padding:0 2px;line-height:1
+  font-size:12px;padding:0 2px;line-height:1;color:#0f172a
 }
 /* (Optional cleanup) You can delete .pill.base and .pill.off if present */
   </style>
@@ -1795,11 +1795,11 @@ if (skillForm){
   <div class="ts" id="skillsAllHeader" style="margin:6px 0 2px; display:none">Skills (A–Z)</div>
   <div id="skillsAll" style="display:none"></div>
 
-  <!-- (Legacy lists are fine to keep; they’ll be hidden by JS when unified list is shown) -->
-  <div class="ts" style="margin:6px 0 2px">Custom skills (A–Z)</div>
-  <div id="customSkills"></div>
-  <div class="ts" style="margin:10px 0 2px">Built-in skills (A–Z)</div>
-  <div id="baseSkills"></div>
+  <!-- Hide legacy sections by default (JS also hides them when unified list shows) -->
+  <div class="ts" style="margin:6px 0 2px; display:none">Custom skills (A–Z)</div>
+  <div id="customSkills" style="display:none"></div>
+  <div class="ts" style="margin:10px 0 2px; display:none">Built-in skills (A–Z)</div>
+  <div id="baseSkills" style="display:none"></div>
 </div>
       </div>
     </div>
@@ -7464,6 +7464,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

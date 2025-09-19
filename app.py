@@ -2265,7 +2265,10 @@ def do_login():
             session["authed"] = True
             session["user"] = rec["username"]
             session["user_id"] = rec["id"]           # <-- store DB user id
+            if is_admin():
+                return redirect("/owner/console")
             return redirect(url_for("app_page"))
+
     except Exception as e:
         # non-fatal: fall through to legacy methods
         print("DB login check failed:", e)
@@ -2281,7 +2284,8 @@ def do_login():
             session["user_id"] = int(hashlib.sha1(uname.encode("utf-8")).hexdigest()[:8], 16)
         except Exception:
             session["user_id"] = 0
-        return redirect(url_for("app_page"))
+        return redirect("/owner/console")
+
 
     # 3) Legacy users.json fallback (until we migrate)
     u = _get_user(user)
@@ -2298,7 +2302,10 @@ def do_login():
             session["user_id"] = int(uid)
         except Exception:
             session["user_id"] = 0
+        if is_admin():
+            return redirect("/owner/console")
         return redirect(url_for("app_page"))
+
 
     # Fail
     html = LOGIN_HTML.replace("<!--ERROR-->", "<div class='err'>Invalid credentials</div>")
@@ -2950,6 +2957,8 @@ APP_HTML = HTML
 
 @app.get("/app")
 def app_page():
+        if is_admin():
+        return redirect("/owner/console")
     # Render template
     html = render_template_string(
         HTML,
@@ -2961,7 +2970,7 @@ def app_page():
         html = html.replace(
             "</body>",
             (
-                '<a href="/director/usage" class="dir-link" title="Director usage">Director</a>'
+                '<a href="/director/usage" class="dir-link" title="Director dashboard">Director dashboard</a>'
                 '<style>'
                 '.dir-link{position:fixed;right:16px;bottom:16px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;'
                 'background:#fff;color:#0f172a;text-decoration:none;box-shadow:0 1px 2px rgba(0,0,0,0.06);'
@@ -5778,6 +5787,8 @@ def director_ui():
     users (with any caps if present), recent pool activity, create users,
     reset passwords, and toggle user active state.
     """
+        if not (session.get("director") or is_admin()):
+        return make_response("forbidden", 403)
     # must be logged in
     try:
         uid = int(session.get("user_id") or 0)
@@ -7226,6 +7237,8 @@ def me_diag_v2():
 # ---------- Director routes ----------
 @app.get("/director")
 def director_home():
+    if not (session.get("director") or is_admin()):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
        return redirect(url_for("director_ui"))
 
 
@@ -7333,6 +7346,8 @@ def director_forgot_post():
     
 @app.get("/director/usage")
 def director_usage():
+    if not (session.get("director") or is_admin()):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
         return redirect(url_for("director_ui"))
 
 
@@ -7453,6 +7468,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

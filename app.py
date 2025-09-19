@@ -644,8 +644,8 @@ HOMEPAGE_HTML = r"""
     <div class="nav">
       <a class="brand" href="/">Lustra</a>
       <div>
-        <a href="/pricing">Pricing</a>
-        <a href="/about" style="margin-left:18px">About</a>
+        <a href="/about">About</a>
+        <a href="/pricing" style="margin-left:18px">Pricing</a>
         <a href="/login" style="margin-left:18px">Sign in</a>
       </div>
     </div>
@@ -6320,6 +6320,7 @@ def owner_console():
   <a class="btn" id="exportOrgBtn" href="#" title="Export a single org">Export CSV (org)</a>
   <a class="btn" id="exportRangeBtn" href="#" title="Export by date range">Export CSV (range)</a>
   <a class="btn" href="/owner/new-client" title="Create org + user (+ optional template/profile)">New Client</a>
+  <a class="btn" href="/logout">Log out</a>
 </div>
   </div>
 
@@ -7470,6 +7471,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -5787,8 +5787,10 @@ def director_ui():
     users (with any caps if present), recent pool activity, create users,
     reset passwords, and toggle user active state.
     """
-        if not (session.get("director") or is_admin()):
+    # access guard
+    if not (session.get("director") or is_admin()):
         return make_response("forbidden", 403)
+
     # must be logged in
     try:
         uid = int(session.get("user_id") or 0)
@@ -7348,7 +7350,7 @@ def director_forgot_post():
 def director_usage():
     if not (session.get("director") or is_admin()):
         return jsonify({"ok": False, "error": "forbidden"}), 403
-        return redirect(url_for("director_ui"))
+    return redirect(url_for("director_ui"))
 
 
 # ---------- App polishing + API (org-aware credits) ----------
@@ -7468,6 +7470,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

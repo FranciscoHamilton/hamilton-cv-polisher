@@ -2957,7 +2957,7 @@ APP_HTML = HTML
 
 @app.get("/app")
 def app_page():
-        if is_admin():
+    if is_admin():
         return redirect("/owner/console")
     # Render template
     html = render_template_string(
@@ -7239,7 +7239,7 @@ def me_diag_v2():
 def director_home():
     if not (session.get("director") or is_admin()):
         return jsonify({"ok": False, "error": "forbidden"}), 403
-       return redirect(url_for("director_ui"))
+    return redirect(url_for("director_ui"))
 
 
 @app.post("/director/login")
@@ -7468,6 +7468,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -1392,6 +1392,9 @@ button[disabled]{opacity:.6;cursor:not-allowed}
   display:inline-block;border:1px dashed var(--line);border-radius:12px;padding:6px 10px;font-weight:800;
   color:var(--blue);background:#fff
 }
+/* Skills pills – smaller + black */
+#skillsAll .pill{ font-size:12px; color: var(--ink); }
+#skillsAll .pill .x{ font-size:12px; }
 .pill{
   display:inline-flex;align-items:center;gap:6px;
   padding:3px 8px;border:1px solid var(--line);border-radius:999px;
@@ -7464,6 +7467,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

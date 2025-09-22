@@ -1171,6 +1171,7 @@ PRICING_HTML = r"""
     .hint{font-size:12.5px;color:var(--muted);margin-top:6px}
     .pill{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:#eef4ff;border:1px solid #e5e7eb}
     .best .tag{font-weight:900;font-size:12px;letter-spacing:.04em;padding:6px 10px;border-radius:999px;color:#fff; background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+    .best{display:flex;align-items:center;gap:10px}
     .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
     .cmp{border:1px dashed var(--line);border-radius:12px;padding:10px;background:#f9fbff}
     .cmp h4{margin:0 0 4px;font-size:14px}
@@ -1238,31 +1239,12 @@ PRICING_HTML = r"""
             <div class="big">£<span id="bestCost">—</span> /mo</div>
             <div class="hint" id="bestNotes">—</div>
           </div>
-          <div>
-            <label>Also see</label>
-            <div class="hint">We compare plans (with overage) vs packs.</div>
           </div>
         </div>
 
         <div class="grid3">
           <div class="cmp">
-            <h4>Starter</h4>
-            <div class="num">£<span id="c_starter">—</span></div>
-            <div class="hint" id="n_starter">—</div>
-          </div>
-          <div class="cmp">
-            <h4>Growth</h4>
-            <div class="num">£<span id="c_growth">—</span></div>
-            <div class="hint" id="n_growth">—</div>
-          </div>
-          <div class="cmp">
-            <h4>Scale</h4>
-            <div class="num">£<span id="c_scale">—</span></div>
-            <div class="hint" id="n_scale">—</div>
-          </div>
-        </div>
-
-        <div class="grid3">
+             <div class="grid3">
           <div class="cmp">
             <h4>Buy Pack 100</h4>
             <div class="num">£<span id="c_pack100">—</span></div>
@@ -1283,21 +1265,6 @@ PRICING_HTML = r"""
     </div>
   </div>
 
-  <p class="hint" style="margin:10px 2px">
-    We always use <strong>Monthly</strong> first, then <strong>Packs</strong> if available, otherwise <strong>Overage</strong>. Prices exclude VAT.
-  </p>
-
-  <script>
-    // Pricing (updated overage)
-    const PLANS = {
-      starter:{ key:'starter', name:'Starter', limit:100, monthly:150, overage:1.55, color:'#2563eb' },
-      growth :{ key:'growth',  name:'Growth',  limit:250, monthly:350, overage:1.45, color:'#0ea5e9' },
-      scale  :{ key:'scale',   name:'Scale',   limit:500, monthly:650, overage:1.35, color:'#8b5cf6' },
-    };
-    const PACKS = [
-      { key:'pack100', name:'Buy Pack 100', size:100, price:160 },
-      { key:'pack300', name:'Buy Pack 300', size:300, price:450 },
-      { key:'pack500', name:'Buy Pack 500', size:500, price:700 },
     ];
     const money = v => (Math.round(v * 100) / 100).toFixed(2);
 
@@ -7879,6 +7846,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

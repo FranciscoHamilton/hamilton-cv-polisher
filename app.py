@@ -87,6 +87,10 @@ CREATE TABLE IF NOT EXISTS org_user_limits (
   active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP DEFAULT NOW()
 );
+-- Backfill 'active' columns for older databases (safe to run anytime)
+ALTER TABLE users           ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
+ALTER TABLE orgs            ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
+ALTER TABLE org_user_limits ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
 
 -- Helpful indexes (idempotent)
 CREATE INDEX IF NOT EXISTS idx_users_org_id           ON users(org_id);
@@ -7242,10 +7246,11 @@ def director_home():
 
 
 @app.post("/director/login")
-def director_usage():
-    if not (session.get("director") or is_admin()):
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-    return redirect(url_for("director_ui"))
+def director_login():
+    pw = (request.form.get("password") or "").strip()
+    if pw == STATS.get("director_pass_override", DIRECTOR_PASS):
+        session["director"] = True
+        return redirect(url_for("director_home"))
     html = DIRECTOR_LOGIN_HTML.replace("<!--DERR-->", "<div class='err'>Incorrect director password</div>")
     return render_template_string(html), 401
 
@@ -7466,6 +7471,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

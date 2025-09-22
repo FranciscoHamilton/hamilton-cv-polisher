@@ -1234,14 +1234,14 @@ CONTACT_HTML = r"""
     }
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:980px;margin:28px auto 64px;padding:0 24px}
+    .wrap{max-width:1180px;margin:28px auto 64px;padding:0 28px}
     .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
     .brand{font-weight:900;color:#0f172a;text-decoration:none;font-size:22px;letter-spacing:.2px}
     .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
-    .pagebox{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:22px}
+    .pagebox{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:28px}
     h1{margin:2px 0 6px;font-size:40px;letter-spacing:-.01em}
     .sub{margin:0 0 16px;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:2fr 1fr;gap:22px}
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:26px}
     @media(max-width:900px){ .grid{grid-template-columns:1fr} }
     label{font-weight:800;font-size:14px;margin:12px 0 6px;display:block}
     input[type="text"], input[type="email"], select, textarea{
@@ -7684,6 +7684,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

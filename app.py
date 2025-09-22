@@ -92,6 +92,23 @@ ALTER TABLE users           ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE
 ALTER TABLE orgs            ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
 ALTER TABLE org_user_limits ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT TRUE;
 
+-- Leads (contact / trial requests)
+CREATE TABLE IF NOT EXISTS leads (
+  id          BIGSERIAL PRIMARY KEY,
+  created_at  TIMESTAMP DEFAULT NOW(),
+  company     TEXT,
+  email       TEXT,
+  name        TEXT,
+  volume      TEXT,
+  users       TEXT,
+  templates   TEXT,
+  need_sso    TEXT,
+  message     TEXT,
+  filename    TEXT,
+  ip          TEXT,
+  user_agent  TEXT
+);
+
 -- Helpful indexes (idempotent)
 CREATE INDEX IF NOT EXISTS idx_users_org_id           ON users(org_id);
 CREATE INDEX IF NOT EXISTS idx_usage_month_user       ON usage_events(user_id, ts);
@@ -1201,6 +1218,170 @@ PRICING_HTML = r"""
 </html>
 """
 
+CONTACT_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Talk to Sales — Lustra</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --brand:#2563eb; --brand-2:#22d3ee;
+      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+      --bg:#f6f9ff; --card:#fff; --shadow:0 10px 24px rgba(2,6,23,.06);
+      --ok:#16a34a; --red:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:980px;margin:28px auto 64px;padding:0 24px}
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .brand{font-weight:900;color:#0f172a;text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+    .pagebox{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:22px}
+    h1{margin:2px 0 6px;font-size:40px;letter-spacing:-.01em}
+    .sub{margin:0 0 16px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:22px}
+    @media(max-width:900px){ .grid{grid-template-columns:1fr} }
+    label{font-weight:800;font-size:14px;margin:12px 0 6px;display:block}
+    input[type="text"], input[type="email"], select, textarea{
+      width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;
+      font-size:15px;outline:none;background:#fff;
+    }
+    textarea{min-height:110px;resize:vertical}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .hint{font-size:12.5px;color:var(--muted);margin-top:4px}
+    .btn{
+      display:inline-block;width:100%;padding:14px 18px;border-radius:999px;text-align:center;
+      font-weight:900;text-decoration:none;border:none;background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff
+    }
+    .side{background:#fbfdff;border:1px solid var(--line);border-radius:16px;padding:16px}
+    .pill{display:inline-flex;align-items:center;padding:4px 8px;border:1px solid var(--line);border-radius:999px;margin:6px 6px 0 0;font-size:12px;color:var(--ink)}
+    .tick{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:rgba(34,211,238,.15);color:#0891b2;font-weight:900;font-size:11px;margin-right:6px}
+    .err{color:var(--red);font-weight:700;margin:6px 0 0}
+    .ok{color:var(--ok);font-weight:800}
+    .fineprint{margin-top:12px;color:var(--muted);font-size:12.5px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <a class="brand" href="/">Lustra</a>
+      <div>
+        <a href="/about">About</a>
+        <a href="/pricing" style="margin-left:18px">Pricing</a>
+        <a href="/login" style="margin-left:18px">Sign in</a>
+      </div>
+    </div>
+
+    <div class="pagebox">
+      <h1>Talk to Sales</h1>
+      <p class="sub">Tell us about your desk; we’ll get you live in a day. Or start a 5-CV trial — no card required.</p>
+
+      <form method="POST" enctype="multipart/form-data" class="grid">
+        <div>
+          <label>Company</label>
+          <input name="company" type="text" required>
+
+          <div class="row">
+            <div>
+              <label>Work email</label>
+              <input name="email" type="email" required>
+            </div>
+            <div>
+              <label>Your name</label>
+              <input name="name" type="text">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Monthly CVs</label>
+              <select name="volume" required>
+                <option value="">Choose…</option>
+                <option>100</option>
+                <option>250</option>
+                <option>500</option>
+                <option>700+</option>
+                <option>Not sure</option>
+              </select>
+            </div>
+            <div>
+              <label>Users</label>
+              <select name="users" required>
+                <option value="">Choose…</option>
+                <option>1–5</option>
+                <option>6–10</option>
+                <option>11–20</option>
+                <option>21–30</option>
+                <option>30+</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Templates needed</label>
+              <select name="templates">
+                <option>1 (included)</option>
+                <option>2</option>
+                <option>3+</option>
+              </select>
+              <div class="hint">Extra templates £50 each.</div>
+            </div>
+            <div>
+              <label>SSO / SLA required?</label>
+              <select name="need_sso">
+                <option>No</option>
+                <option>Yes</option>
+                <option>Maybe</option>
+              </select>
+            </div>
+          </div>
+
+          <label>Message (optional)</label>
+          <textarea name="message" placeholder="Anything we should know?"></textarea>
+
+          <label>Upload a sample CV (optional)</label>
+          <input name="file" type="file" accept=".pdf,.doc,.docx,.txt">
+
+          <!-- anti-spam -->
+          <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off">
+
+          <!-- CSRF -->
+          <input type="hidden" name="csrf" value="{{csrf}}">
+
+          <div style="margin-top:16px">
+            <button class="btn" type="submit">Send to Sales / Start trial</button>
+          </div>
+
+          <div class="fineprint">We’ll reply within 1 business day. We never use your documents to train models.</div>
+        </div>
+
+        <aside class="side">
+          <div style="font-weight:900;margin-bottom:10px">What you get</div>
+          <div><span class="tick">✓</span>On-brand DOCX output</div>
+          <div><span class="tick">✓</span>PDF / DOCX / TXT supported</div>
+          <div><span class="tick">✓</span>Org-wide credits & usage</div>
+          <div><span class="tick">✓</span>CSV exports and Director dashboard</div>
+          <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
+          <div style="font-weight:900;margin-bottom:6px">Plans</div>
+          <div class="pill">Starter — 100 CVs · £150/mo</div>
+          <div class="pill">Growth — 250 CVs · £350/mo</div>
+          <div class="pill">Scale — 500 CVs · £650/mo</div>
+          <div class="hint" style="margin-top:8px">Buy Packs available · non-expiring.</div>
+          <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
+          <div style="font-weight:900;margin-bottom:6px">Prefer email?</div>
+          <div><a href="mailto:hello@lustra.uk">hello@lustra.uk</a></div>
+          <div class="hint">We reply within 1 business day.</div>
+        </aside>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
+"""
+
 # ------------------------ Start Free Trial (new) ------------------------
 START_HTML = r"""
 <!doctype html>
@@ -2209,43 +2390,75 @@ def start_trial():
     # Keep buttons working: send them to the new Start Free Trial form
     return redirect("/start")
 
-# --- Start Free Trial: new routes ---
+# at top of file (once)
+from secrets import token_hex
+import os, re
+
 @app.get("/start")
-def start_free_trial_form():
-    resp = make_response(render_template_string(START_HTML))
+def contact_get():
+    # CSRF token for the form
+    if not session.get("csrf"):
+        session["csrf"] = token_hex(16)
+    html = CONTACT_HTML.replace("{{csrf}}", session["csrf"])
+    resp = make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
     resp.headers["Cache-Control"] = "no-store"
     return resp
 
 @app.post("/start")
-def start_free_trial_submit():
-    # Honeypot: if filled, treat as bot, but still continue to login
-    if (request.form.get("company_website") or "").strip():
-        return redirect(url_for("login"))
+def contact_post():
+    # CSRF + honeypot (supports old and new field names)
+    if (request.form.get("csrf") or "") != (session.get("csrf") or ""):
+        return "invalid csrf", 400
+    if (request.form.get("website") or request.form.get("company_website") or "").strip():
+        return "ok", 200  # silent drop for bots
 
-    data = {
-        "company": (request.form.get("company") or "").strip(),
-        "email": (request.form.get("email") or "").strip(),
-        "name": (request.form.get("name") or "").strip(),
-        "team_size": (request.form.get("team_size") or "").strip(),
-        "notes": (request.form.get("notes") or "").strip(),
-    }
+    company   = (request.form.get("company") or "").strip()
+    email     = (request.form.get("email") or "").strip()
+    name      = (request.form.get("name") or "").strip()
+    volume    = (request.form.get("volume") or "").strip()
+    users     = (request.form.get("users") or "").strip()
+    templates = (request.form.get("templates") or "").strip()
+    need_sso  = (request.form.get("need_sso") or "").strip()
+    message   = (request.form.get("message") or "").strip()
+    ip        = request.headers.get("X-Forwarded-For","").split(",")[0].strip() or request.remote_addr or ""
+    ua        = request.headers.get("User-Agent","").strip()
 
-    # Basic validation
-    if not data["company"] or not data["email"] or not data["name"]:
-        return redirect("/start")
-
-    # Give 5 trial credits in this session
-    session["trial_credits"] = 5
-
-    # Log the request (safe if logger not present)
+    # optional file
+    upname = ""
     try:
-        _log_trial_request(data)
+        f = request.files.get("file")
+        if f and (f.filename or "").strip():
+            fn = re.sub(r"[^A-Za-z0-9_.-]+","_", f.filename.strip())
+            if len(fn) > 60: fn = fn[-60:]
+            path = os.path.join("/tmp", f"lead_" + token_hex(4) + "_" + fn)
+            f.save(path)
+            upname = os.path.basename(path)
     except Exception:
         pass
 
-    # Send them to Sign in — your banner will show the 5 credits
-    return redirect(url_for("login"))
+    try:
+        db_execute("""
+          INSERT INTO leads (company,email,name,volume,users,templates,need_sso,message,filename,ip,user_agent)
+          VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        """, (company,email,name,volume,users,templates,need_sso,message,upname,ip,ua))
+    except Exception as e:
+        print("lead insert failed:", e)
 
+    # thank-you view
+    thanks = """
+    <div class="pagebox">
+      <h1>Thanks — we’ve got it!</h1>
+      <p class="sub">We’ll reach out within 1 business day. You can also email <a href="mailto:hello@lustra.uk">hello@lustra.uk</a>.</p>
+      <p><a class="btn" href="/login" style="width:auto;padding-left:20px;padding-right:20px">Sign in to start your 5-CV trial</a></p>
+    </div>
+    """
+    html = CONTACT_HTML.replace(
+        '<form method="POST" enctype="multipart/form-data" class="grid">', thanks
+    ).replace("</form>", "")
+    resp = make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+    
 # ------------------------ Auth routes (unchanged, plus user DB support) ------------------------
 @app.get("/login")
 def login():
@@ -7471,6 +7684,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

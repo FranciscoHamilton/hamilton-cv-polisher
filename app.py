@@ -1173,47 +1173,215 @@ PRICING_HTML = r"""
     </div>
   </div>
 
+  <section id="calc" style="margin:36px 0 14px">
+  <h2 style="font-size:28px;letter-spacing:-.01em;color:#0b1220">Savings & best plan</h2>
+  <p class="sub" style="margin:6px 0 18px">Estimate time/payroll savings and see which plan (with overage) or pack fits your volume.</p>
+
+  <style>
+    .calc-wrap{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    @media(max-width:900px){ .calc-wrap{grid-template-columns:1fr} }
+    .card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+    .card .in{padding:16px 16px 18px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+    .row .full{grid-column:1 / -1}
+    label{font-weight:800;color:#0b1220;font-size:14px}
+    input[type="number"], input[type="text"], select{
+      width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:13.5px;background:#fff
+    }
+    .hint{font-size:12.5px;color:var(--muted);margin-top:6px}
+    .pill{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:#eef2ff;border:1px solid #e5e7eb;font-weight:800}
+    .best{display:flex;align-items:center;gap:10px;margin:8px 0 0}
+    .best .tag{font-weight:900;font-size:12px;letter-spacing:.04em;padding:6px 10px;border-radius:999px;color:#fff}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+    .cmp{border:1px dashed var(--line);border-radius:12px;padding:10px}
+    .cmp h4{margin:0 0 4px;font-size:14px}
+    .cmp .num{font-weight:900;font-size:18px}
+  </style>
+
+  <div class="calc-wrap">
+    <!-- Inputs -->
+    <div class="card">
+      <div class="in">
+        <div class="row">
+          <div>
+            <label>CVs per month</label>
+            <input id="c_volume" type="number" min="1" step="1" value="120" />
+          </div>
+          <div>
+            <label>Minutes per CV</label>
+            <input id="c_minutes" type="number" min="1" step="1" value="15" />
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div class="full">
+            <label>Recruiter hourly <strong>rate</strong> (£)</label>
+            <input id="c_rate" type="number" min="1" step="1" value="30" />
+          </div>
+        </div>
+
+        <div class="grid3">
+          <div class="cmp">
+            <h4>Time saved</h4>
+            <div class="num"><span id="saved_mo">—</span> /mo</div>
+            <div class="hint"><span id="saved_yr">—</span> /yr</div>
+          </div>
+          <div class="cmp">
+            <h4>Payroll saved</h4>
+            <div class="num">£<span id="pay_mo">—</span> /mo</div>
+            <div class="hint">£<span id="pay_yr">—</span> /yr</div>
+          </div>
+          <div class="cmp">
+            <h4>Effective £/CV</h4>
+            <div class="num">£<span id="eff_cv">—</span></div>
+            <div class="hint">at recommended option</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="card">
+      <div class="in">
+        <div class="pill">
+          <div class="best">
+            <span id="bestTag" class="tag" style="background:var(--brand)">BEST OPTION</span>
+            <div id="bestName" style="font-weight:900">—</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div>
+            <label>Monthly cost</label>
+            <div class="num" style="font-weight:900;font-size:22px">£<span id="bestCost">—</span> /mo</div>
+            <div class="hint" id="bestNotes">—</div>
+          </div>
+          <div>
+            <label>Also see</label>
+            <div class="hint">We compare plans (with overage) vs packs.</div>
+          </div>
+        </div>
+
+        <div class="grid3">
+          <div class="cmp">
+            <h4>Starter</h4>
+            <div class="num">£<span id="c_starter">—</span></div>
+            <div class="hint" id="n_starter">—</div>
+          </div>
+          <div class="cmp">
+            <h4>Growth</h4>
+            <div class="num">£<span id="c_growth">—</span></div>
+            <div class="hint" id="n_growth">—</div>
+          </div>
+          <div class="cmp">
+            <h4>Scale</h4>
+            <div class="num">£<span id="c_scale">—</span></div>
+            <div class="hint" id="n_scale">—</div>
+          </div>
+        </div>
+
+        <div class="grid3">
+          <div class="cmp">
+            <h4>Buy Pack 100</h4>
+            <div class="num">£<span id="c_pack100">—</span></div>
+            <div class="hint">£1.60/CV (non-expiring)</div>
+          </div>
+          <div class="cmp">
+            <h4>Buy Pack 300</h4>
+            <div class="num">£<span id="c_pack300">—</span></div>
+            <div class="hint">£1.50/CV (non-expiring)</div>
+          </div>
+          <div class="cmp">
+            <h4>Buy Pack 500</h4>
+            <div class="num">£<span id="c_pack500">—</span></div>
+            <div class="hint">£1.40/CV (non-expiring)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="hint" style="margin:10px 2px">
+    We always use <strong>Monthly</strong> first, then <strong>Packs</strong> if available, otherwise <strong>Overage</strong>. Prices exclude VAT.
+  </p>
+
   <script>
-    /* Calculator unchanged — only plan constants updated */
-    function fmt(n){ return new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(n); }
-    function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
+    // ---- helpers
+    const money = v => (Math.round(v * 100) / 100).toFixed(2);
 
-    const PLANS = [
-      { kind:'Monthly', key:'Starter', baseCredits:100, baseCost:150, baseRate:1.50, overRate:1.70 },
-      { kind:'Monthly', key:'Growth',  baseCredits:300, baseCost:420, baseRate:1.40, overRate:1.60 },
-      { kind:'Monthly', key:'Scale',   baseCredits:500, baseCost:650, baseRate:1.30, overRate:1.50 }
-      // Buy Packs are on-demand; not part of the "best monthly plan" picker.
-    ];
+    function planCost(p, vol){
+      const over = Math.max(0, vol - p.limit);
+      const cost = p.monthly + over * p.overage;
+      const note = over > 0 ? `${over} over @ £${p.overage.toFixed(2)}/CV` : `within ${p.limit} CVs`;
+      return { key:p.key, name:p.name, cost, eff: cost/vol, note, color:p.color, type:'plan' };
+    }
 
-    function costFor(plan, volume){
-      const included=Math.min(volume, plan.baseCredits);
-      const over=Math.max(0, volume - plan.baseCredits);
-      const cost=plan.baseCost + over*plan.overRate;
-      const percv=volume ? (cost/volume) : 0;
-      const detail=over>0?`includes ${plan.baseCredits} + ${over} over @ £${plan.overRate.toFixed(2)}`:`up to ${plan.baseCredits} included`;
-      return { name:plan.key, cost, percv, detail };
+    function packCost(vol){
+      // choose the smallest single pack that covers volume (clean + easy to explain)
+      let choice = null;
+      for (const pk of PACKS){
+        if (vol <= pk.size){ choice = { key:pk.key, name:pk.name, cost:pk.price, eff: pk.price/vol, note:`${pk.size} CV pack`, color:'#0f172a', type:'pack' }; break; }
+      }
+      // if volume > 500, suggest multi-pack rough cost
+      if (!choice){
+        const n = Math.ceil(vol / 500);
+        const cost = n * 700;
+        choice = { key:'packMulti', name:`Buy Pack 500 × ${n}`, cost, eff: cost/vol, note:`approx, non-expiring`, color:'#0f172a', type:'pack' };
+      }
+      return choice;
     }
 
     function calc(){
-      const cvs=parseFloat(document.getElementById('cvs').value)||0;
-      const mManual=parseFloat(document.getElementById('minManual').value)||0;
-      const rate=parseFloat(document.getElementById('hourRate').value)||0;
+      const vol = Math.max(1, parseInt(document.getElementById('c_volume').value||'0',10));
+      const mins = Math.max(1, parseInt(document.getElementById('c_minutes').value||'1',10));
+      const rate = Math.max(1, parseFloat(document.getElementById('c_rate').value||'1'));
 
-      const timeSavedHours=(Math.max(0,mManual)*cvs)/60;
-      const moneySaved=timeSavedHours*rate;
-      document.getElementById('outHours').textContent=(Math.round(timeSavedHours*10)/10).toFixed(1);
-      document.getElementById('outMoney').textContent=fmt(Math.round(moneySaved));
+      // savings (month/year)
+      const hrs = (mins/60) * vol;
+      const payMo = hrs * rate;
+      document.getElementById('saved_mo').textContent = money(hrs) + ' h';
+      document.getElementById('saved_yr').textContent = money(hrs*12) + ' h';
+      document.getElementById('pay_mo').textContent = money(payMo);
+      document.getElementById('pay_yr').textContent = money(payMo*12);
 
-      const options=PLANS.map(p=>({plan:p,quote:costFor(p,cvs)})).sort((a,b)=>a.quote.cost-b.quote.cost);
-      const pickEl=document.getElementById('planPick');
-      if(!cvs){ pickEl.textContent=''; return; }
-      const best=options[0].quote;
-      const percv=best.percv?` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)`:'';
-      pickEl.innerHTML=`Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>/mo${percv}<br><span class="sub">${best.detail}</span>`;
+      // costs
+      const s = planCost(PLANS.starter, vol);
+      const g = planCost(PLANS.growth,  vol);
+      const sc= planCost(PLANS.scale,   vol);
+      const pk= packCost(vol);
+
+      // display comparisons
+      document.getElementById('c_starter').textContent = money(s.cost);
+      document.getElementById('n_starter').textContent = s.note;
+      document.getElementById('c_growth').textContent  = money(g.cost);
+      document.getElementById('n_growth').textContent  = g.note;
+      document.getElementById('c_scale').textContent   = money(sc.cost);
+      document.getElementById('n_scale').textContent   = sc.note;
+      document.getElementById('c_pack100').textContent = vol<=100 ? '160.00' : '—';
+      document.getElementById('c_pack300').textContent = vol<=300 && vol>100 ? '450.00' : '—';
+      document.getElementById('c_pack500').textContent = vol<=500 && vol>300 ? '700.00' : (vol>500 ? money(pk.cost) : '—');
+
+      // choose best (min cost among the four)
+      const options = [s,g,sc,pk];
+      const best = options.reduce((a,b)=> a.cost<b.cost ? a : b);
+
+      // best box
+      const tag = document.getElementById('bestTag');
+      const nm  = document.getElementById('bestName');
+      const bc  = document.getElementById('bestCost');
+      const bn  = document.getElementById('bestNotes');
+      tag.style.background = (best.type==='plan') ? best.color : 'linear-gradient(90deg,var(--brand),var(--brand-2))';
+      nm.textContent = best.name;
+      bc.textContent = money(best.cost);
+      bn.textContent = (best.type==='plan') ? best.note : 'Non-expiring pack';
+      document.getElementById('eff_cv').textContent = money(best.cost / vol);
     }
-    document.addEventListener('input', (e)=>{ if(['cvs','minManual','hourRate'].includes(e.target.id)) calc(); });
-    document.addEventListener('DOMContentLoaded', calc);
+
+    ['c_volume','c_minutes','c_rate'].forEach(id => {
+      document.getElementById(id).addEventListener('input', calc);
+    });
+    window.addEventListener('load', calc);
   </script>
+</section>
 </body>
 </html>
 """
@@ -7706,6 +7874,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -1261,6 +1261,29 @@ CONTACT_HTML = r"""
     .err{color:var(--red);font-weight:700;margin:6px 0 0}
     .ok{color:var(--ok);font-weight:800}
     .fineprint{margin-top:12px;color:var(--muted);font-size:12.5px}
+/* --- FORM FIELD SIZE TUNE-UP (smaller inputs + selects) --- */
+.pagebox label{font-size:17px;font-weight:800}
+
+.pagebox input[type="text"],
+.pagebox input[type="email"],
+.pagebox input[type="number"],
+.pagebox select{
+  height:44px;          /* trim control height */
+  padding:8px 12px;
+  font-size:15.5px;     /* smaller than label */
+  line-height:1.25;
+  border-radius:12px;
+}
+
+.pagebox textarea{
+  font-size:15.5px;
+  line-height:1.35;
+  padding:10px 12px;
+  min-height:120px;
+}
+
+.pagebox ::placeholder{font-size:15.5px;opacity:.65}
+.pagebox .btn{padding:12px 16px}
   </style>
 </head>
 <body>
@@ -7684,6 +7707,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

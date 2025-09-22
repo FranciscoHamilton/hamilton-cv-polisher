@@ -5887,7 +5887,7 @@ def director_ui():
 </head>
 <body>
   <header>
-    <a class="back" href="/app" onclick="if(history.length>1){{history.back(); return false;}}">← Back</a>
+    <a class="back" href="/app">← Back</a>
     <h1>Director Console</h1>
     <span id="orgBadge" class="muted"></span>
   </header>
@@ -7471,6 +7471,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

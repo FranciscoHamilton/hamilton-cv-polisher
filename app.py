@@ -1184,19 +1184,22 @@ PRICING_HTML = r"""
       <div class="in">
         <div class="row">
           <div>
+                      <div>
             <label>CVs per month</label>
-            <input id="c_volume" type="number" min="1" step="1" value="120" />
+            <input id="c_volume" type="number" min="1" step="1" value="120" placeholder="e.g., 120" />
+            <div class="hint">Estimated number of CVs your team will polish each month.</div>
           </div>
           <div>
             <label>Minutes per CV</label>
-            <input id="c_minutes" type="number" min="1" step="1" value="15" />
+            <input id="c_minutes" type="number" min="1" step="1" value="15" placeholder="e.g., 15" />
+            <div class="hint">Average minutes you currently spend tidying one CV (before Lustra).</div>
           </div>
         </div>
         <div class="row" style="margin-top:10px">
           <div class="full">
             <label>Recruiter hourly <strong>rate</strong> (£)</label>
-            <input id="c_rate" type="number" min="1" step="1" value="30" />
-          </div>
+            <input id="c_rate" type="number" min="1" step="1" value="30" placeholder="e.g., 30" />
+            <div class="hint">Average fully-loaded hourly cost per recruiter (salary ÷ hours).</div>
         </div>
 
         <div class="grid3">
@@ -1300,22 +1303,42 @@ PRICING_HTML = r"""
 
     function planCost(p, vol){
       const over = Math.max(0, vol - p.limit);
-      const cost = p.monthly + over * p.overage;
-      const note = over > 0 ? `${over} over @ £${p.overage.toFixed(2)}/CV` : `within ${p.limit} CVs`;
-      return { key:p.key, name:p.name, cost, eff: cost/vol, note, color:p.color, type:'plan' };
+      const overCost = over * p.overage;
+      const cost = p.monthly + overCost;
+      const note = over > 0
+        ? `${over} over @ £${p.overage.toFixed(2)}/CV`
+        : `within ${p.limit} CVs`;
+      const longnote = over > 0
+        ? `Includes ${p.limit} CVs. You have ${over} additional CVs charged as overage at £${p.overage.toFixed(2)} per CV (£${overCost.toFixed(2)}). Total £${cost.toFixed(2)}/mo.`
+        : `Covers up to ${p.limit} CVs this month. No overage. Total £${cost.toFixed(2)}/mo.`;
+      return { key:p.key, name:p.name, cost, eff: cost/vol, note, longnote, color:p.color, type:'plan' };
     }
-    function packCost(vol){
+        function packCost(vol){
       let choice = null;
       for (const pk of PACKS){
         if (vol <= pk.size){
-          choice = { key:pk.key, name:pk.name, cost:pk.price, eff: pk.price/vol, note:`${pk.size} CV pack`, color:'#0f172a', type:'pack' };
+          const eff = pk.price / vol;
+          choice = {
+            key:pk.key, name:pk.name, cost:pk.price, eff,
+            note:`${pk.size} CV pack`,
+            longnote:`Non-expiring pack of ${pk.size} CVs. Effective £/CV at your volume: £${eff.toFixed(2)}.`,
+            color:'#0f172a', type:'pack'
+          };
           break;
         }
       }
       if (!choice){
         const n = Math.ceil(vol / 500);
         const cost = n * 700;
-        choice = { key:'packMulti', name:`Buy Pack 500 × ${n}`, cost, eff: cost/vol, note:`approx, non-expiring`, color:'#0f172a', type:'pack' };
+        const eff = cost / vol;
+        choice = {
+          key:'packMulti',
+          name:`Buy Pack 500 × ${n}`,
+          cost, eff,
+          note:`approx, non-expiring`,
+          longnote:`Approximate suggestion: Buy Pack 500 × ${n} (non-expiring). Effective £/CV at your volume: £${eff.toFixed(2)}.`,
+          color:'#0f172a', type:'pack'
+        };
       }
       return choice;
     }
@@ -1357,7 +1380,7 @@ PRICING_HTML = r"""
       document.getElementById('bestTag').style.background = (best.type==='plan') ? best.color : 'linear-gradient(90deg,var(--brand),var(--brand-2))';
       document.getElementById('bestName').textContent = best.name;
       document.getElementById('bestCost').textContent = money(best.cost);
-      document.getElementById('bestNotes').textContent = (best.type==='plan') ? best.note : 'Non-expiring pack';
+      document.getElementById('bestNotes').textContent = best.longnote || best.note;
       document.getElementById('eff_cv').textContent = money(best.cost / vol);
     }
     ['c_volume','c_minutes','c_rate'].forEach(id => document.getElementById(id).addEventListener('input', calc));
@@ -7856,6 +7879,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

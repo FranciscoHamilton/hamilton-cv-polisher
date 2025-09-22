@@ -2973,7 +2973,7 @@ def app_page():
         html = html.replace(
             "</body>",
             (
-                '<a href="/director/usage" class="dir-link" title="Director dashboard">Director dashboard</a>'
+                '<a href="/director" class="dir-link" title="Director dashboard">Director dashboard</a>'
                 '<style>'
                 '.dir-link{position:fixed;right:16px;bottom:16px;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px;'
                 'background:#fff;color:#0f172a;text-decoration:none;box-shadow:0 1px 2px rgba(0,0,0,0.06);'
@@ -7236,17 +7236,16 @@ def me_diag_v2():
 # ---------- Director routes ----------
 @app.get("/director")
 def director_home():
-    if not (session.get("director") or is_admin()):
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-    return redirect(url_for("director_ui"))
+    if session.get("director") or is_admin():
+        return redirect(url_for("director_ui"))
+    return render_template_string(DIRECTOR_LOGIN_HTML)
 
 
 @app.post("/director/login")
-def director_login():
-    pw = (request.form.get("password") or "").strip()
-    if pw == STATS.get("director_pass_override", DIRECTOR_PASS):
-        session["director"] = True
-        return redirect(url_for("director_home"))
+def director_usage():
+    if not (session.get("director") or is_admin()):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    return redirect(url_for("director_ui"))
     html = DIRECTOR_LOGIN_HTML.replace("<!--DERR-->", "<div class='err'>Incorrect director password</div>")
     return render_template_string(html), 401
 
@@ -7467,6 +7466,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

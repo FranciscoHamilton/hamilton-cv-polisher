@@ -1063,7 +1063,7 @@ PRICING_HTML = r"""
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Email support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.45/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.55/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Starter</a>
@@ -1084,7 +1084,7 @@ PRICING_HTML = r"""
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.35/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.45/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Growth</a>
@@ -1105,7 +1105,7 @@ PRICING_HTML = r"""
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.25/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.35/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Scale</a>
@@ -7706,6 +7706,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

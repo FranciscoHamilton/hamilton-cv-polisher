@@ -1242,27 +1242,6 @@ PRICING_HTML = r"""
           </div>
         </div>
 
-        <div class="grid3">
-          <div class="cmp">
-             <div class="grid3">
-          <div class="cmp">
-            <h4>Buy Pack 100</h4>
-            <div class="num">£<span id="c_pack100">—</span></div>
-            <div class="hint">£1.60/CV (non-expiring)</div>
-          </div>
-          <div class="cmp">
-            <h4>Buy Pack 300</h4>
-            <div class="num">£<span id="c_pack300">—</span></div>
-            <div class="hint">£1.50/CV (non-expiring)</div>
-          </div>
-          <div class="cmp">
-            <h4>Buy Pack 500</h4>
-            <div class="num">£<span id="c_pack500">—</span></div>
-            <div class="hint">£1.40/CV (non-expiring)</div>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
     ];
@@ -1349,19 +1328,7 @@ PRICING_HTML = r"""
       document.getElementById('bestCost').textContent = money(best.cost);
       document.getElementById('bestNotes').textContent = best.longnote || best.note;
       document.getElementById('eff_cv').textContent = money(best.cost / vol);
-    }
-    ['c_volume','c_minutes','c_rate'].forEach(id => document.getElementById(id).addEventListener('input', calc));
-    window.addEventListener('load', calc);
-  </script>
-</section>
-</body>
-</html>
-"""
-
-CONTACT_HTML = r"""
-<!doctype html>
-<html lang="en">
-<head>
+    
   <meta charset="utf-8" />
   <title>Talk to Sales — Lustra</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -7846,6 +7813,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

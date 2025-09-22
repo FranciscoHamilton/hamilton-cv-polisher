@@ -1231,145 +1231,6 @@ PRICING_HTML = r"""
     document.addEventListener('input', (e)=>{ if(['cvs','minManual','hourRate'].includes(e.target.id)) recalc(); });
     document.addEventListener('DOMContentLoaded', recalc);
   </script>
-/* --- FORM FIELD SIZE TUNE-UP (reduce field text; keep label size unchanged) --- */
-.pagebox input[type="text"],
-.pagebox input[type="email"],
-.pagebox input[type="number"],
-.pagebox select{
-  height:42px;          /* a touch shorter */
-  padding:8px 12px;
-  font-size:14px;       /* smaller than label; titles unchanged */
-  line-height:1.25;
-  border-radius:12px;
-}
-
-.pagebox textarea{
-  font-size:14px;       /* smaller than label */
-  line-height:1.35;
-  padding:10px 12px;
-  min-height:110px;
-}
-
-.pagebox ::placeholder{font-size:14px;opacity:.65}
-/* optional: keep or remove this if you liked the smaller button */
-/* .pagebox .btn{padding:12px 16px} */
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/">Lustra</a>
-      <div>
-        <a href="/about">About</a>
-        <a href="/pricing" style="margin-left:18px">Pricing</a>
-        <a href="/login" style="margin-left:18px">Sign in</a>
-      </div>
-    </div>
-
-    <div class="pagebox">
-      <h1>Talk to Sales</h1>
-      <p class="sub">Tell us about your desk; we’ll get you live in a day. Or start a 5-CV trial — no card required.</p>
-
-      <form method="POST" enctype="multipart/form-data" class="grid">
-        <div>
-          <label>Company</label>
-          <input name="company" type="text" required>
-
-          <div class="row">
-            <div>
-              <label>Work email</label>
-              <input name="email" type="email" required>
-            </div>
-            <div>
-              <label>Your name</label>
-              <input name="name" type="text">
-            </div>
-          </div>
-
-          <div class="row">
-            <div>
-              <label>Monthly CVs</label>
-              <select name="volume" required>
-                <option value="">Choose…</option>
-                <option>100</option>
-                <option>250</option>
-                <option>500</option>
-                <option>700+</option>
-                <option>Not sure</option>
-              </select>
-            </div>
-            <div>
-              <label>Users</label>
-              <select name="users" required>
-                <option value="">Choose…</option>
-                <option>1–5</option>
-                <option>6–10</option>
-                <option>11–20</option>
-                <option>21–30</option>
-                <option>30+</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="row">
-            <div>
-              <label>Templates needed</label>
-              <select name="templates">
-                <option>1 (included)</option>
-                <option>2</option>
-                <option>3+</option>
-              </select>
-              <div class="hint">Extra templates £50 each.</div>
-            </div>
-            <div>
-              <label>SSO / SLA required?</label>
-              <select name="need_sso">
-                <option>No</option>
-                <option>Yes</option>
-                <option>Maybe</option>
-              </select>
-            </div>
-          </div>
-
-          <label>Message (optional)</label>
-          <textarea name="message" placeholder="Anything we should know?"></textarea>
-
-          <label>Upload a sample CV (optional)</label>
-          <input name="file" type="file" accept=".pdf,.doc,.docx,.txt">
-
-          <!-- anti-spam -->
-          <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off">
-
-          <!-- CSRF -->
-          <input type="hidden" name="csrf" value="{{csrf}}">
-
-          <div style="margin-top:16px">
-            <button class="btn" type="submit">Send to Sales / Start trial</button>
-          </div>
-
-          <div class="fineprint">We’ll reply within 1 business day. We never use your documents to train models.</div>
-        </div>
-
-        <aside class="side">
-          <div style="font-weight:900;margin-bottom:10px">What you get</div>
-          <div><span class="tick">✓</span>On-brand DOCX output</div>
-          <div><span class="tick">✓</span>PDF / DOCX / TXT supported</div>
-          <div><span class="tick">✓</span>Org-wide credits & usage</div>
-          <div><span class="tick">✓</span>CSV exports and Director dashboard</div>
-          <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
-          <div style="font-weight:900;margin-bottom:6px">Plans</div>
-          <div class="pill">Starter — 100 CVs · £150/mo</div>
-          <div class="pill">Growth — 250 CVs · £350/mo</div>
-          <div class="pill">Scale — 500 CVs · £650/mo</div>
-          <div class="hint" style="margin-top:8px">Buy Packs available · non-expiring.</div>
-          <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
-          <div style="font-weight:900;margin-bottom:6px">Prefer email?</div>
-          <div><a href="mailto:hello@lustra.uk">hello@lustra.uk</a></div>
-          <div class="hint">We reply within 1 business day.</div>
-        </aside>
-      </form>
-    </div>
-  </div>
 </body>
 </html>
 """
@@ -2385,6 +2246,171 @@ def start_trial():
 # at top of file (once)
 from secrets import token_hex
 import os, re
+# ------------------------ Contact / Talk to Sales page ------------------------
+CONTACT_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Talk to Sales — Lustra</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{--brand:#2563eb; --brand-2:#22d3ee; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#f6f9ff; --card:#fff;}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1180px;margin:28px auto 64px;padding:0 28px}
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .brand{font-weight:900;color:#0f172a;text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+
+    .pagebox{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 10px 24px rgba(2,6,23,.06);padding:28px}
+    h1{margin:2px 0 6px;font-size:40px;letter-spacing:-.01em}
+    .sub{margin:0 0 16px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:26px}
+    @media(max-width:900px){ .grid{grid-template-columns:1fr} }
+    label{font-weight:800;font-size:14px;margin:12px 0 6px;display:block}
+    input[type="text"], input[type="email"], select, textarea{
+      width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;
+      font-size:15px;outline:none;background:#fff;
+    }
+    textarea{min-height:110px;resize:vertical}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .hint{font-size:12.5px;color:var(--muted);margin-top:4px}
+    .btn{
+      display:inline-block;width:100%;padding:14px 18px;border-radius:999px;text-align:center;
+      font-weight:900;text-decoration:none;border:none;background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff
+    }
+    .side{background:#fbfdff;border:1px solid var(--line);border-radius:16px;padding:16px}
+    .pill{display:inline-flex;align-items:center;padding:4px 8px;border:1px solid var(--line);border-radius:999px;margin:6px 6px 0 0;font-size:12px;color:var(--ink)}
+    .tick{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:rgba(34,211,238,.15);color:#0891b2;font-weight:900;font-size:11px;margin-right:6px}
+    .fineprint{margin-top:12px;color:var(--muted);font-size:12.5px}
+
+    /* --- FORM FIELD SIZE TUNE-UP (reduce field text; keep label size unchanged) --- */
+    .pagebox input[type="text"], .pagebox input[type="email"], .pagebox input[type="number"], .pagebox select{
+      height:42px;padding:8px 12px;font-size:14px;line-height:1.25;border-radius:12px;
+    }
+    .pagebox textarea{font-size:14px;line-height:1.35;padding:10px 12px;min-height:110px}
+    .pagebox ::placeholder{font-size:14px;opacity:.65}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <a class="brand" href="/">Lustra</a>
+      <div>
+        <a href="/about">About</a>
+        <a href="/pricing" style="margin-left:18px">Pricing</a>
+        <a href="/login" style="margin-left:18px">Sign in</a>
+      </div>
+    </div>
+
+    <div class="pagebox">
+      <h1>Talk to Sales</h1>
+      <p class="sub">Tell us about your desk; we’ll get you live in a day. Or start a 5-CV trial — no card required.</p>
+
+      <form method="POST" enctype="multipart/form-data" class="grid">
+        <div>
+          <label>Company</label>
+          <input name="company" type="text" required>
+
+          <div class="row">
+            <div>
+              <label>Work email</label>
+              <input name="email" type="email" required>
+            </div>
+            <div>
+              <label>Your name</label>
+              <input name="name" type="text">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Monthly CVs</label>
+              <select name="volume" required>
+                <option value="">Choose…</option>
+                <option>100</option>
+                <option>250</option>
+                <option>500</option>
+                <option>700+</option>
+                <option>Not sure</option>
+              </select>
+            </div>
+            <div>
+              <label>Users</label>
+              <select name="users" required>
+                <option value="">Choose…</option>
+                <option>1–5</option>
+                <option>6–10</option>
+                <option>11–20</option>
+                <option>21–30</option>
+                <option>30+</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Templates needed</label>
+              <select name="templates">
+                <option>1 (included)</option>
+                <option>2</option>
+                <option>3+</option>
+              </select>
+              <div class="hint">Extra templates £50 each.</div>
+            </div>
+            <div>
+              <label>SSO / SLA required?</label>
+              <select name="need_sso">
+                <option>No</option>
+                <option>Yes</option>
+                <option>Maybe</option>
+              </select>
+            </div>
+          </div>
+
+          <label>Message (optional)</label>
+          <textarea name="message" placeholder="Anything we should know?"></textarea>
+
+          <label>Upload a sample CV (optional)</label>
+          <input name="file" type="file" accept=".pdf,.doc,.docx,.txt">
+
+          <!-- anti-spam -->
+          <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off">
+
+          <!-- CSRF -->
+          <input type="hidden" name="csrf" value="{{csrf}}">
+
+          <div style="margin-top:16px">
+            <button class="btn" type="submit">Send to Sales / Start trial</button>
+          </div>
+
+          <div class="fineprint">We’ll reply within 1 business day. We never use your documents to train models.</div>
+        </div>
+
+        <aside class="side">
+          <div style="font-weight:900;margin-bottom:10px">What you get</div>
+          <div><span class="tick">✓</span>On-brand DOCX output</div>
+          <div><span class="tick">✓</span>PDF / DOCX / TXT supported</div>
+          <div><span class="tick">✓</span>Org-wide credits & usage</div>
+          <div><span class="tick">✓</span>CSV exports and Director dashboard</div>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:14px 0">
+          <div style="font-weight:900;margin-bottom:6px">Plans</div>
+          <div class="pill">Starter — 100 CVs · £150/mo</div>
+          <div class="pill">Growth — 250 CVs · £350/mo</div>
+          <div class="pill">Scale — 500 CVs · £650/mo</div>
+          <div class="hint" style="margin-top:8px">Buy Packs available · non-expiring.</div>
+          <hr style="border:none;border-top:1px solid #e5e7eb;margin:14px 0">
+          <div style="font-weight:900;margin-bottom:6px">Prefer email?</div>
+          <div><a href="mailto:hello@lustra.uk">hello@lustra.uk</a></div>
+          <div class="hint">We reply within 1 business day.</div>
+        </aside>
+      </form>
+    </div>
+  </div>
+</body>
+</html>
+"""
 
 @app.get("/start")
 def contact_get():
@@ -7676,6 +7702,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

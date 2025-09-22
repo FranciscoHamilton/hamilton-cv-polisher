@@ -1149,21 +1149,39 @@ PRICING_HTML = r"""
     </div> <!-- /.pagebox -->
   </div> <!-- /.wrap -->
 
-    <div class="wrap section">
-    <div class="card calc">
+      <div class="wrap section">
+    <div class="card calc" style="margin-bottom:56px">
       <div class="inner">
-        <div class="name">Savings & best plan</div>
+        <div class="name">Savings &amp; best plan</div>
         <div class="sub">Estimate time/payroll savings and see which plan fits your volume (with overage).</div>
 
-        <div class="calc-grid" style="margin-top:10px">
-          <div><label>CVs per month</label><input id="cvs" type="number" min="0" value="120" placeholder="e.g., 120"></div>
-          <div><label>Minutes per CV (manual polish)</label><input id="minManual" type="number" min="0" value="15" placeholder="e.g., 15"></div>
-          <div><label>Recruiter hourly rate (£)</label><input id="hourRate" type="number" min="0" value="30" placeholder="e.g., 30"></div>
+        <div class="calc-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px 24px;margin-top:10px">
+          <div class="field">
+            <label>CVs per month</label>
+            <input id="cvs" type="number" min="0" value="120" placeholder="e.g., 120" style="width:100%;max-width:420px">
+            <div class="hint">Average number of CVs your team polishes each month.</div>
+          </div>
+          <div class="field">
+            <label>Minutes per CV (manual polish)</label>
+            <input id="minManual" type="number" min="0" value="15" placeholder="e.g., 15" style="width:100%;max-width:420px">
+            <div class="hint">Average minutes currently spent tidying one CV, before Lustra.</div>
+          </div>
+          <div class="field">
+            <label>Recruiter hourly rate (£)</label>
+            <input id="hourRate" type="number" min="0" value="30" placeholder="e.g., 30" style="width:100%;max-width:420px">
+            <div class="hint">Average fully-loaded hourly cost per recruiter (salary ÷ hours).</div>
+          </div>
         </div>
 
-        <div class="calc-out">
-          <div><span class="n" id="outHours">0</span> hours saved / month</div>
-          <div><span class="n">£<span id="outMoney">0</span></span> payroll saved / month</div>
+        <div class="calc-out" style="display:flex;gap:40px;flex-wrap:wrap;margin-top:14px">
+          <div>
+            <div><span class="n" id="outHours">0</span> hours saved / month</div>
+            <div id="outHoursY" style="color:#64748b;font-size:14px;margin-top:2px">— /yr</div>
+          </div>
+          <div>
+            <div><span class="n">£<span id="outMoney">0</span></span> payroll saved / month</div>
+            <div id="outMoneyY" style="color:#64748b;font-size:14px;margin-top:2px">— /yr</div>
+          </div>
         </div>
 
         <!-- Best option: single horizontal row -->
@@ -1209,6 +1227,12 @@ PRICING_HTML = r"""
       const payroll = hours * rate;
       document.getElementById('outHours').textContent = (Math.round(hours*10)/10).toFixed(1);
       document.getElementById('outMoney').textContent = fmt(Math.round(payroll));
+
+      // yearly (soft hint)
+      const hoursY = hours * 12;
+      const payrollY = payroll * 12;
+      document.getElementById('outHoursY').textContent = (Math.round(hoursY*10)/10).toFixed(1) + ' h /yr';
+      document.getElementById('outMoneyY').textContent = fmt(Math.round(payrollY)) + ' /yr';
 
       if(!cvs){
         document.getElementById('bestName').textContent = '—';
@@ -7702,6 +7726,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

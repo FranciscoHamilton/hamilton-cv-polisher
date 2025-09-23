@@ -859,9 +859,9 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
   <div class="wrap">
     <div class="nav">
       <a class="brand" href="/">Lustra</a>
-      <div>
-        <a href="/pricing">Pricing</a>
-        <a href="/about" style="margin-left:18px">About</a>
+            <div>
+        <a href="/about">About</a>
+        <a href="/pricing" style="margin-left:18px">Pricing</a>
         <a href="/login" style="margin-left:18px">Sign in</a>
       </div>
     </div>
@@ -1023,7 +1023,9 @@ PRICING_HTML = r"""
     .calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
     @media(max-width:980px){ .calc-grid{grid-template-columns:1fr} }
     .calc label{display:block;font-weight:900;margin-bottom:6px}
-    .calc input[type=number]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:inset 0 1px 2px rgba(2,6,23,.03)}
+    .calc .hint{font-size:12px;color:var(--muted)}
+    .calc input[type=number]{width:100%;max-width:160px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:inset 0 1px 2px rgba(2,6,23,.03)}
+    @media(max-width:980px){ .calc input[type=number]{max-width:100%;} }
     .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px}
     .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
   </style>
@@ -1035,9 +1037,9 @@ PRICING_HTML = r"""
     <div class="nav">
       <a class="brand" href="/">Lustra</a>
       <div class="nav-links">
-        <a href="/">Home</a>
         <a href="/about">About</a>
-        <a href="/login">Sign in</a>
+        <a href="/pricing" style="margin-left:18px">Pricing</a>
+        <a href="/login" style="margin-left:18px">Sign in</a>
       </div>
     </div>
   </div>
@@ -1149,7 +1151,7 @@ PRICING_HTML = r"""
     </div> <!-- /.pagebox -->
   </div> <!-- /.wrap -->
 
-      <div class="wrap section">
+      <div class="wrap section" style="margin-bottom:72px">
     <div class="card calc" style="margin-bottom:56px">
       <div class="inner">
         <div class="name">Savings &amp; best plan</div>
@@ -1173,6 +1175,14 @@ PRICING_HTML = r"""
           </div>
         </div>
 
+<!-- Best option: single horizontal row -->
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+          <span id="bestBadge" style="display:inline-flex;align-items:center;font-weight:900;font-size:12px;letter-spacing:.04em;padding:6px 10px;border-radius:999px;color:#fff;background:linear-gradient(90deg,var(--brand),var(--brand-2))">BEST OPTION</span>
+          <span id="bestName" style="font-size:28px;font-weight:900;line-height:1.2;color:#0b122a">—</span>
+        </div>
+        <div id="bestCost" style="font-size:22px;font-weight:900;line-height:1.2;color:#0b122a;margin-top:6px">£— /mo</div>
+        <div id="bestDetail" class="sub" style="margin-top:6px"></div>
+        
         <div class="calc-out" style="display:flex;gap:40px;flex-wrap:wrap;margin-top:14px">
           <div>
             <div><span class="n" id="outHours">0</span> hours saved / month</div>
@@ -1184,13 +1194,6 @@ PRICING_HTML = r"""
           </div>
         </div>
 
-        <!-- Best option: single horizontal row -->
-        <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
-          <span id="bestBadge" style="display:inline-flex;align-items:center;font-weight:900;font-size:12px;letter-spacing:.04em;padding:6px 10px;border-radius:999px;color:#fff;background:linear-gradient(90deg,var(--brand),var(--brand-2))">BEST OPTION</span>
-          <span id="bestName" style="font-size:28px;font-weight:900;line-height:1.2;color:#0b122a">—</span>
-        </div>
-        <div id="bestCost" style="font-size:28px;font-weight:900;line-height:1.2;color:#0b122a;margin-top:6px">£— /mo</div>
-        <div id="bestDetail" class="sub" style="margin-top:6px"></div>
       </div>
     </div>
   </div>
@@ -1964,7 +1967,7 @@ LOGIN_HTML = r"""
         <button type="submit">Continue</button>
       </form>
       <div class="muted">
-        Default demo: admin / hamilton • <a href="/forgot">Forgot password?</a> • <a href="/">Home</a>
+        Default demo: admin / hamilton • <a href="/forgot">Forgot password?</a>
       </div>
     </div>
   </div>
@@ -3409,7 +3412,7 @@ def app_page():
             '  if(hist){'
             '    shrink(hist);'
             '    var items=hist.querySelectorAll("*");'
-            '    for(var i=0;i<items.length;i++){ try{items[i].style.fontSize="13px";}catch(e){} }'
+            '    for(var i=0;i<items.length;i++){ try{items[i].style.fontSize="12px";}catch(e){} }
             '  }'
             '}catch(e){console.log("stats font tweak failed",e);} })();</script></body>'
         )
@@ -7726,6 +7729,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

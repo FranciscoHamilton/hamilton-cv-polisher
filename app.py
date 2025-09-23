@@ -1028,6 +1028,7 @@ PRICING_HTML = r"""
     @media(max-width:980px){ .calc input[type=number]{max-width:100%;} }
     .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px}
     .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
+    #bestCost .pcv{font-size:14px;color:#64748b;font-weight:700}
   </style>
 </head>
 
@@ -1251,7 +1252,7 @@ PRICING_HTML = r"""
 
       document.getElementById('bestName').textContent = best.name;
       document.getElementById('bestName').style.color = best.color;        // colour matches Starter/Growth/Scale
-      document.getElementById('bestCost').textContent = fmtGBP(best.total) + ' /mo' + percv;
+      document.getElementById('bestCost').innerHTML = fmtGBP(best.total) + ' /mo' + (best.percv ? ' <span class="pcv">(~£' + (Math.round(best.percv*100)/100).toFixed(2) + '/CV)</span>' : '');
       document.getElementById('bestDetail').textContent = best.detail;      // clear, full sentence
     }
 
@@ -1382,6 +1383,33 @@ body{
 
 /* layout */
 .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+.grid > .card{height:100%;display:flex;flex-direction:column}
+
+/* skills pills — compact black chips + small close */
+.skills{display:flex;flex-wrap:wrap;gap:8px}
+.skills .pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:999px;
+  border:1px solid #0b1220;background:#0b1220;color:#fff;
+  font-size:12px;font-weight:700
+}
+.skills .pill .x{all:unset;cursor:pointer;font-weight:900;font-size:12px;line-height:1;padding:0 2px;color:#fff;opacity:.85}
+.skills .pill .x:hover{opacity:1}
+
+/* full history rows: smaller & tidy */
+.history .row{font-size:12px}
+.history .row .muted{font-size:12px}
+.grid > .card{height:100%;display:flex;flex-direction:column}
+/* skills pills — compact black chips */
+.skills{display:flex;flex-wrap:wrap;gap:8px}
+.skills .pill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:999px;
+  border:1px solid #0b1220;background:#0b1220;color:#fff;
+  font-size:12px;font-weight:700
+}
+/* placeholder for the little “×” we’ll add next step */
+.skills .pill .kill{display:none}
 @media(max-width:980px){ .grid{grid-template-columns:1fr;gap:12px} }
 
 /* cards */
@@ -1949,8 +1977,8 @@ LOGIN_HTML = r"""
     <div class="nav">
       <a class="brand" href="/">Lustra</a>
       <div>
-  <a href="/">Home</a>
-  <a href="/about" style="margin-left:18px">About</a>
+  <a href="/about">About</a>
+  <a href="/pricing" style="margin-left:18px">Pricing</a>
   <a href="/login" style="margin-left:18px">Sign in</a>
 </div>
     </div>
@@ -2001,6 +2029,14 @@ DIRECTOR_LOGIN_HTML = r"""
 </head>
 <body>
   <div class="wrap">
+      <div class="nav" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <a class="brand" href="/" style="font-weight:900;color:#0f172a;text-decoration:none;font-size:22px;letter-spacing:.2px">Lustra</a>
+      <div>
+        <a href="/about">About</a>
+        <a href="/pricing" style="margin-left:18px">Pricing</a>
+        <a href="/login" style="margin-left:18px">Sign in</a>
+      </div>
+    </div>
     <div class="card">
       <h3>Director verification</h3>
       <!--DERR-->
@@ -7729,6 +7765,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

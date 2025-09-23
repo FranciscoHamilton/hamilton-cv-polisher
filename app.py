@@ -3448,7 +3448,7 @@ def app_page():
             '  if(hist){'
             '    shrink(hist);'
             '    var items=hist.querySelectorAll("*");'
-            '    for(var i=0;i<items.length;i++){ try{items[i].style.fontSize="12px";}catch(e){} }
+            '    for(var i=0;i<items.length;i++){ try{items[i].style.fontSize="12px";}catch(e){} }'
             '  }'
             '}catch(e){console.log("stats font tweak failed",e);} })();</script></body>'
         )
@@ -7765,6 +7765,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

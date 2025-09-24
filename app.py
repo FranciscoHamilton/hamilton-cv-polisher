@@ -6024,15 +6024,17 @@ if (!monthRows.length) {
 # --- Director UI (fixed: triple quotes + ASCII only) ---
 
 from flask import render_template_string, redirect
+import os  # <-- add this import
 
 @app.get("/director/ui")
 def director_ui():
-    # --- guard ---
-    try:
-        if not is_admin():
+    # --- guard (TEMP: bypass when DIRECTOR_OPEN=1) ---
+    if os.getenv("DIRECTOR_OPEN") != "1":
+        try:
+            if not is_admin():
+                return redirect("/login")
+        except Exception:
             return redirect("/login")
-    except Exception:
-        pass
 
     # --- data ---
     row = db_query_one("SELECT name FROM orgs WHERE active=TRUE ORDER BY id LIMIT 1", ())
@@ -7596,6 +7598,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

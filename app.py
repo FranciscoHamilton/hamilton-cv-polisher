@@ -5091,6 +5091,11 @@ def director_api_dashboard():
         WHERE org_id = %s AND ts >= date_trunc('month', now())
     """, (org_id,))
     month_total = int(month_total_row[0]) if month_total_row else 0
+    # extra counts for UI tiles
+    last30_row = db_query_one("SELECT COUNT(*) FROM usage_events WHERE org_id=%s AND ts >= now() - interval '30 days'", (org_id,))
+    today_row  = db_query_one("SELECT COUNT(*) FROM usage_events WHERE org_id=%s AND date_trunc('day', ts) = date_trunc('day', now())", (org_id,))
+    last30 = int(last30_row[0]) if last30_row else 0
+    today  = int(today_row[0])  if today_row  else 0
 
     # Recent org events
     rec = db_query_all("""
@@ -5118,6 +5123,9 @@ def director_api_dashboard():
         "orgId": org_id,
         "orgName": org_name,
         "pool": {"balance": pool_balance},
+        "credits": pool_balance,          # for new UI
+        "last30": last30,                 # for new UI
+        "today": today,                   # for new UI
         "month": {"total": month_total, "rows": month_rows},
         "recent": recent
     })
@@ -5166,6 +5174,21 @@ def director_api_users():
                     GROUP BY user_id
                 """, (org_id,))
                 bal_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
+
+                # usage counts (this month & all-time) per user in this org
+                cur.execute("""
+                    SELECT user_id, COUNT(*) FROM usage_events
+                    WHERE org_id=%s AND ts >= date_trunc('month', now())
+                    GROUP BY user_id
+                """, (org_id,))
+                month_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
+
+                cur.execute("""
+                    SELECT user_id, COUNT(*) FROM usage_events
+                    WHERE org_id=%s
+                    GROUP BY user_id
+                """, (org_id,))
+                total_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
 
                 # users in this org
                 cur.execute("""
@@ -5397,6 +5420,72 @@ def director_api_create_user():
         return jsonify({"ok": True, "id": new_id, "username": u, "seed_granted": granted})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+
+@app.post("/director/api/toggle")
+def director_api_toggle():
+    """Enable/disable a user in my org. Body: {user:<username>, active:'1'|'0'}"""
+    try:
+        me = int(session.get("user_id") or 0)
+    except Exception:
+        me = 0
+    if me <= 0:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    my_org = _current_user_org_id()
+    if not my_org:
+        return jsonify({"ok": False, "error": "no_org"}), 400
+
+    data = request.get_json(silent=True) or {}
+    uname = (data.get("user") or "").strip().lower()
+    want_active = str(data.get("active") or "1") == "1"
+    if not uname or uname in ("admin",):
+        return jsonify({"ok": False, "error": "bad_username"}), 400
+
+    row = db_query_one("SELECT id FROM users WHERE username=%s AND org_id=%s", (uname, my_org))
+    if not row:
+        return jsonify({"ok": False, "error": "user_not_found"}), 404
+
+    ok = db_execute("UPDATE users SET active=%s WHERE id=%s", (want_active, int(row[0])))
+    return jsonify({"ok": bool(ok)} if ok else ({"ok": False, "error": "update_failed"}, 500))
+
+
+@app.post("/director/api/invite")
+def director_api_invite():
+    """Create a user in my org. Body: {user:<username>}"""
+    try:
+        me = int(session.get("user_id") or 0)
+    except Exception:
+        me = 0
+    if me <= 0:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    my_org = _current_user_org_id()
+    if not my_org:
+        return jsonify({"ok": False, "error": "no_org"}), 400
+
+    data = request.get_json(silent=True) or {}
+    uname = (data.get("user") or "").strip()
+    if not uname:
+        return jsonify({"ok": False, "error": "missing_user"}), 400
+    lu = uname.lower()
+    if lu in ("admin", "director"):
+        return jsonify({"ok": False, "error": "reserved_username"}), 400
+
+    # refuse dup
+    if db_query_one("SELECT 1 FROM users WHERE username=%s", (uname,)):
+        return jsonify({"ok": False, "error": "username_taken"}), 400
+
+    # simple initial password; director can reset later
+    initial_password = "changeme"
+    ok = db_execute(
+        "INSERT INTO users (username, password_hash, org_id, active) VALUES (%s,%s,%s,TRUE)",
+        (uname, _hash_pw(initial_password), my_org)
+    )
+    if not ok:
+        return jsonify({"ok": False, "error": "insert_failed"}), 500
+
+    row = db_query_one("SELECT id FROM users WHERE username=%s", (uname,))
+    return jsonify({"ok": True, "id": int(row[0]) if row else None, "username": uname})        
 # --- Canonical per-user dashboard payload (feeds the four tiles in one call) ---
 
 @app.get("/me/dashboard")
@@ -7732,6 +7821,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

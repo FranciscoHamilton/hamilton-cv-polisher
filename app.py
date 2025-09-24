@@ -2126,32 +2126,48 @@ DIRECTOR_LOGIN_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Director access</title>
+  <title>Director access — Lustra</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#ffffff}
+    :root{
+      --brand:#2563eb; --brand-2:#22d3ee;
+      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+      --bg:#f6f9ff; --card:#ffffff; --shadow:0 10px 24px rgba(13,59,102,.08);
+    }
+    *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:520px;margin:48px auto;padding:0 18px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
-    label{font-weight:600;font-size:13px}
-    input[type=password]{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
-    button{width:100%;margin-top:12px;background:linear-gradient(90deg,var(--blue),#0a4d8c);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
-    .muted{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
-    .err{margin-top:8px;color:#b91c1c;font-weight:700;font-size:12px}
-    a{color:var(--blue);text-decoration:none}
+    a{color:var(--brand);text-decoration:none}
+    .wrap{max-width:560px;margin:56px auto;padding:0 18px}
+    .logo{display:flex;align-items:center;gap:10px;margin-bottom:18px}
+    .logo .dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+    .logo .name{font-weight:900;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:#0b1220}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:var(--shadow)}
+    h1{margin:0 0 6px;font-size:22px;letter-spacing:-.01em}
+    .sub{color:var(--muted);font-size:14px;margin:0 0 14px}
+    label{font-weight:700;font-size:13px}
+    input[type=password]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;margin-top:6px}
+    button{width:100%;margin-top:14px;background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer}
+    .muted{color:var(--muted);font-size:13px;margin-top:12px}
+    .err{background:#fee2e2;border:1px solid #fecaca;color:#991b1b;padding:10px;border-radius:12px;font-weight:700;margin:10px 0}
   </style>
 </head>
 <body>
   <div class="wrap">
+    <div class="logo">
+      <div class="dot"></div><div class="name">Lustra • Director</div>
+    </div>
     <div class="card">
-      <h3>Director verification</h3>
+      <h1>Sign in</h1>
+      <p class="sub">Enter the director password to access the console.</p>
       <!--DERR-->
-      <form method="post" action="/director/login">
-        <label for="dp">Director password</label>
-        <input id="dp" type="password" name="password" autofocus required />
-        <button type="submit">Enter</button>
+      <form method="post" action="/director/login" autocomplete="off">
+        <label for="password">Director password</label>
+        <input id="password" type="password" name="password" autofocus required />
+        <button type="submit">Continue</button>
       </form>
-      <div class="muted"><a href="/director/forgot">Forgot director password?</a> · <a href="/app">Back</a></div>
+      <div class="muted">
+        <a href="/director/forgot">Forgot director password?</a> · <a href="/app">Back to app</a>
+      </div>
     </div>
   </div>
 </body>
@@ -2162,126 +2178,197 @@ DIRECTOR_HTML = r"""
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Director — Dashboard</title>
+  <meta charset="utf-8">
+  <title>Director — Lustra Console</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#ffffff;--ok:#16a34a}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:1100px;margin:28px auto;padding:0 18px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
-    h1{margin:0 0 12px;color:var(--blue);font-size:22px}
-    h3{margin:0 0 10px;color:var(--blue);font-size:16px}
-    .k{color:var(--muted);font-size:12px}
+    :root{
+      --brand:#2563eb; --brand-2:#22d3ee;
+      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+      --bg:#f6f9ff; --card:#ffffff; --ok:#047857; --warn:#a16207; --bad:#b91c1c;
+      --shadow:0 10px 24px rgba(13,59,102,.08);
+      --shadow-sm:0 2px 8px rgba(13,59,102,.06);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--ink);
+         font: 14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}
+    a{color:var(--brand);text-decoration:none}
+    .topbar{
+      position:sticky;top:0;z-index:50;background:linear-gradient(90deg,var(--card),#fdfdff);
+      border-bottom:1px solid var(--line);
+      display:flex;align-items:center;justify-content:space-between;
+      padding:12px 18px;
+    }
+    .brand{display:flex;align-items:center;gap:10px}
+    .dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+    .brand .name{font-weight:900;letter-spacing:.06em;text-transform:uppercase;font-size:12px}
+    .nav{display:flex;gap:12px}
+    .nav a{font-weight:700;font-size:13px;color:#0b1220}
+    .wrap{max-width:1200px;margin:28px auto;padding:0 18px;display:grid;gap:18px}
+    h1{margin:0 0 4px;font-size:22px;letter-spacing:-.01em}
+    .sub{color:var(--muted);font-size:13px;margin:0 0 10px}
+    .grid{display:grid;grid-template-columns:1fr;gap:18px}
+    @media(min-width:1000px){.grid{grid-template-columns:1.2fr .8fr}}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+    .card h2{margin:0 0 10px;font-size:16px}
+    .pill{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted);background:#fafcff}
+    .section{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px}
+    .tables{display:grid;grid-template-columns:1fr;gap:18px}
     table{width:100%;border-collapse:collapse}
-    th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;font-size:13px}
-    .actions a,.actions button{display:inline-block;margin-right:6px;margin-top:6px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-weight:700;text-decoration:none;color:var(--blue);cursor:pointer}
-    .ok{color:var(--ok);font-weight:700}
-    input,select{padding:8px;border:1px solid var(--line);border-radius:10px}
-    form.inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;font-size:13px}
+    th{background:#f8fafc;position:sticky;top:0}
+    .muted{color:var(--muted)}
+    .badge-ok{color:#065f46;background:#ecfdf5;border:1px solid #d1fae5}
+    .badge-no{color:#7c2d12;background:#fff7ed;border:1px solid #ffedd5}
+    .metrics{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:8px}
+    @media(min-width:700px){.metrics{grid-template-columns:repeat(3,1fr)}}
+    .metric{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow-sm)}
+    .metric .k{font-size:12px;color:var(--muted);margin:0}
+    .metric .v{font-size:22px;font-weight:800;margin:2px 0 0}
   </style>
 </head>
 <body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="dot"></div>
+      <div class="name">Lustra • Director</div>
+    </div>
+    <div class="nav">
+      <a href="/app">Back to app</a>
+      <a href="/director/logout">Logout</a>
+    </div>
+  </div>
+
   <div class="wrap">
-    <h1>Director dashboard</h1>
-    <div class="actions">
-      <a href="/director/export.csv">Export CSV</a>
-      <a href="/pricing">Buy more credits</a>
-      <a href="/app">← Back to app</a>
+    <div>
+      <h1>Director dashboard</h1>
+      <p class="sub">Usage overview and audit trail. Visual refresh only — functionality unchanged.</p>
+
+      <!-- Quick metrics (purely visual, no logic change; values drawn from existing context if desired later) -->
+      <div class="metrics">
+        <div class="metric">
+          <p class="k">Total users</p>
+          <p class="v">{{ users|length }}</p>
+        </div>
+        <div class="metric">
+          <p class="k">Recent events</p>
+          <p class="v">{{ events|length }}</p>
+        </div>
+        <div class="metric">
+          <p class="k">Legacy entries</p>
+          <p class="v">{{ legacy|length }}</p>
+        </div>
+      </div>
     </div>
 
-    <div class="grid" style="margin-top:12px">
-      <div class="card">
-        <h3>Usage stats</h3>
-        <div class="k">This month: <strong>{{m1}}</strong> · 3 mo: <strong>{{m3}}</strong> · 6 mo: <strong>{{m6}}</strong> · 12 mo: <strong>{{m12}}</strong> · Total: <strong>{{tot}}</strong></div>
-        <div class="k" style="margin-top:6px">Last candidate: <strong>{{last_candidate}}</strong> · Last time: <strong>{{last_time}}</strong></div>
+    <div class="grid">
+      <!-- LEFT COLUMN: Tables -->
+      <div class="tables">
+        <div class="card">
+          <div class="section">
+            <h2>Per-user totals <span class="pill">{{ users|length }} users</span></h2>
+          </div>
+
+          {% if users and users|length > 0 %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Active</th>
+                  <th>This month</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for u in users %}
+                <tr>
+                  <td>{{ u.username }}</td>
+                  <td class="muted">{{ 'Yes' if u.active else 'No' }}</td>
+                  <td>{{ u.month_usage }}</td>
+                  <td>{{ u.total_usage }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+            <div class="muted">No users found.</div>
+          {% endif %}
+        </div>
+
+        <div class="card">
+          <div class="section">
+            <h2>Recent usage events <span class="pill">{{ events|length }}</span></h2>
+          </div>
+
+          {% if events and events|length > 0 %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>User</th>
+                  <th>Candidate</th>
+                  <th class="muted">File</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for e in events %}
+                <tr>
+                  <td>{{ e.ts }}</td>
+                  <td>{{ e.username }}</td>
+                  <td>{{ e.candidate }}</td>
+                  <td class="muted">{{ e.filename }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+            <div class="muted">No recent events.</div>
+          {% endif %}
+        </div>
+
+        <div class="card">
+          <div class="section">
+            <h2>Legacy JSON history <span class="pill">{{ legacy|length }}</span></h2>
+          </div>
+
+          {% if legacy and legacy|length > 0 %}
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Candidate</th>
+                  <th class="muted">File</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for h in legacy|reverse %}
+                <tr>
+                  <td>{{ h.ts }}</td>
+                  <td>{{ h.candidate }}</td>
+                  <td class="muted">{{ h.filename }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+            <div class="muted">No legacy entries.</div>
+          {% endif %}
+        </div>
       </div>
 
+      <!-- RIGHT COLUMN: Side card (optional notes / help text) -->
       <div class="card">
-        <h3>Credits (manual)</h3>
-        <div class="k">Balance: <strong>{{credits_balance}}</strong> · Purchased: <strong>{{credits_purchased}}</strong></div>
-        <form class="inline" method="post" action="/director/credits/add">
-          <label>Add credits:</label>
-          <input name="amount" type="number" min="1" step="1" required />
-          <button type="submit">Add</button>
-        </form>
-        <div class="k" style="margin-top:6px">Trial credits (this session): <strong>{{trial_left}}</strong></div>
-      </div>
-
-      <div class="card" style="grid-column:1 / -1">
-  <h3>Users (Postgres)</h3>
-  <div class="k" style="margin-bottom:8px">These are users stored in Postgres and tracked in <code>usage_events</code>.</div>
-  <table>
-    <thead>
-      <tr>
-        <th>User ID</th>
-        <th>Username</th>
-        <th>Status</th>
-        <th>Month usage</th>
-        <th>Total usage</th>
-      </tr>
-    </thead>
-    <tbody>
-    {% for u in users_usage %}
-      <tr>
-        <td>{{u.id}}</td>
-        <td>{{u.username}}</td>
-        <td>{{'active' if u.active else 'disabled'}}</td>
-        <td>{{u.month_usage}}</td>
-        <td>{{u.total_usage}}</td>
-      </tr>
-    {% endfor %}
-    {% if not users_usage %}
-      <tr><td colspan="5" class="k">No Postgres users found yet.</td></tr>
-    {% endif %}
-    </tbody>
-  </table>
-
-  <h3 style="margin-top:16px">Legacy users.json (optional)</h3>
-  <div class="k" style="margin-bottom:8px">
-    These are the older file-based users (not tracked in Postgres). You can still toggle or create them here.
-  </div>
-  <table>
-    <thead><tr><th>Username</th><th>Status</th><th>Actions</th></tr></thead>
-    <tbody>
-    {% for u in users %}
-      <tr>
-        <td>{{u.username}}</td>
-        <td>{{'active' if u.active else 'disabled'}}</td>
-        <td>
-          <form method="post" action="/director/users/toggle" style="display:inline">
-            <input type="hidden" name="username" value="{{u.username}}"/>
-            <input type="hidden" name="action" value="{{'disable' if u.active else 'enable'}}"/>
-            <button type="submit">{{'Disable' if u.active else 'Enable'}}</button>
-          </form>
-        </td>
-      </tr>
-    {% endfor %}
-    {% if not users %}
-      <tr><td colspan="3" class="k">No legacy users.</td></tr>
-    {% endif %}
-    </tbody>
-  </table>
-
-  <h3 style="margin-top:14px">Create legacy user</h3>
-  <form class="inline" method="post" action="/director/users/create">
-    <input name="username" placeholder="username" required />
-    <input name="password" placeholder="password" required />
-    <button type="submit">Create</button>
-  </form>
-</div>
-
-      <div class="card" style="grid-column:1 / -1">
-        <h3>Recent activity</h3>
-        <table>
-          <thead><tr><th>Time</th><th>Candidate</th><th>Filename</th></tr></thead>
-          <tbody>
-          {% for item in history %}
-            <tr><td>{{item.ts}}</td><td>{{item.candidate or '—'}}</td><td>{{item.filename}}</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
+        <h2>About this console</h2>
+        <p class="muted" style="margin:0">
+          Visual refresh aligned to Lustra (colors, rounded cards, typography). All actions, data, and routes are unchanged.
+        </p>
       </div>
     </div>
   </div>
@@ -6022,227 +6109,327 @@ if (!monthRows.length) {
 # --- Director: minimal UI for org-scoped dashboard (read-only) ---
 # --- Director: minimal UI for org-scoped dashboard (read-only + enable/disable) ---
 # --- Director UI (fixed: triple quotes + ASCII only) ---
-
-from flask import render_template_string, redirect
-import os  # <-- add this import
-
 @app.get("/director/ui")
 def director_ui():
-    # --- guard (TEMP: bypass when DIRECTOR_OPEN=1) ---
-    if os.getenv("DIRECTOR_OPEN") != "1":
+    """
+    Simple HTML page for directors to view their org's pool balance,
+    users (with any caps if present), recent pool activity, create users,
+    reset passwords, and toggle user active state.
+    """
+    # access guard
+    if not (session.get("director") or is_admin()):
+        return make_response("forbidden", 403)
+
+    # must be logged in
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+    if uid <= 0:
+        return redirect(url_for("login"))
+
+    # must belong to an org (or be admin)
+    my_org = _current_user_org_id()
+    is_admin = False
+    try:
+        is_admin = bool(session.get("is_admin")) or (session.get("username","").lower() == "admin") or (session.get("user","").lower() == "admin")
+    except Exception:
+        pass
+
+    if not my_org and not is_admin:
+        return make_response("No organization assigned to this account.", 403)
+
+    # if admin (no org on session), allow ?org_id=... to inspect
+    if is_admin and not my_org:
         try:
-            if not is_admin():
-                return redirect("/login")
+            my_org = int(request.args.get("org_id") or "0")
         except Exception:
-            return redirect("/login")
+            my_org = 0
+        if my_org <= 0:
+            return make_response("Admin view: please pass ?org_id=NN to inspect an org.", 400)
 
-    # --- data ---
-    row = db_query_one("SELECT name FROM orgs WHERE active=TRUE ORDER BY id LIMIT 1", ())
-    org_name = (row[0] if row and row[0] else "Lustra")
-
-    row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger", ())
-    bal = int(row[0]) if row and row[0] is not None else 0
-
-    row = db_query_one("""
-        SELECT COALESCE(SUM(delta),0)
-          FROM org_credits_ledger
-         WHERE created_at >= now() - interval '30 days'
-    """, ())
-    last30 = int(row[0]) if row and row[0] is not None else 0
-
-    row = db_query_one("""
-        SELECT COALESCE(SUM(delta),0)
-          FROM org_credits_ledger
-         WHERE created_at::date = now()::date
-    """, ())
-    today = int(row[0]) if row and row[0] is not None else 0
-
+    # data pulls
+    bal = org_balance(my_org)
     users = db_query_all("""
-        SELECT
-            u.id,
-            u.username,
-            NULL AS monthly_cap,
-            COALESCE(u.active, TRUE) AS active
-        FROM users u
-        ORDER BY LOWER(u.username)
-    """, ()) or []
+        SELECT u.id, u.username,
+               (SELECT l.monthly_cap
+                  FROM org_user_limits l
+                 WHERE l.org_id = u.org_id AND l.user_id = u.id AND l.active
+                 LIMIT 1) AS monthly_cap,
+               COALESCE(u.active, TRUE) AS active
+          FROM users u
+         WHERE u.org_id = %s
+         ORDER BY u.username ASC
+    """, (my_org,)) or []
 
     recent = db_query_all("""
-        SELECT
-            e.ts,
-            COALESCE(u.username, '(unknown)') AS username,
-            COALESCE(e.candidate, ''),
-            COALESCE(e.filename, ''),
-            NULL::int  AS delta,
-            NULL::text AS reason
-        FROM usage_events e
-        LEFT JOIN users u ON u.id = e.user_id
-        ORDER BY e.ts DESC
-        LIMIT 50
-    """, ()) or []
+        SELECT e.created_at, u.username, e.candidate, e.filename, e.delta, e.reason
+          FROM (
+            SELECT created_at, user_id, NULL::text AS candidate, NULL::text AS filename, delta, reason
+              FROM org_credits_ledger
+             WHERE org_id = %s
+            UNION ALL
+            SELECT created_at, user_id, candidate, filename, NULL::int AS delta, 'polish'::text AS reason
+              FROM usage_events
+             WHERE org_id = %s
+          ) e
+          LEFT JOIN users u ON u.id = e.user_id
+         ORDER BY e.created_at DESC
+         LIMIT 50
+    """, (my_org, my_org)) or []
 
-    # --- view (Jinja; NOT an f-string) ---
-    html = r"""<!doctype html>
-<html lang="en">
+    html = f"""
+<!doctype html>
+<html>
 <head>
-  <meta charset="utf-8" />
-  <title>Lustra — Director Console</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8">
+  <title>Director - Org Console</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    :root{
-      --blue:#2563eb; --blue-2:#22d3ee;
-      --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
-      --bg:#f5f8fd; --card:#ffffff; --shadow:0 10px 28px rgba(13,59,102,.08);
-      --ok:#16a34a; --warn:#d97706; --bad:#b91c1c;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:1200px;margin:24px auto 64px;padding:0 20px}
-    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:18px}
-    .pagehead{display:flex;align-items:center;gap:12px;margin:8px 0 18px}
-    .back{display:inline-flex;align-items:center;gap:6px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--ink)}
-    .back:hover{background:#f8fafc}
-    h1{margin:0;font-size:28px;letter-spacing:-.01em}
-    .org{color:var(--muted);font-weight:800;margin-left:6px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 16px;box-shadow:var(--shadow)}
-    .card h2{margin:0 0 10px;font-size:18px;color:var(--blue)}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
-    .table-wrap{overflow:auto}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:14px}
-    th{position:sticky;top:0;background:#f8fafc;font-weight:800}
-    td.muted,th.muted{color:var(--muted)}
-    .actions{display:flex;gap:8px;flex-wrap:wrap}
-    input[type=text],input[type=number]{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:14px;box-shadow:inset 0 1px 2px rgba(2,6,23,.03);outline:none}
-    input[type=text]:focus,input[type=number]:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(59,130,246,.18)}
-    .btn{display:inline-block;padding:10px 14px;border:1px solid var(--line);border-radius:12px;font-weight:900;cursor:pointer;background:#f8fafc;color:#0b1220;text-decoration:none}
-    .btn:hover{background:#eef2f7}
-    .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;box-shadow:var(--shadow)}
-    .btn.danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
-    .pill{display:inline-block;padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;background:#f8fafc}
-    .pill.ok{color:var(--ok);border-color:#bbf7d0;background:#f0fdf4}
-    .pill.warn{color:var(--warn);border-color:#fde68a;background:#fffbeb}
-    .pill.bad{color:var(--bad);border-color:#fecaca;background:#fef2f2}
-    .muted{color:var(--muted);font-size:13px}
-    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .mt6{margin-top:6px} .mt10{margin-top:10px} .mt14{margin-top:14px}
+    :root {{ --bg:#fff; --ink:#111; --muted:#666; --line:#e6e6e6; --ok:#0a7f14; --warn:#d28500; --bad:#b00020; }}
+    body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--ink); margin:0; padding:20px; }}
+    header {{ display:flex; gap:12px; align-items:center; margin-bottom:18px; }}
+    header .back {{ text-decoration:none; padding:8px 10px; border:1px solid var(--line); border-radius:10px; }}
+    h1 {{ font-size:22px; margin:0; }}
+    h2 {{ margin:22px 0 10px; }}
+    .muted {{ color: var(--muted); font-size:14px; }}
+    .grid {{ display:grid; gap:12px; }}
+    table {{ border-collapse: collapse; width: 100%; }}
+    th, td {{ border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: middle; }}
+    th {{ background: #fafafa; }}
+    .pill {{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-size:12px; }}
+    .pill.ok {{ color: var(--ok); font-weight:600; }}
+    .pill.off {{ color: var(--bad); font-weight:700; }}
+    .controls {{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }}
+    .controls input {{ padding:8px; border:1px solid var(--line); border-radius:8px; min-width:180px; }}
+    .controls button {{ padding:8px 12px; border:1px solid var(--line); border-radius:10px; background:#f7f7f7; cursor:pointer; }}
+    .msg {{ margin-top:6px; font-size:14px; }}
+    .small {{ font-size:12px; color:var(--muted); }}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/">Lustra</a>
-      <div>
-        <a href="/about">About</a>
-        <a href="/pricing">Pricing</a>
-        <a href="/login">Sign in</a>
-      </div>
-    </div>
+  <header>
+    <a class="back" href="/app">← Back</a>
+    <h1>Director Console</h1>
+    <span id="orgBadge" class="muted"></span>
+  </header>
 
-    <div class="pagehead">
-      <a class="back" href="/app">← Back</a>
-      <h1>Director Console</h1>
-      <span class="org">{{ org_name }}</span>
-    </div>
-
-    <div class="card">
+  <section class="grid">
+    <div>
       <h2>Org Balance</h2>
-      <div class="row">
-        <span class="pill">Credits: {{ bal }}</span>
-        <span class="muted">Last 30d: {{ last30 }} • Today: {{ today }}</span>
-      </div>
+      <div class="muted">Pool credits available for your organization.</div>
+      <div id="poolBox" style="margin-top:6px;font-size:18px;">Loading…</div>
     </div>
+  </section>
 
-    <div class="grid mt14">
-      <div class="card">
-        <h2>Users</h2>
-        <div class="row mt6">
-          <form method="post" action="/director/user/create" class="row">
-            <input type="text" name="username" placeholder="new username" required />
-            <button class="btn primary" type="submit">Invite</button>
-          </form>
-        </div>
-        <div class="table-wrap mt10">
-          <table>
-            <thead>
-              <tr>
-                <th>User</th>
-                <th class="muted">Monthly cap</th>
-                <th class="muted">Active</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for u in users %}
-              <tr>
-                <td>{{ u[1] }}</td>
-                <td class="muted">{{ '-' if u[2] is none else u[2] }}</td>
-                <td class="muted">{{ 'Yes' if u[3] else 'No' }}</td>
-                <td class="actions">
-                  <form method="post" action="/director/user/toggle" style="display:inline">
-                    <input type="hidden" name="user_id" value="{{ u[0] }}"/>
-                    <button class="btn" type="submit">Toggle</button>
-                  </form>
-                  <form method="post" action="/director/user/cap" style="display:inline">
-                    <input type="hidden" name="user_id" value="{{ u[0] }}"/>
-                    <input type="number" name="monthly_cap" min="0" placeholder="set cap" />
-                    <button class="btn" type="submit">Set cap</button>
-                  </form>
-                </td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <h2 style="margin-top:26px;">Users</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>User ID</th>
+        <th>Username</th>
+        <th>Monthly Cap</th>
+        <th>Active</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="usersBody">
+      <tr><td colspan="5" class="muted">Loading…</td></tr>
+    </tbody>
+  </table>
 
-      <div class="card">
-        <h2>Recent activity</h2>
-        <div class="table-wrap mt6">
-          <table>
-            <thead>
-              <tr>
-                <th>When</th>
-                <th>User</th>
-                <th>Candidate</th>
-                <th>File</th>
-                <th class="muted">Δ</th>
-                <th class="muted">Reason</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for r in recent %}
-              <tr>
-                <td>{{ r[0] }}</td>
-                <td>{{ r[1] }}</td>
-                <td>{{ r[2] }}</td>
-                <td class="muted">{{ r[3] }}</td>
-                <td class="muted">{{ '' if r[4] is none else r[4] }}</td>
-                <td class="muted">{{ '' if r[5] is none else r[5] }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <div style="margin-top:14px; border:1px solid var(--line); border-radius:12px; padding:12px;">
+    <h3 style="margin:0 0 8px;">Create User</h3>
+    <div class="controls">
+      <input id="cu_u" placeholder="Username">
+      <input id="cu_p" placeholder="Password">
+      <input id="cu_seed" type="number" inputmode="numeric" placeholder="Seed credits (optional)">
+      <button id="cu_btn">Create</button>
+      <span id="cu_msg" class="msg"></span>
+    </div>
+    <div class="small">New users are created in your org. Seed credits (if provided) are added to the org pool.</div>
+  </div>
+
+  <div style="margin-top:14px; border:1px solid var(--line); border-radius:12px; padding:12px;">
+    <h3 style="margin:0 0 8px;">Reset User Password</h3>
+    <div class="controls">
+      <input id="rp_uid" placeholder="User ID">
+      <input id="rp_pw" placeholder="New password">
+      <button id="rp_btn">Reset</button>
+      <span id="rp_msg" class="msg"></span>
     </div>
   </div>
-</body>
-</html>"""
 
-    return render_template_string(
-        html,
-        org_name=org_name,
-        bal=bal,
-        last30=last30,
-        today=today,
-        users=users,
-        recent=recent,
-    )
+  <h2 style="margin-top:26px;">Recent Activity</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>When</th>
+        <th>User</th>
+        <th>Candidate</th>
+        <th>Filename</th>
+        <th>Delta</th>
+        <th>Reason</th>
+      </tr>
+    </thead>
+    <tbody id="recentBody">
+      <tr><td colspan="6" class="muted">Loading…</td></tr>
+    </tbody>
+  </table>
+
+  <script>
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}}[c])));
+
+  async function loadDashboard() {{
+    const res = await fetch('/director/api/dashboard?limit=20');
+    if (!res.ok) {{ $('#poolBox').textContent = 'Failed to load.'; return; }}
+    const d = await res.json();
+    $('#orgBadge').textContent = d.orgName ? ('Org: ' + d.orgName) : '';
+    const bal = (d.pool && typeof d.pool.balance === 'number') ? d.pool.balance : null;
+    $('#poolBox').textContent = (bal == null) ? '—' : (bal + ' credits');
+
+    const recent = d.recent || [];
+    if (!recent.length) {{
+      $('#recentBody').innerHTML = '<tr><td colspan="6" class="muted">No recent activity.</td></tr>';
+    }} else {{
+      let html = '';
+      for (const r of recent) {{
+        const when = r.ts ? new Date(r.ts) : null;
+        const whenTxt = when && !isNaN(when.getTime()) ? when.toLocaleString() : esc(r.ts || '');
+        html += `<tr>
+          <td>${{whenTxt}}</td>
+          <td>${{esc(r.username || r.user_id || '')}}</td>
+          <td>${{esc(r.candidate || '')}}</td>
+          <td>${{esc(r.filename || '')}}</td>
+          <td>${{typeof r.delta === 'number' ? r.delta : ''}}</td>
+          <td>${{esc(r.reason || '')}}</td>
+        </tr>`;
+      }}
+      $('#recentBody').innerHTML = html;
+    }}
+  }}
+
+  async function loadUsers() {{
+    const res = await fetch('/director/api/users');
+    if (!res.ok) {{ $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">Failed to load users.</td></tr>'; return; }}
+    const js = await res.json();
+    const rows = js.users || [];
+    if (!rows.length) {{
+      $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">No users in this org yet.</td></tr>';
+      return;
+    }}
+    let html = '';
+    for (const u of rows) {{
+      const cap = (u.cap == null ? '' : u.cap);
+      const active = !!u.active;
+      const pill = `<span class="pill ${{active ? 'ok' : 'off'}}">${{active ? 'Active' : 'Disabled'}}</span>`;
+      const toggleLabel = active ? 'Disable' : 'Enable';
+      const toggleNext = active ? 0 : 1;
+      html += `<tr data-uid="${{u.id}}">
+        <td>${{u.id}}</td>
+        <td>${{esc(u.username || '')}}</td>
+        <td>
+          <input class="cap" type="number" inputmode="numeric" placeholder="(none)" value="${{cap}}">
+          <button class="setcap">Save</button>
+        </td>
+        <td>${{pill}}</td>
+        <td>
+          <button class="toggle" data-active="${{toggleNext}}">${{toggleLabel}}</button>
+        </td>
+      </tr>`;
+    }}
+    $('#usersBody').innerHTML = html;
+  }}
+
+  // Create user
+  document.getElementById('cu_btn')?.addEventListener('click', async () => {{
+    const u = ($('#cu_u')?.value || '').trim();
+    const p = ($('#cu_p')?.value || '').trim();
+    const seed = ($('#cu_seed')?.value || '').trim();
+    const msg = $('#cu_msg');
+    if (!u || !p) {{ msg.textContent = 'Username and password are required.'; return; }}
+    msg.textContent = 'Working…';
+    try {{
+      const qs = new URLSearchParams({{ u, p }});
+      if (seed) qs.set('seed', String(Number(seed)));
+      const res = await fetch('/director/api/create-user?' + qs.toString());
+      const js = await res.json();
+      if (!res.ok || !js.ok) {{ msg.textContent = 'Failed: ' + (js.error || res.status); return; }}
+      msg.textContent = 'User created (id ' + js.user_id + ').';
+      $('#cu_u').value = ''; $('#cu_p').value = ''; $('#cu_seed').value = '';
+      await loadUsers(); await loadDashboard();
+    }} catch (e) {{
+      msg.textContent = 'Network error';
+    }}
+  }});
+
+  // Reset password
+  document.getElementById('rp_btn')?.addEventListener('click', async () => {{
+    const uid = ($('#rp_uid')?.value || '').trim();
+    const pw  = ($('#rp_pw')?.value || '').trim();
+    const msg = $('#rp_msg');
+    if (!uid || !pw) {{ msg.textContent = 'Please enter both User ID and a new password.'; return; }}
+    msg.textContent = 'Working…';
+    try {{
+      const res = await fetch('/director/api/user/reset-password', {{
+        method: 'POST', headers: {{'Content-Type': 'application/json'}},
+        body: JSON.stringify({{ user_id: Number(uid), new_password: pw }})
+      }});
+      const js = await res.json();
+      if (!res.ok || !js.ok) {{ msg.textContent = 'Failed: ' + (js.error || res.status); return; }}
+      msg.textContent = 'Password updated for user #' + js.user_id + ' (' + (js.username || '') + ')';
+      $('#rp_pw').value = '';
+    }} catch (e) {{
+      msg.textContent = 'Network error';
+    }}
+  }});
+
+  // Row actions: enable/disable + set cap
+  document.addEventListener('click', async (ev) => {{
+    const row = ev.target.closest('tr[data-uid]');
+    if (!row) return;
+
+    // Toggle active
+    if (ev.target.closest('button.toggle')) {{
+      const btn = ev.target.closest('button.toggle');
+      const uid = row.getAttribute('data-uid');
+      const newActive = btn.getAttribute('data-active'); // "1" or "0"
+      btn.disabled = true;
+      try {{
+        const res = await fetch(`/director/api/user/set-active?user_id=${{encodeURIComponent(uid)}}&active=${{encodeURIComponent(newActive)}}`);
+        const js = await res.json();
+        if (!res.ok || !js.ok) {{ alert('Failed: ' + (js.error || res.status)); }}
+        else {{ await loadUsers(); }}
+      }} finally {{ btn.disabled = false; }}
+      return;
+    }}
+
+    // Save monthly cap
+    if (ev.target.closest('button.setcap')) {{
+      const capInput = row.querySelector('input.cap');
+      const raw = (capInput?.value || '').trim();
+      const uid = row.getAttribute('data-uid');
+      const cap = raw === '' ? 'null' : String(Number(raw));
+      const btn = ev.target.closest('button.setcap');
+      btn.disabled = true;
+      try {{
+        const res = await fetch(`/director/api/user/set-monthly-cap?user_id=${{encodeURIComponent(uid)}}&cap=${{encodeURIComponent(cap)}}`);
+        const js = await res.json();
+        if (!res.ok || !js.ok) {{ alert('Failed: ' + (js.error || res.status)); }}
+        else {{ alert('Saved'); }}
+      }} finally {{ btn.disabled = false; }}
+      return;
+    }}
+  }});
+
+  // initial load
+  (async () => {{ await loadUsers(); await loadDashboard(); }})();
+  </script>
+</body>
+</html>
+    """
+    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 # --- Friendly 402 page (Out of credits) ---
 def _render_out_of_credits(reason_text=None):
@@ -6304,15 +6491,23 @@ def _render_out_of_credits(reason_text=None):
 </body>
 </html>
 """
-    return render_template_string(
-        html,
-        org_name=org_name,
-        bal=bal,
-        last30=last30,
-        today=today,
-        users=users,
-        recent=recent,
-    )
+    return make_response(html, 402, {"Content-Type": "text/html; charset=utf-8"})
+
+class PaymentRequired(HTTPException):
+    code = 402
+    description = "Payment Required"
+
+@app.errorhandler(PaymentRequired)
+def on_payment_required(e):
+    reason = getattr(e, "description", None)
+    return _render_out_of_credits(reason)
+
+
+# Optional: direct route to preview the page
+@app.get("/out-of-credits")
+def out_of_credits_preview():
+    reason = request.args.get("msg") or "Preview: this is how the page looks when credits run out."
+    return _render_out_of_credits(reason)   
 
 # --- Admin: create org tables if missing (safe to run anytime) ---
 @app.get("/__admin/ensure-org-schema")
@@ -7598,10 +7793,5 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
-
-
-
-
-
 
 

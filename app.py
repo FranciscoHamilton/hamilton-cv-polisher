@@ -6210,7 +6210,7 @@ def director_ui():
          LIMIT 50
     """, (my_org, my_org)) or []
 
-    html = f"""
+        html = f"""
 <!doctype html>
 <html>
 <head>
@@ -6249,227 +6249,122 @@ def director_ui():
 
     .muted{color:var(--muted);font-size:13px}
     .grid{display:grid;gap:16px}
-    @media(min-width:1000px){.grid{grid-template-columns:1fr}}
+    @media (min-width: 1000px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
-  <header>
-    <a class="back" href="/app">← Back</a>
-    <h1>Director Console</h1>
-    <span id="orgBadge" class="muted"></span>
-  </header>
+  <div class="wrap">
+    <header>
+      <a class="back" href="/app">← Back</a>
+      <h1>Director Console</h1>
+      <span id="orgBadge" class="muted"></span>
+    </header>
 
-  <section class="grid">
-    <div>
+    <div class="section">
       <h2>Org Balance</h2>
-      <div class="muted">Pool credits available for your organization.</div>
-      <div id="poolBox" style="margin-top:6px;font-size:18px;">Loading…</div>
+      <div id="balance" class="muted">Loading…</div>
     </div>
-  </section>
 
-  <h2 style="margin-top:26px;">Users</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>User ID</th>
-        <th>Username</th>
-        <th>Monthly Cap</th>
-        <th>Active</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="usersBody">
-      <tr><td colspan="5" class="muted">Loading…</td></tr>
-    </tbody>
-  </table>
+    <div class="grid">
+      <div class="section">
+        <h2>Users</h2>
+        <div class="controls">
+          <input id="newUser" placeholder="new username" />
+          <button id="inviteBtn" class="btn primary">Invite</button>
+        </div>
+        <div class="muted" id="uMsg" style="margin-top:6px"></div>
+        <div style="margin-top:10px;overflow:auto">
+          <table id="usersTbl">
+            <thead><tr>
+              <th>User</th><th>Status</th><th>This month</th><th>Total</th><th>Actions</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
 
-  <div style="margin-top:14px; border:1px solid var(--line); border-radius:12px; padding:12px;">
-    <h3 style="margin:0 0 8px;">Create User</h3>
-    <div class="controls">
-      <input id="cu_u" placeholder="Username">
-      <input id="cu_p" placeholder="Password">
-      <input id="cu_seed" type="number" inputmode="numeric" placeholder="Seed credits (optional)">
-      <button id="cu_btn">Create</button>
-      <span id="cu_msg" class="msg"></span>
-    </div>
-    <div class="small">New users are created in your org. Seed credits (if provided) are added to the org pool.</div>
-  </div>
-
-  <div style="margin-top:14px; border:1px solid var(--line); border-radius:12px; padding:12px;">
-    <h3 style="margin:0 0 8px;">Reset User Password</h3>
-    <div class="controls">
-      <input id="rp_uid" placeholder="User ID">
-      <input id="rp_pw" placeholder="New password">
-      <button id="rp_btn">Reset</button>
-      <span id="rp_msg" class="msg"></span>
+      <div class="section">
+        <h2>Recent activity</h2>
+        <div style="overflow:auto">
+          <table id="actTbl">
+            <thead><tr>
+              <th>When</th><th>User</th><th>Candidate</th><th>Filename</th><th class="muted">Delta</th><th class="muted">Reason</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
-
-  <h2 style="margin-top:26px;">Recent Activity</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>When</th>
-        <th>User</th>
-        <th>Candidate</th>
-        <th>Filename</th>
-        <th>Delta</th>
-        <th>Reason</th>
-      </tr>
-    </thead>
-    <tbody id="recentBody">
-      <tr><td colspan="6" class="muted">Loading…</td></tr>
-    </tbody>
-  </table>
 
   <script>
-  const $ = (s) => document.querySelector(s);
-  const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}}[c])));
+  async function json(url, opts) {
+    const r = await fetch(url, opts || {});
+    if (!r.ok) throw new Error(await r.text());
+    return await r.json();
+  }
 
-  async function loadDashboard() {{
-    const res = await fetch('/director/api/dashboard?limit=20');
-    if (!res.ok) {{ $('#poolBox').textContent = 'Failed to load.'; return; }}
-    const d = await res.json();
-    $('#orgBadge').textContent = d.orgName ? ('Org: ' + d.orgName) : '';
-    const bal = (d.pool && typeof d.pool.balance === 'number') ? d.pool.balance : null;
-    $('#poolBox').textContent = (bal == null) ? '—' : (bal + ' credits');
+  async function loadDashboard(){
+    const d = await json('/director/api/dashboard');
+    document.getElementById('orgBadge').textContent = d.org_name || '';
+    const b = document.getElementById('balance');
+    b.innerHTML = `
+      <div class="pill" style="margin-right:8px">Credits: ${d.credits}</div>
+      <span class="muted">Last 30d: ${d.last30} • Today: ${d.today}</span>
+    `;
+  }
 
-    const recent = d.recent || [];
-    if (!recent.length) {{
-      $('#recentBody').innerHTML = '<tr><td colspan="6" class="muted">No recent activity.</td></tr>';
-    }} else {{
-      let html = '';
-      for (const r of recent) {{
-        const when = r.ts ? new Date(r.ts) : null;
-        const whenTxt = when && !isNaN(when.getTime()) ? when.toLocaleString() : esc(r.ts || '');
-        html += `<tr>
-          <td>${{whenTxt}}</td>
-          <td>${{esc(r.username || r.user_id || '')}}</td>
-          <td>${{esc(r.candidate || '')}}</td>
-          <td>${{esc(r.filename || '')}}</td>
-          <td>${{typeof r.delta === 'number' ? r.delta : ''}}</td>
-          <td>${{esc(r.reason || '')}}</td>
-        </tr>`;
-      }}
-      $('#recentBody').innerHTML = html;
-    }}
-  }}
-
-  async function loadUsers() {{
-    const res = await fetch('/director/api/users');
-    if (!res.ok) {{ $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">Failed to load users.</td></tr>'; return; }}
-    const js = await res.json();
-    const rows = js.users || [];
-    if (!rows.length) {{
-      $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">No users in this org yet.</td></tr>';
-      return;
-    }}
-    let html = '';
-    for (const u of rows) {{
-      const cap = (u.cap == null ? '' : u.cap);
-      const active = !!u.active;
-      const pill = `<span class="pill ${{active ? 'ok' : 'off'}}">${{active ? 'Active' : 'Disabled'}}</span>`;
-      const toggleLabel = active ? 'Disable' : 'Enable';
-      const toggleNext = active ? 0 : 1;
-      html += `<tr data-uid="${{u.id}}">
-        <td>${{u.id}}</td>
-        <td>${{esc(u.username || '')}}</td>
+  async function loadUsers(){
+    const d = await json('/director/api/users');
+    const tb = document.querySelector('#usersTbl tbody');
+    tb.innerHTML = d.users.map(u => `
+      <tr>
+        <td>${u.username}</td>
+        <td>${u.active ? '<span class="pill">active</span>' : '<span class="pill off">disabled</span>'}</td>
+        <td>${u.month_usage}</td>
+        <td>${u.total_usage}</td>
         <td>
-          <input class="cap" type="number" inputmode="numeric" placeholder="(none)" value="${{cap}}">
-          <button class="setcap">Save</button>
+          <button class="${u.active ? 'danger' : 'primary'} toggle" data-user="${u.username}" data-active="${u.active ? '0' : '1'}">${u.active ? 'Disable' : 'Enable'}</button>
         </td>
-        <td>${{pill}}</td>
-        <td>
-          <button class="toggle" data-active="${{toggleNext}}">${{toggleLabel}}</button>
-        </td>
-      </tr>`;
-    }}
-    $('#usersBody').innerHTML = html;
-  }}
+      </tr>
+    `).join('');
+  }
 
-  // Create user
-  document.getElementById('cu_btn')?.addEventListener('click', async () => {{
-    const u = ($('#cu_u')?.value || '').trim();
-    const p = ($('#cu_p')?.value || '').trim();
-    const seed = ($('#cu_seed')?.value || '').trim();
-    const msg = $('#cu_msg');
-    if (!u || !p) {{ msg.textContent = 'Username and password are required.'; return; }}
-    msg.textContent = 'Working…';
-    try {{
-      const qs = new URLSearchParams({{ u, p }});
-      if (seed) qs.set('seed', String(Number(seed)));
-      const res = await fetch('/director/api/create-user?' + qs.toString());
-      const js = await res.json();
-      if (!res.ok || !js.ok) {{ msg.textContent = 'Failed: ' + (js.error || res.status); return; }}
-      msg.textContent = 'User created (id ' + js.user_id + ').';
-      $('#cu_u').value = ''; $('#cu_p').value = ''; $('#cu_seed').value = '';
-      await loadUsers(); await loadDashboard();
-    }} catch (e) {{
-      msg.textContent = 'Network error';
-    }}
-  }});
-
-  // Reset password
-  document.getElementById('rp_btn')?.addEventListener('click', async () => {{
-    const uid = ($('#rp_uid')?.value || '').trim();
-    const pw  = ($('#rp_pw')?.value || '').trim();
-    const msg = $('#rp_msg');
-    if (!uid || !pw) {{ msg.textContent = 'Please enter both User ID and a new password.'; return; }}
-    msg.textContent = 'Working…';
-    try {{
-      const res = await fetch('/director/api/user/reset-password', {{
-        method: 'POST', headers: {{'Content-Type': 'application/json'}},
-        body: JSON.stringify({{ user_id: Number(uid), new_password: pw }})
-      }});
-      const js = await res.json();
-      if (!res.ok || !js.ok) {{ msg.textContent = 'Failed: ' + (js.error || res.status); return; }}
-      msg.textContent = 'Password updated for user #' + js.user_id + ' (' + (js.username || '') + ')';
-      $('#rp_pw').value = '';
-    }} catch (e) {{
-      msg.textContent = 'Network error';
-    }}
-  }});
-
-  // Row actions: enable/disable + set cap
-  document.addEventListener('click', async (ev) => {{
-    const row = ev.target.closest('tr[data-uid]');
-    if (!row) return;
-
-    // Toggle active
-    if (ev.target.closest('button.toggle')) {{
-      const btn = ev.target.closest('button.toggle');
-      const uid = row.getAttribute('data-uid');
-      const newActive = btn.getAttribute('data-active'); // "1" or "0"
-      btn.disabled = true;
-      try {{
-        const res = await fetch(`/director/api/user/set-active?user_id=${{encodeURIComponent(uid)}}&active=${{encodeURIComponent(newActive)}}`);
-        const js = await res.json();
-        if (!res.ok || !js.ok) {{ alert('Failed: ' + (js.error || res.status)); }}
-        else {{ await loadUsers(); }}
-      }} finally {{ btn.disabled = false; }}
-      return;
-    }}
-
-    // Save monthly cap
-    if (ev.target.closest('button.setcap')) {{
-      const capInput = row.querySelector('input.cap');
-      const raw = (capInput?.value || '').trim();
-      const uid = row.getAttribute('data-uid');
-      const cap = raw === '' ? 'null' : String(Number(raw));
-      const btn = ev.target.closest('button.setcap');
-      btn.disabled = true;
-      try {{
-        const res = await fetch(`/director/api/user/set-monthly-cap?user_id=${{encodeURIComponent(uid)}}&cap=${{encodeURIComponent(cap)}}`);
-        const js = await res.json();
-        if (!res.ok || !js.ok) {{ alert('Failed: ' + (js.error || res.status)); }}
-        else {{ alert('Saved'); }}
-      }} finally {{ btn.disabled = false; }}
-      return;
-    }}
-  }});
+  // actions
+  document.addEventListener('click', async (e) => {
+    const t = e.target;
+    if (t.classList.contains('toggle')) {
+      const user = t.getAttribute('data-user');
+      const active = t.getAttribute('data-active');
+      t.disabled = true;
+      try {
+        await json('/director/api/toggle', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user, active: active === '1'})});
+        await loadUsers();
+      } catch(err) {
+        alert('Toggle failed: ' + err.message);
+      } finally {
+        t.disabled = false;
+      }
+    }
+    if (t.id === 'inviteBtn') {
+      const name = document.getElementById('newUser').value.trim();
+      if (!name) return;
+      t.disabled = true;
+      try {
+        await json('/director/api/invite', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:name})});
+        document.getElementById('uMsg').textContent = 'Invitation created.';
+        document.getElementById('newUser').value = '';
+        await loadUsers();
+      } catch(err) {
+        document.getElementById('uMsg').textContent = 'Invite failed: ' + err.message;
+      } finally {
+        t.disabled = false;
+      }
+    }
+  });
 
   // initial load
-  (async () => {{ await loadUsers(); await loadDashboard(); }})();
+  (async () => { await loadUsers(); await loadDashboard(); })();
   </script>
 </body>
 </html>
@@ -7838,6 +7733,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

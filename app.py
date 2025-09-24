@@ -5198,12 +5198,15 @@ def director_api_users():
                     ORDER BY username ASC
                 """, (org_id,))
                 for uid2, uname, act in cur.fetchall():
-                    users.append({
-                        "id": int(uid2),
-                        "username": uname or "",
-                        "active": bool(act),
-                        "balance": bal_map.get(int(uid2))
-                    })
+    users.append({
+        "id": int(uid2),
+        "username": uname or "",
+        "active": bool(act),
+        "balance": bal_map.get(int(uid2)),
+        # added fields for the table
+        "month": month_counts.get(int(uid2), 0),
+        "total": total_counts.get(int(uid2), 0)
+    })
 
         return jsonify({"ok": True, "org_id": org_id, "users": users})
     except Exception as e:
@@ -7821,6 +7824,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -615,6 +615,31 @@ HOMEPAGE_HTML = r"""
   <title>Lustra</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+  /* ===== Consistent site header (brand + right links) across all pages ===== */
+:root{
+  --site-max: 1200px;
+  --site-pad-x: 24px;
+  --site-pad-y: 16px;
+}
+.sitebar, .topbar, header .sitebar, header .topbar{
+  max-width: var(--site-max);
+  margin: 0 auto;
+  padding: var(--site-pad-y) var(--site-pad-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sitebar .brand, .topbar .brand{
+  display:flex; align-items:center; gap:10px;
+  font-weight: 900; letter-spacing: .02em; font-size: 22px;
+}
+.sitebar nav, .topbar .nav{
+  display:flex; align-items:center; gap:24px;
+}
+.sitebar a, .topbar a{
+  text-decoration:none; font-weight:800;
+}
     :root{
   --blue:#2563eb;      /* vivid indigo */
   --blue-2:#22d3ee;    /* bright cyan  */
@@ -661,15 +686,16 @@ HOMEPAGE_HTML = r"""
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/">Lustra</a>
-      <div>
-        <a href="/about">About</a>
-        <a href="/pricing" style="margin-left:18px">Pricing</a>
-        <a href="/login" style="margin-left:18px">Sign in</a>
-      </div>
-    </div>
+  <header>
+  <div class="sitebar">
+    <a class="brand" href="/">Lustra</a>
+    <nav>
+      <a href="/about">About</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/login">Sign in</a>
+    </nav>
+  </div>
+</header>
 
     <div class="hero">
       <div class="kicker">BUILT BY RECRUITERS, FOR RECRUITERS</div>
@@ -831,6 +857,27 @@ ABOUT_HTML = r"""
   <title>About — Lustra</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+  /* ===== Consistent site header (brand + right links) across all pages ===== */
+:root{
+  --site-max: 1200px;
+  --site-pad-x: 24px;
+  --site-pad-y: 16px;
+}
+.sitebar, .topbar, header .sitebar, header .topbar{
+  max-width: var(--site-max);
+  margin: 0 auto;
+  padding: var(--site-pad-y) var(--site-pad-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sitebar .brand, .topbar .brand{
+  display:flex; align-items:center; gap:10px;
+  font-weight: 900; letter-spacing: .02em; font-size: 22px;
+}
+.sitebar nav, .topbar .nav{ display:flex; align-items:center; gap:24px; }
+.sitebar a, .topbar a{ text-decoration:none; font-weight:800; }
     :root{
   --blue:#2563eb;      /* vivid indigo */
   --blue-2:#22d3ee;    /* bright cyan  */
@@ -856,15 +903,17 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/">Lustra</a>
-      <div>
-        <a href="/pricing">Pricing</a>
-        <a href="/about" style="margin-left:18px">About</a>
-        <a href="/login" style="margin-left:18px">Sign in</a>
-      </div>
-    </div>
+  <header>
+  <div class="sitebar">
+    <a class="brand" href="/">Lustra</a>
+    <nav>
+      <a href="/about">About</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/login">Sign in</a>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
 
     <div class="card">
       <div class="inner">
@@ -2083,6 +2132,31 @@ LOGIN_HTML = r"""
     padding: 18px 18px;
   }
   #signinCard h1{ font-size: 30px; }
+}
+/* ===== Consistent site header (brand + right links) across all pages ===== */
+:root{
+  --site-max: 1200px;
+  --site-pad-x: 24px;
+  --site-pad-y: 16px;
+}
+.sitebar, .topbar, header .sitebar, header .topbar{
+  max-width: var(--site-max);
+  margin: 0 auto;
+  padding: var(--site-pad-y) var(--site-pad-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sitebar .brand, .topbar .brand{
+  display:flex; align-items:center; gap:10px;
+  font-weight: 900; letter-spacing: .02em; font-size: 22px;
+}
+.sitebar nav, .topbar .nav{
+  display:flex; align-items:center; gap:24px;
+}
+.sitebar a, .topbar a{
+  text-decoration:none; font-weight:800;
 }
   </style>
 </head>
@@ -7814,6 +7888,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

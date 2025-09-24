@@ -6210,7 +6210,7 @@ def director_ui():
          LIMIT 50
     """, (my_org, my_org)) or []
 
-    html = f"""
+    html = r"""
 <!doctype html>
 <html>
 <head>
@@ -7732,6 +7732,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

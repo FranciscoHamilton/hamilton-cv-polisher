@@ -6024,73 +6024,63 @@ if (!monthRows.length) {
 # --- Director UI (fixed: triple quotes + ASCII only) ---
 @app.get("/director/ui")
 def director_ui():
-    """
-    Simple HTML page for directors to view their org's pool balance,
-    users (with any caps if present), recent pool activity, create users,
-    reset passwords, and toggle user active state.
-    """
-    # access guard
-    if not (session.get("director") or is_admin()):
-        return make_response("forbidden", 403)
-
-    # must be logged in
+    # --- guard ---
     try:
-        uid = int(session.get("user_id") or 0)
-    except Exception:
-        uid = 0
-    if uid <= 0:
-        return redirect(url_for("login"))
-
-    # must belong to an org (or be admin)
-    my_org = _current_user_org_id()
-    is_admin = False
-    try:
-        is_admin = bool(session.get("is_admin")) or (session.get("username","").lower() == "admin") or (session.get("user","").lower() == "admin")
+        if not is_admin():
+            return redirect("/login")
     except Exception:
         pass
 
-    if not my_org and not is_admin:
-        return make_response("No organization assigned to this account.", 403)
+    # --- data (safe fallbacks if DB is missing) ---
+    # org name (optional)
+    row = db_query_one("SELECT name FROM orgs WHERE active=TRUE ORDER BY id LIMIT 1", ())
+    org_name = (row[0] if row and row[0] else "Lustra")
 
-    # if admin (no org on session), allow ?org_id=... to inspect
-    if is_admin and not my_org:
-        try:
-            my_org = int(request.args.get("org_id") or "0")
-        except Exception:
-            my_org = 0
-        if my_org <= 0:
-            return make_response("Admin view: please pass ?org_id=NN to inspect an org.", 400)
+    # org credits overview (optional)
+    row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM org_credits_ledger", ())
+    bal = int(row[0]) if row and row[0] is not None else 0
 
-    # data pulls
-    bal = org_balance(my_org)
+    row = db_query_one("""
+        SELECT COALESCE(SUM(delta),0)
+          FROM org_credits_ledger
+         WHERE created_at >= now() - interval '30 days'
+    """, ())
+    last30 = int(row[0]) if row and row[0] is not None else 0
+
+    row = db_query_one("""
+        SELECT COALESCE(SUM(delta),0)
+          FROM org_credits_ledger
+         WHERE created_at::date = now()::date
+    """, ())
+    today = int(row[0]) if row and row[0] is not None else 0
+
+    # users table (monthly_cap may be NULL)
     users = db_query_all("""
-        SELECT u.id, u.username,
-               (SELECT l.monthly_cap
-                  FROM org_user_limits l
-                 WHERE l.org_id = u.org_id AND l.user_id = u.id AND l.active
-                 LIMIT 1) AS monthly_cap,
-               COALESCE(u.active, TRUE) AS active
-          FROM users u
-         WHERE u.org_id = %s
-         ORDER BY u.username ASC
-    """, (my_org,)) or []
+        SELECT
+            u.id,
+            u.username,
+            NULL AS monthly_cap,                 -- keep schema; set if you add caps
+            COALESCE(u.active, TRUE) AS active
+        FROM users u
+        ORDER BY LOWER(u.username)
+    """, ()) or []
 
+    # recent usage (tuples so template stays simple)
     recent = db_query_all("""
-        SELECT e.created_at, u.username, e.candidate, e.filename, e.delta, e.reason
-          FROM (
-            SELECT created_at, user_id, NULL::text AS candidate, NULL::text AS filename, delta, reason
-              FROM org_credits_ledger
-             WHERE org_id = %s
-            UNION ALL
-            SELECT created_at, user_id, candidate, filename, NULL::int AS delta, 'polish'::text AS reason
-              FROM usage_events
-             WHERE org_id = %s
-          ) e
-          LEFT JOIN users u ON u.id = e.user_id
-         ORDER BY e.created_at DESC
-         LIMIT 50
-    """, (my_org, my_org)) or []
+        SELECT
+            e.ts,
+            COALESCE(u.username, '(unknown)') AS username,
+            COALESCE(e.candidate, ''),
+            COALESCE(e.filename, ''),
+            NULL::int  AS delta,                -- placeholder for "Δ"
+            NULL::text AS reason
+        FROM usage_events e
+        LEFT JOIN users u ON u.id = e.user_id
+        ORDER BY e.ts DESC
+        LIMIT 50
+    """, ()) or []
 
+    # --- view (Jinja template string; NOT an f-string) ---
     html = r"""<!doctype html>
 <html lang="en">
 <head>
@@ -6099,48 +6089,65 @@ def director_ui():
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      /* Lustra brand — keep in sync with HOMEPAGE_HTML */
-      --blue:#2563eb;
-      --blue-2:#22d3ee;
+      /* Lustra brand (match homepage/pricing) */
+      --blue:#2563eb;      /* vivid indigo */
+      --blue-2:#22d3ee;   /* bright cyan  */
       --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
       --bg:#f5f8fd; --card:#ffffff; --shadow:0 10px 28px rgba(13,59,102,.08);
       --ok:#16a34a; --warn:#d97706; --bad:#b91c1c;
     }
+
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+      background:var(--bg); color:var(--ink);
+    }
     .wrap{max-width:1200px;margin:24px auto 64px;padding:0 20px}
+
+    /* Top nav (matches site) */
     .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
     .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
     .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:18px}
+
+    /* Header */
     .pagehead{display:flex;align-items:center;gap:12px;margin:8px 0 18px}
     .back{display:inline-flex;align-items:center;gap:6px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--ink)}
     .back:hover{background:#f8fafc}
     h1{margin:0;font-size:28px;letter-spacing:-.01em}
     .org{color:var(--muted);font-weight:800;margin-left:6px}
+
+    /* Cards / grid */
     .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 16px;box-shadow:var(--shadow)}
     .card h2{margin:0 0 10px;font-size:18px;color:var(--blue)}
-    .pill{display:inline-block;padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;background:#f8fafc}
-    .pill.ok{color:var(--ok);border-color:#bbf7d0;background:#f0fdf4}
-    .pill.warn{color:var(--warn);border-color:#fde68a;background:#fffbeb}
-    .pill.bad{color:var(--bad);border-color:#fecaca;background:#fef2f2}
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
+
+    /* Table */
     .table-wrap{overflow:auto}
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:14px}
     th{position:sticky;top:0;background:#f8fafc;font-weight:800}
     td.muted,th.muted{color:var(--muted)}
     .actions{display:flex;gap:8px;flex-wrap:wrap}
+
+    /* Inputs & buttons */
     input[type=text],input[type=number]{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:14px;box-shadow:inset 0 1px 2px rgba(2,6,23,.03);outline:none}
     input[type=text]:focus,input[type=number]:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(59,130,246,.18)}
     .btn{display:inline-block;padding:10px 14px;border:1px solid var(--line);border-radius:12px;font-weight:900;cursor:pointer;background:#f8fafc;color:#0b1220;text-decoration:none}
     .btn:hover{background:#eef2f7}
     .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;box-shadow:var(--shadow)}
     .btn.danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+
+    .pill{display:inline-block;padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;background:#f8fafc}
+    .pill.ok{color:var(--ok);border-color:#bbf7d0;background:#f0fdf4}
+    .pill.warn{color:var(--warn);border-color:#fde68a;background:#fffbeb}
+    .pill.bad{color:var(--bad);border-color:#fecaca;background:#fef2f2}
+
     .muted{color:var(--muted);font-size:13px}
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .mt6{margin-top:6px}.mt10{margin-top:10px}.mt14{margin-top:14px}.mt18{margin-top:18px}
+    .mt6{margin-top:6px} .mt10{margin-top:10px} .mt14{margin-top:14px}
   </style>
 </head>
 <body>
@@ -6194,7 +6201,7 @@ def director_ui():
               <tr>
                 <td>{{ u[1] }}</td>
                 <td class="muted">{{ '-' if u[2] is none else u[2] }}</td>
-                <td class="muted">{{ 'Yes' if (u[3] if u[3] is not none else True) else 'No' }}</td>
+                <td class="muted">{{ 'Yes' if (u[3]) else 'No' }}</td>
                 <td class="actions">
                   <form method="post" action="/director/user/toggle" style="display:inline">
                     <input type="hidden" name="user_id" value="{{ u[0] }}"/>
@@ -6230,12 +6237,12 @@ def director_ui():
             <tbody>
               {% for r in recent %}
               <tr>
-                <td>{{ (r[0].strftime('%Y-%m-%d %H:%M:%S') if r[0] else '-') }}</td>
-                <td>{{ r[1] or '(unknown)' }}</td>
-                <td>{{ r[2] or '' }}</td>
-                <td class="muted">{{ r[3] or '' }}</td>
-                <td class="muted">{{ '' if r[4] is none else r[4] }}</td>
-                <td class="muted">{{ r[5] or '' }}</td>
+                <td>{{ r[0] }}</td>
+                <td>{{ r[1] }}</td>
+                <td>{{ r[2] }}</td>
+                <td class="muted">{{ r[3] }}</td>
+                <td class="muted">{{ r[4] if r[4] is not none else '' }}</td>
+                <td class="muted">{{ r[5] if r[5] is not none else '' }}</td>
               </tr>
               {% endfor %}
             </tbody>
@@ -6247,6 +6254,17 @@ def director_ui():
   </div>
 </body>
 </html>"""
+
+    # IMPORTANT: return stays inside the function, aligned with html = r""" above
+    return render_template_string(
+        html,
+        org_name=org_name,
+        bal=bal,
+        last30=last30,
+        today=today,
+        users=users,
+        recent=recent,
+    )
 return render_template_string(
     html,
     org_name=org_name if 'org_name' in locals() else '',
@@ -7619,6 +7637,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

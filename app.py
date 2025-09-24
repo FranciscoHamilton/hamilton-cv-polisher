@@ -6022,6 +6022,8 @@ if (!monthRows.length) {
 # --- Director: minimal UI for org-scoped dashboard (read-only) ---
 # --- Director: minimal UI for org-scoped dashboard (read-only + enable/disable) ---
 # --- Director UI (fixed: triple quotes + ASCII only) ---
+
+
 @app.get("/director/ui")
 def director_ui():
     # --- guard ---
@@ -6335,23 +6337,15 @@ def _render_out_of_credits(reason_text=None):
 </body>
 </html>
 """
-    return make_response(html, 402, {"Content-Type": "text/html; charset=utf-8"})
-
-class PaymentRequired(HTTPException):
-    code = 402
-    description = "Payment Required"
-
-@app.errorhandler(PaymentRequired)
-def on_payment_required(e):
-    reason = getattr(e, "description", None)
-    return _render_out_of_credits(reason)
-
-
-# Optional: direct route to preview the page
-@app.get("/out-of-credits")
-def out_of_credits_preview():
-    reason = request.args.get("msg") or "Preview: this is how the page looks when credits run out."
-    return _render_out_of_credits(reason)   
+    return render_template_string(
+        html,
+        org_name=org_name,
+        bal=bal,
+        last30=last30,
+        today=today,
+        users=users,
+        recent=recent,
+    )
 
 # --- Admin: create org tables if missing (safe to run anytime) ---
 @app.get("/__admin/ensure-org-schema")
@@ -7637,6 +7631,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

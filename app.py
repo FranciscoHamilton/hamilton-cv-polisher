@@ -969,6 +969,27 @@ PRICING_HTML = r"""
   <title>Pricing — Lustra</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+  /* ===== Consistent site header (brand + right links) across all pages ===== */
+:root{
+  --site-max: 1200px;
+  --site-pad-x: 24px;
+  --site-pad-y: 16px;
+}
+.sitebar, .topbar, header .sitebar, header .topbar{
+  max-width: var(--site-max);
+  margin: 0 auto;
+  padding: var(--site-pad-y) var(--site-pad-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.sitebar .brand, .topbar .brand{
+  display:flex; align-items:center; gap:10px;
+  font-weight: 900; letter-spacing: .02em; font-size: 22px;
+}
+.sitebar nav, .topbar .nav{ display:flex; align-items:center; gap:24px; }
+.sitebar a, .topbar a{ text-decoration:none; font-weight:800; }
     :root{
       --brand:#2563eb; --brand-2:#22d3ee;
       --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
@@ -1079,17 +1100,16 @@ PRICING_HTML = r"""
 </head>
 
 <body>
-  <!-- NAV -->
-  <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/">Lustra</a>
-      <div class="nav-links">
-        <a href="/">Home</a>
-        <a href="/about">About</a>
-        <a href="/login">Sign in</a>
-      </div>
-    </div>
+  <header>
+  <div class="sitebar">
+    <a class="brand" href="/">Lustra</a>
+    <nav>
+      <a href="/about">About</a>
+      <a href="/pricing">Pricing</a>
+      <a href="/login">Sign in</a>
+    </nav>
   </div>
+</header>
 
   <!-- PAGE BOX with hero + plans (aligned with Lustra) -->
   <div class="wrap">
@@ -7888,6 +7908,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

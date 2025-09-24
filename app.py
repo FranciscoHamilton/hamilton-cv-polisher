@@ -859,9 +859,9 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
   <div class="wrap">
     <div class="nav">
       <a class="brand" href="/">Lustra</a>
-            <div>
-        <a href="/about">About</a>
-        <a href="/pricing" style="margin-left:18px">Pricing</a>
+      <div>
+        <a href="/pricing">Pricing</a>
+        <a href="/about" style="margin-left:18px">About</a>
         <a href="/login" style="margin-left:18px">Sign in</a>
       </div>
     </div>
@@ -1023,12 +1023,9 @@ PRICING_HTML = r"""
     .calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
     @media(max-width:980px){ .calc-grid{grid-template-columns:1fr} }
     .calc label{display:block;font-weight:900;margin-bottom:6px}
-    .calc .hint{font-size:12px;color:var(--muted)}
-    .calc input[type=number]{width:100%;max-width:160px;padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:inset 0 1px 2px rgba(2,6,23,.03)}
-    @media(max-width:980px){ .calc input[type=number]{max-width:100%;} }
+    .calc input[type=number]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:inset 0 1px 2px rgba(2,6,23,.03)}
     .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px}
     .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
-    #bestCost .pcv{font-size:14px;color:#64748b;font-weight:700}
   </style>
 </head>
 
@@ -1038,9 +1035,9 @@ PRICING_HTML = r"""
     <div class="nav">
       <a class="brand" href="/">Lustra</a>
       <div class="nav-links">
+        <a href="/">Home</a>
         <a href="/about">About</a>
-        <a href="/pricing" style="margin-left:18px">Pricing</a>
-        <a href="/login" style="margin-left:18px">Sign in</a>
+        <a href="/login">Sign in</a>
       </div>
     </div>
   </div>
@@ -1066,7 +1063,7 @@ PRICING_HTML = r"""
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Email support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.55/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.45/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Starter</a>
@@ -1087,7 +1084,7 @@ PRICING_HTML = r"""
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.45/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.35/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Growth</a>
@@ -1108,7 +1105,7 @@ PRICING_HTML = r"""
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.35/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.25/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Scale</a>
@@ -1152,113 +1149,257 @@ PRICING_HTML = r"""
     </div> <!-- /.pagebox -->
   </div> <!-- /.wrap -->
 
-      <div class="wrap section" style="margin-bottom:72px">
-    <div class="card calc" style="margin-bottom:56px">
+  <div class="wrap">
+    <p class="note">Prices exclude VAT where applicable. Monthly credits reset each month. Packs never expire and are org-wide. We always use Monthly first, then Packs if available, otherwise Overage.</p>
+  </div>
+
+  <!-- CALCULATOR (unchanged; only constants updated) -->
+  <div class="wrap section">
+    <div class="card calc">
       <div class="inner">
-        <div class="name">Savings &amp; best plan</div>
+        <div class="name">Savings & best plan</div>
         <div class="sub">Estimate time/payroll savings and see which plan fits your volume (with overage).</div>
-
-        <div class="calc-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:18px 24px;margin-top:10px">
-          <div class="field">
-            <label>CVs per month</label>
-            <input id="cvs" type="number" min="0" value="120" placeholder="e.g., 120" style="width:100%;max-width:420px">
-            <div class="hint">Average number of CVs your team polishes each month.</div>
-          </div>
-          <div class="field">
-            <label>Minutes per CV (manual polish)</label>
-            <input id="minManual" type="number" min="0" value="15" placeholder="e.g., 15" style="width:100%;max-width:420px">
-            <div class="hint">Average minutes currently spent tidying one CV, before Lustra.</div>
-          </div>
-          <div class="field">
-            <label>Recruiter hourly rate (£)</label>
-            <input id="hourRate" type="number" min="0" value="30" placeholder="e.g., 30" style="width:100%;max-width:420px">
-            <div class="hint">Average fully-loaded hourly cost per recruiter (salary ÷ hours).</div>
-          </div>
+        <div class="calc-grid" style="margin-top:10px">
+          <div><label>CVs per month</label><input id="cvs" type="number" min="0" value="100"></div>
+          <div><label>Minutes per CV (manual polish)</label><input id="minManual" type="number" min="0" value="15"></div>
+          <div><label>Recruiter hourly cost</label><input id="hourRate" type="number" min="0" value="30"></div>
         </div>
-
-<!-- Best option: single horizontal row -->
-        <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
-          <span id="bestBadge" style="display:inline-flex;align-items:center;font-weight:900;font-size:12px;letter-spacing:.04em;padding:6px 10px;border-radius:999px;color:#fff;background:linear-gradient(90deg,var(--brand),var(--brand-2))">BEST OPTION</span>
-          <span id="bestName" style="font-size:28px;font-weight:900;line-height:1.2;color:#0b122a">—</span>
+        <div class="calc-out">
+          <div><span class="n" id="outHours">25.0</span> hours saved / month</div>
+          <div><span class="n">£<span id="outMoney">750</span></span> payroll saved / month</div>
         </div>
-        <div id="bestCost" style="font-size:22px;font-weight:900;line-height:1.2;color:#0b122a;margin-top:6px">£— /mo</div>
-        <div id="bestDetail" class="sub" style="margin-top:6px"></div>
-        
-        <div class="calc-out" style="display:flex;gap:40px;flex-wrap:wrap;margin-top:14px">
-          <div>
-            <div><span class="n" id="outHours">0</span> hours saved / month</div>
-            <div id="outHoursY" style="color:#64748b;font-size:14px;margin-top:2px">— /yr</div>
-          </div>
-          <div>
-            <div><span class="n">£<span id="outMoney">0</span></span> payroll saved / month</div>
-            <div id="outMoneyY" style="color:#64748b;font-size:14px;margin-top:2px">— /yr</div>
-          </div>
-        </div>
-
+        <div class="sub" id="planPick" style="margin-top:8px"></div>
       </div>
     </div>
   </div>
 
   <script>
+    /* Calculator unchanged — only plan constants updated */
     function fmt(n){ return new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(n); }
     function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
-    // Monthly plans — aligned with the cards above
     const PLANS = [
-      { key:'Starter', credits:100, cost:150, over:1.55, color:'#06b6d4' },
-      { key:'Growth',  credits:250, cost:350, over:1.45, color:'#2563eb' },
-      { key:'Scale',   credits:500, cost:650, over:1.35, color:'#8b5cf6' }
+      { kind:'Monthly', key:'Starter', baseCredits:100, baseCost:150, baseRate:1.50, overRate:1.70 },
+      { kind:'Monthly', key:'Growth',  baseCredits:300, baseCost:420, baseRate:1.40, overRate:1.60 },
+      { kind:'Monthly', key:'Scale',   baseCredits:500, baseCost:650, baseRate:1.30, overRate:1.50 }
+      // Buy Packs are on-demand; not part of the "best monthly plan" picker.
     ];
 
-    function quote(plan, volume){
-      const v = Math.max(0, Math.floor(volume||0));
-      const included = Math.min(v, plan.credits);
-      const over = Math.max(0, v - plan.credits);
-      const total = plan.cost + over*plan.over;
-      const percv = v ? (total / v) : 0;
-      const detail = over>0
-        ? `Includes ${plan.credits} CVs. You have ${over} additional CVs charged as overage at £${plan.over.toFixed(2)} per CV (${fmtGBP(over*plan.over)}). Total ${fmtGBP(total)}/mo.`
-        : `Within ${plan.credits} included CVs. Total ${fmtGBP(total)}/mo.`;
-      return { name: plan.key, total, percv, detail, color: plan.color };
+    function costFor(plan, volume){
+      const included=Math.min(volume, plan.baseCredits);
+      const over=Math.max(0, volume - plan.baseCredits);
+      const cost=plan.baseCost + over*plan.overRate;
+      const percv=volume ? (cost/volume) : 0;
+      const detail=over>0?`includes ${plan.baseCredits} + ${over} over @ £${plan.overRate.toFixed(2)}`:`up to ${plan.baseCredits} included`;
+      return { name:plan.key, cost, percv, detail };
     }
 
-    function recalc(){
-      const cvs = parseFloat(document.getElementById('cvs').value)||0;
-      const minManual = parseFloat(document.getElementById('minManual').value)||0;
-      const rate = parseFloat(document.getElementById('hourRate').value)||0;
+    function calc(){
+      const cvs=parseFloat(document.getElementById('cvs').value)||0;
+      const mManual=parseFloat(document.getElementById('minManual').value)||0;
+      const rate=parseFloat(document.getElementById('hourRate').value)||0;
 
-      const hours = (cvs * Math.max(0,minManual)) / 60;
-      const payroll = hours * rate;
-      document.getElementById('outHours').textContent = (Math.round(hours*10)/10).toFixed(1);
-      document.getElementById('outMoney').textContent = fmt(Math.round(payroll));
+      const timeSavedHours=(Math.max(0,mManual)*cvs)/60;
+      const moneySaved=timeSavedHours*rate;
+      document.getElementById('outHours').textContent=(Math.round(timeSavedHours*10)/10).toFixed(1);
+      document.getElementById('outMoney').textContent=fmt(Math.round(moneySaved));
 
-      // yearly (soft hint)
-      const hoursY = hours * 12;
-      const payrollY = payroll * 12;
-      document.getElementById('outHoursY').textContent = (Math.round(hoursY*10)/10).toFixed(1) + ' h /yr';
-      document.getElementById('outMoneyY').textContent = fmt(Math.round(payrollY)) + ' /yr';
-
-      if(!cvs){
-        document.getElementById('bestName').textContent = '—';
-        document.getElementById('bestName').style.color = '#0f172a';
-        document.getElementById('bestCost').textContent = '£— /mo';
-        document.getElementById('bestDetail').textContent = '';
-        return;
-      }
-
-      const quotes = PLANS.map(p => quote(p, cvs)).sort((a,b)=>a.total-b.total);
-      const best = quotes[0];
-      const percv = best.percv ? ` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)` : '';
-
-      document.getElementById('bestName').textContent = best.name;
-      document.getElementById('bestName').style.color = best.color;        // colour matches Starter/Growth/Scale
-      document.getElementById('bestCost').innerHTML = fmtGBP(best.total) + ' /mo' + (best.percv ? ' <span class="pcv">(~£' + (Math.round(best.percv*100)/100).toFixed(2) + '/CV)</span>' : '');
-      document.getElementById('bestDetail').textContent = best.detail;      // clear, full sentence
+      const options=PLANS.map(p=>({plan:p,quote:costFor(p,cvs)})).sort((a,b)=>a.quote.cost-b.quote.cost);
+      const pickEl=document.getElementById('planPick');
+      if(!cvs){ pickEl.textContent=''; return; }
+      const best=options[0].quote;
+      const percv=best.percv?` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)`:'';
+      pickEl.innerHTML=`Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>/mo${percv}<br><span class="sub">${best.detail}</span>`;
     }
-
-    document.addEventListener('input', (e)=>{ if(['cvs','minManual','hourRate'].includes(e.target.id)) recalc(); });
-    document.addEventListener('DOMContentLoaded', recalc);
+    document.addEventListener('input', (e)=>{ if(['cvs','minManual','hourRate'].includes(e.target.id)) calc(); });
+    document.addEventListener('DOMContentLoaded', calc);
   </script>
+</body>
+</html>
+"""
+
+CONTACT_HTML = r"""
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Talk to Sales — Lustra</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --brand:#2563eb; --brand-2:#22d3ee;
+      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+      --bg:#f6f9ff; --card:#fff; --shadow:0 10px 24px rgba(2,6,23,.06);
+      --ok:#16a34a; --red:#ef4444;
+    }
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1180px;margin:28px auto 64px;padding:0 28px}
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .brand{font-weight:900;color:#0f172a;text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+    .pagebox{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:28px}
+    h1{margin:2px 0 6px;font-size:40px;letter-spacing:-.01em}
+    .sub{margin:0 0 16px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:26px}
+    @media(max-width:900px){ .grid{grid-template-columns:1fr} }
+    label{font-weight:800;font-size:14px;margin:12px 0 6px;display:block}
+    input[type="text"], input[type="email"], select, textarea{
+      width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;
+      font-size:15px;outline:none;background:#fff;
+    }
+    textarea{min-height:110px;resize:vertical}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .hint{font-size:12.5px;color:var(--muted);margin-top:4px}
+    .btn{
+      display:inline-block;width:100%;padding:14px 18px;border-radius:999px;text-align:center;
+      font-weight:900;text-decoration:none;border:none;background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff
+    }
+    .side{background:#fbfdff;border:1px solid var(--line);border-radius:16px;padding:16px}
+    .pill{display:inline-flex;align-items:center;padding:4px 8px;border:1px solid var(--line);border-radius:999px;margin:6px 6px 0 0;font-size:12px;color:var(--ink)}
+    .tick{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:rgba(34,211,238,.15);color:#0891b2;font-weight:900;font-size:11px;margin-right:6px}
+    .err{color:var(--red);font-weight:700;margin:6px 0 0}
+    .ok{color:var(--ok);font-weight:800}
+    .fineprint{margin-top:12px;color:var(--muted);font-size:12.5px}
+/* --- FORM FIELD SIZE TUNE-UP (reduce field text; keep label size unchanged) --- */
+.pagebox input[type="text"],
+.pagebox input[type="email"],
+.pagebox input[type="number"],
+.pagebox select{
+  height:42px;          /* a touch shorter */
+  padding:8px 12px;
+  font-size:14px;       /* smaller than label; titles unchanged */
+  line-height:1.25;
+  border-radius:12px;
+}
+
+.pagebox textarea{
+  font-size:14px;       /* smaller than label */
+  line-height:1.35;
+  padding:10px 12px;
+  min-height:110px;
+}
+
+.pagebox ::placeholder{font-size:14px;opacity:.65}
+/* optional: keep or remove this if you liked the smaller button */
+/* .pagebox .btn{padding:12px 16px} */
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="nav">
+      <a class="brand" href="/">Lustra</a>
+      <div>
+        <a href="/about">About</a>
+        <a href="/pricing" style="margin-left:18px">Pricing</a>
+        <a href="/login" style="margin-left:18px">Sign in</a>
+      </div>
+    </div>
+
+    <div class="pagebox">
+      <h1>Talk to Sales</h1>
+      <p class="sub">Tell us about your desk; we’ll get you live in a day. Or start a 5-CV trial — no card required.</p>
+
+      <form method="POST" enctype="multipart/form-data" class="grid">
+        <div>
+          <label>Company</label>
+          <input name="company" type="text" required>
+
+          <div class="row">
+            <div>
+              <label>Work email</label>
+              <input name="email" type="email" required>
+            </div>
+            <div>
+              <label>Your name</label>
+              <input name="name" type="text">
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Monthly CVs</label>
+              <select name="volume" required>
+                <option value="">Choose…</option>
+                <option>100</option>
+                <option>250</option>
+                <option>500</option>
+                <option>700+</option>
+                <option>Not sure</option>
+              </select>
+            </div>
+            <div>
+              <label>Users</label>
+              <select name="users" required>
+                <option value="">Choose…</option>
+                <option>1–5</option>
+                <option>6–10</option>
+                <option>11–20</option>
+                <option>21–30</option>
+                <option>30+</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <label>Templates needed</label>
+              <select name="templates">
+                <option>1 (included)</option>
+                <option>2</option>
+                <option>3+</option>
+              </select>
+              <div class="hint">Extra templates £50 each.</div>
+            </div>
+            <div>
+              <label>SSO / SLA required?</label>
+              <select name="need_sso">
+                <option>No</option>
+                <option>Yes</option>
+                <option>Maybe</option>
+              </select>
+            </div>
+          </div>
+
+          <label>Message (optional)</label>
+          <textarea name="message" placeholder="Anything we should know?"></textarea>
+
+          <label>Upload a sample CV (optional)</label>
+          <input name="file" type="file" accept=".pdf,.doc,.docx,.txt">
+
+          <!-- anti-spam -->
+          <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off">
+
+          <!-- CSRF -->
+          <input type="hidden" name="csrf" value="{{csrf}}">
+
+          <div style="margin-top:16px">
+            <button class="btn" type="submit">Send to Sales / Start trial</button>
+          </div>
+
+          <div class="fineprint">We’ll reply within 1 business day. We never use your documents to train models.</div>
+        </div>
+
+        <aside class="side">
+          <div style="font-weight:900;margin-bottom:10px">What you get</div>
+          <div><span class="tick">✓</span>On-brand DOCX output</div>
+          <div><span class="tick">✓</span>PDF / DOCX / TXT supported</div>
+          <div><span class="tick">✓</span>Org-wide credits & usage</div>
+          <div><span class="tick">✓</span>CSV exports and Director dashboard</div>
+          <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
+          <div style="font-weight:900;margin-bottom:6px">Plans</div>
+          <div class="pill">Starter — 100 CVs · £150/mo</div>
+          <div class="pill">Growth — 250 CVs · £350/mo</div>
+          <div class="pill">Scale — 500 CVs · £650/mo</div>
+          <div class="hint" style="margin-top:8px">Buy Packs available · non-expiring.</div>
+          <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
+          <div style="font-weight:900;margin-bottom:6px">Prefer email?</div>
+          <div><a href="mailto:hello@lustra.uk">hello@lustra.uk</a></div>
+          <div class="hint">We reply within 1 business day.</div>
+        </aside>
+      </form>
+    </div>
+  </div>
 </body>
 </html>
 """
@@ -1383,33 +1524,6 @@ body{
 
 /* layout */
 .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
-.grid > .card{height:100%;display:flex;flex-direction:column}
-
-/* skills pills — compact black chips + small close */
-.skills{display:flex;flex-wrap:wrap;gap:8px}
-.skills .pill{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:6px 10px;border-radius:999px;
-  border:1px solid #0b1220;background:#0b1220;color:#fff;
-  font-size:12px;font-weight:700
-}
-.skills .pill .x{all:unset;cursor:pointer;font-weight:900;font-size:12px;line-height:1;padding:0 2px;color:#fff;opacity:.85}
-.skills .pill .x:hover{opacity:1}
-
-/* full history rows: smaller & tidy */
-.history .row{font-size:12px}
-.history .row .muted{font-size:12px}
-.grid > .card{height:100%;display:flex;flex-direction:column}
-/* skills pills — compact black chips */
-.skills{display:flex;flex-wrap:wrap;gap:8px}
-.skills .pill{
-  display:inline-flex;align-items:center;gap:6px;
-  padding:6px 10px;border-radius:999px;
-  border:1px solid #0b1220;background:#0b1220;color:#fff;
-  font-size:12px;font-weight:700
-}
-/* placeholder for the little “×” we’ll add next step */
-.skills .pill .kill{display:none}
 @media(max-width:980px){ .grid{grid-template-columns:1fr;gap:12px} }
 
 /* cards */
@@ -1977,8 +2091,8 @@ LOGIN_HTML = r"""
     <div class="nav">
       <a class="brand" href="/">Lustra</a>
       <div>
-  <a href="/about">About</a>
-  <a href="/pricing" style="margin-left:18px">Pricing</a>
+  <a href="/">Home</a>
+  <a href="/about" style="margin-left:18px">About</a>
   <a href="/login" style="margin-left:18px">Sign in</a>
 </div>
     </div>
@@ -1995,7 +2109,7 @@ LOGIN_HTML = r"""
         <button type="submit">Continue</button>
       </form>
       <div class="muted">
-        Default demo: admin / hamilton • <a href="/forgot">Forgot password?</a>
+        Default demo: admin / hamilton • <a href="/forgot">Forgot password?</a> • <a href="/">Home</a>
       </div>
     </div>
   </div>
@@ -2015,68 +2129,29 @@ DIRECTOR_LOGIN_HTML = r"""
   <title>Director access</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{
-      --blue:#0a4d8c; --blue-2:#003366;
-      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
-      --bg:#eef3fb; --card:#ffffff;
-      --shadow:0 6px 24px rgba(2,6,23,.06), 0 1px 2px rgba(2,6,23,.06)
-    }
+    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#ffffff}
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:1100px;margin:28px auto 56px;padding:0 18px}
-    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .brand{font-weight:900;color:#0f172a;text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:18px}
-
-    .page{display:flex;justify-content:center}
-    .card{
-      width:100%;max-width:720px;
-      background:var(--card);border:1px solid var(--line);
-      border-radius:22px;padding:22px 24px;box-shadow:var(--shadow)
-    }
-    h3{margin:2px 0 12px;color:var(--blue);font-size:22px;letter-spacing:.2px}
-
-    label{display:block;font-weight:800;font-size:14px;margin:12px 0 6px}
-    input[type=password]{
-      width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;font-size:15px;
-      outline:none; box-shadow:inset 0 1px 2px rgba(2,6,23,.03)
-    }
-    input[type=password]:focus{
-      border-color:#93c5fd; box-shadow:0 0 0 3px rgba(59,130,246,.18)
-    }
-
-    button{
-      width:100%;margin-top:14px;
-      background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;border-radius:14px;
-      padding:14px 16px;font-weight:900;cursor:pointer;box-shadow:var(--shadow)
-    }
-    button:hover{transform:translateY(-1px)}
-    .muted{color:var(--muted);font-size:12.5px;text-align:center;margin-top:10px}
-    .err{margin-top:8px;color:#b91c1c;font-weight:800;font-size:12px}
+    .wrap{max-width:520px;margin:48px auto;padding:0 18px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
+    label{font-weight:600;font-size:13px}
+    input[type=password]{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
+    button{width:100%;margin-top:12px;background:linear-gradient(90deg,var(--blue),#0a4d8c);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
+    .muted{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
+    .err{margin-top:8px;color:#b91c1c;font-weight:700;font-size:12px}
     a{color:var(--blue);text-decoration:none}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/">Lustra</a>
-      <div>
-        <a href="/about">About</a>
-        <a href="/pricing" style="margin-left:18px">Pricing</a>
-        <a href="/login" style="margin-left:18px">Sign in</a>
-      </div>
-    </div>
-
-    <div class="page">
-      <div class="card">
-        <h3>Director verification</h3>
-        <!--DERR-->
-        <form method="post" action="/director/login" autocomplete="off">
-          <label for="dp">Director password</label>
-          <input id="dp" type="password" name="password" autofocus required />
-          <button type="submit">Enter</button>
-        </form>
-        <div class="muted"><a href="/director/forgot">Forgot director password?</a> · <a href="/app">Back</a></div>
-      </div>
+    <div class="card">
+      <h3>Director verification</h3>
+      <!--DERR-->
+      <form method="post" action="/director/login">
+        <label for="dp">Director password</label>
+        <input id="dp" type="password" name="password" autofocus required />
+        <button type="submit">Enter</button>
+      </form>
+      <div class="muted"><a href="/director/forgot">Forgot director password?</a> · <a href="/app">Back</a></div>
     </div>
   </div>
 </body>
@@ -2091,49 +2166,20 @@ DIRECTOR_HTML = r"""
   <title>Director — Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-      <style>
-    :root{
-      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#eff4fb; --card:#ffffff;
-      --brand:#2563eb; --brand2:#22d3ee; --success:#16a34a; --danger:#b91c1c;
-      --shadow:0 10px 24px rgba(2,6,23,.06), 0 1px 2px rgba(2,6,23,.06)
-    }
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:1180px;margin:28px auto 56px;padding:0 28px}
-
-    /* page header + back link */
-    .pagehead{display:flex;align-items:center;gap:14px;margin:6px 0 16px}
-    .back{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:12px;
-      background:#f1f5f9;border:1px solid #e5e7eb;color:#0b1220;text-decoration:none;font-weight:800}
-    .back:hover{background:#e9eef6}
-    h1{margin:0;font-size:32px;letter-spacing:-.01em}
-    .org{color:var(--muted);font-weight:800;margin-left:8px}
-
-    /* cards / sections */
-    .section{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:18px 20px;margin:14px 0}
-
-    /* tables */
-    table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
-    thead th{background:#f8fafc;font-weight:900;text-align:left;padding:12px;border-bottom:1px solid var(--line)}
-    tbody td{padding:12px;border-bottom:1px solid #f1f5f9}
-    tbody tr:hover{background:#fbfdff}
-    .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;border:1px solid #d1fae5;background:#ecfdf5;color:#065f46}
-    .badge.danger{border-color:#fee2e2;background:#fef2f2;color:#991b1b}
-
-    /* inputs & buttons */
-    input[type="text"], input[type="password"], input[type="number"], select{
-      width:100%;max-width:260px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:14px;outline:none;background:#fff;
-      box-shadow:inset 0 1px 2px rgba(2,6,23,.03)
-    }
-    input:focus, select:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(59,130,246,.18)}
-    .btn{display:inline-block;padding:10px 14px;border:none;border-radius:12px;font-weight:900;cursor:pointer}
-    .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;box-shadow:var(--shadow)}
-    .btn.ghost{background:#f1f5f9;border:1px solid #e5e7eb;color:#0b1220}
-    .btn.danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
-
-    /* little notes */
-    .muted{color:var(--muted);font-size:13px}
-    .grid2{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
-    @media(max-width:980px){ .grid2{grid-template-columns:1fr} }
+    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#ffffff;--ok:#16a34a}
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+    .wrap{max-width:1100px;margin:28px auto;padding:0 18px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
+    h1{margin:0 0 12px;color:var(--blue);font-size:22px}
+    h3{margin:0 0 10px;color:var(--blue);font-size:16px}
+    .k{color:var(--muted);font-size:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;font-size:13px}
+    .actions a,.actions button{display:inline-block;margin-right:6px;margin-top:6px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-weight:700;text-decoration:none;color:var(--blue);cursor:pointer}
+    .ok{color:var(--ok);font-weight:700}
+    input,select{padding:8px;border:1px solid var(--line);border-radius:10px}
+    form.inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
   </style>
 </head>
 <body>
@@ -2369,171 +2415,6 @@ def start_trial():
 # at top of file (once)
 from secrets import token_hex
 import os, re
-# ------------------------ Contact / Talk to Sales page ------------------------
-CONTACT_HTML = r"""
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Talk to Sales — Lustra</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root{--brand:#2563eb; --brand-2:#22d3ee; --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#f6f9ff; --card:#fff;}
-    *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:1180px;margin:28px auto 64px;padding:0 28px}
-    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .brand{font-weight:900;color:#0f172a;text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
-
-    .pagebox{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:0 10px 24px rgba(2,6,23,.06);padding:28px}
-    h1{margin:2px 0 6px;font-size:40px;letter-spacing:-.01em}
-    .sub{margin:0 0 16px;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:2fr 1fr;gap:26px}
-    @media(max-width:900px){ .grid{grid-template-columns:1fr} }
-    label{font-weight:800;font-size:14px;margin:12px 0 6px;display:block}
-    input[type="text"], input[type="email"], select, textarea{
-      width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;
-      font-size:15px;outline:none;background:#fff;
-    }
-    textarea{min-height:110px;resize:vertical}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .hint{font-size:12.5px;color:var(--muted);margin-top:4px}
-    .btn{
-      display:inline-block;width:100%;padding:14px 18px;border-radius:999px;text-align:center;
-      font-weight:900;text-decoration:none;border:none;background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff
-    }
-    .side{background:#fbfdff;border:1px solid var(--line);border-radius:16px;padding:16px}
-    .pill{display:inline-flex;align-items:center;padding:4px 8px;border:1px solid var(--line);border-radius:999px;margin:6px 6px 0 0;font-size:12px;color:var(--ink)}
-    .tick{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:rgba(34,211,238,.15);color:#0891b2;font-weight:900;font-size:11px;margin-right:6px}
-    .fineprint{margin-top:12px;color:var(--muted);font-size:12.5px}
-
-    /* --- FORM FIELD SIZE TUNE-UP (reduce field text; keep label size unchanged) --- */
-    .pagebox input[type="text"], .pagebox input[type="email"], .pagebox input[type="number"], .pagebox select{
-      height:42px;padding:8px 12px;font-size:14px;line-height:1.25;border-radius:12px;
-    }
-    .pagebox textarea{font-size:14px;line-height:1.35;padding:10px 12px;min-height:110px}
-    .pagebox ::placeholder{font-size:14px;opacity:.65}
-  </style>
-</head>
-<body>
-  <div class="wrap">
-    <div class="nav">
-      <a class="brand" href="/">Lustra</a>
-      <div>
-        <a href="/about">About</a>
-        <a href="/pricing" style="margin-left:18px">Pricing</a>
-        <a href="/login" style="margin-left:18px">Sign in</a>
-      </div>
-    </div>
-
-    <div class="pagebox">
-      <h1>Talk to Sales</h1>
-      <p class="sub">Tell us about your desk; we’ll get you live in a day. Or start a 5-CV trial — no card required.</p>
-
-      <form method="POST" enctype="multipart/form-data" class="grid">
-        <div>
-          <label>Company</label>
-          <input name="company" type="text" required>
-
-          <div class="row">
-            <div>
-              <label>Work email</label>
-              <input name="email" type="email" required>
-            </div>
-            <div>
-              <label>Your name</label>
-              <input name="name" type="text">
-            </div>
-          </div>
-
-          <div class="row">
-            <div>
-              <label>Monthly CVs</label>
-              <select name="volume" required>
-                <option value="">Choose…</option>
-                <option>100</option>
-                <option>250</option>
-                <option>500</option>
-                <option>700+</option>
-                <option>Not sure</option>
-              </select>
-            </div>
-            <div>
-              <label>Users</label>
-              <select name="users" required>
-                <option value="">Choose…</option>
-                <option>1–5</option>
-                <option>6–10</option>
-                <option>11–20</option>
-                <option>21–30</option>
-                <option>30+</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="row">
-            <div>
-              <label>Templates needed</label>
-              <select name="templates">
-                <option>1 (included)</option>
-                <option>2</option>
-                <option>3+</option>
-              </select>
-              <div class="hint">Extra templates £50 each.</div>
-            </div>
-            <div>
-              <label>SSO / SLA required?</label>
-              <select name="need_sso">
-                <option>No</option>
-                <option>Yes</option>
-                <option>Maybe</option>
-              </select>
-            </div>
-          </div>
-
-          <label>Message (optional)</label>
-          <textarea name="message" placeholder="Anything we should know?"></textarea>
-
-          <label>Upload a sample CV (optional)</label>
-          <input name="file" type="file" accept=".pdf,.doc,.docx,.txt">
-
-          <!-- anti-spam -->
-          <input type="text" name="website" style="display:none" tabindex="-1" autocomplete="off">
-
-          <!-- CSRF -->
-          <input type="hidden" name="csrf" value="{{csrf}}">
-
-          <div style="margin-top:16px">
-            <button class="btn" type="submit">Send to Sales / Start trial</button>
-          </div>
-
-          <div class="fineprint">We’ll reply within 1 business day. We never use your documents to train models.</div>
-        </div>
-
-        <aside class="side">
-          <div style="font-weight:900;margin-bottom:10px">What you get</div>
-          <div><span class="tick">✓</span>On-brand DOCX output</div>
-          <div><span class="tick">✓</span>PDF / DOCX / TXT supported</div>
-          <div><span class="tick">✓</span>Org-wide credits & usage</div>
-          <div><span class="tick">✓</span>CSV exports and Director dashboard</div>
-          <hr style="border:none;border-top:1px solid #e5e7eb;margin:14px 0">
-          <div style="font-weight:900;margin-bottom:6px">Plans</div>
-          <div class="pill">Starter — 100 CVs · £150/mo</div>
-          <div class="pill">Growth — 250 CVs · £350/mo</div>
-          <div class="pill">Scale — 500 CVs · £650/mo</div>
-          <div class="hint" style="margin-top:8px">Buy Packs available · non-expiring.</div>
-          <hr style="border:none;border-top:1px solid #e5e7eb;margin:14px 0">
-          <div style="font-weight:900;margin-bottom:6px">Prefer email?</div>
-          <div><a href="mailto:hello@lustra.uk">hello@lustra.uk</a></div>
-          <div class="hint">We reply within 1 business day.</div>
-        </aside>
-      </form>
-    </div>
-  </div>
-</body>
-</html>
-"""
 
 @app.get("/start")
 def contact_get():
@@ -3508,7 +3389,7 @@ def app_page():
             '  if(hist){'
             '    shrink(hist);'
             '    var items=hist.querySelectorAll("*");'
-            '    for(var i=0;i<items.length;i++){ try{items[i].style.fontSize="12px";}catch(e){} }'
+            '    for(var i=0;i<items.length;i++){ try{items[i].style.fontSize="13px";}catch(e){} }'
             '  }'
             '}catch(e){console.log("stats font tweak failed",e);} })();</script></body>'
         )
@@ -5091,11 +4972,6 @@ def director_api_dashboard():
         WHERE org_id = %s AND ts >= date_trunc('month', now())
     """, (org_id,))
     month_total = int(month_total_row[0]) if month_total_row else 0
-    # extra counts for UI tiles
-    last30_row = db_query_one("SELECT COUNT(*) FROM usage_events WHERE org_id=%s AND ts >= now() - interval '30 days'", (org_id,))
-    today_row  = db_query_one("SELECT COUNT(*) FROM usage_events WHERE org_id=%s AND date_trunc('day', ts) = date_trunc('day', now())", (org_id,))
-    last30 = int(last30_row[0]) if last30_row else 0
-    today  = int(today_row[0])  if today_row  else 0
 
     # Recent org events
     rec = db_query_all("""
@@ -5123,9 +4999,6 @@ def director_api_dashboard():
         "orgId": org_id,
         "orgName": org_name,
         "pool": {"balance": pool_balance},
-        "credits": pool_balance,          # for new UI
-        "last30": last30,                 # for new UI
-        "today": today,                   # for new UI
         "month": {"total": month_total, "rows": month_rows},
         "recent": recent
     })
@@ -5175,21 +5048,6 @@ def director_api_users():
                 """, (org_id,))
                 bal_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
 
-                # usage counts (this month & all-time) per user in this org
-                cur.execute("""
-                    SELECT user_id, COUNT(*) FROM usage_events
-                    WHERE org_id=%s AND ts >= date_trunc('month', now())
-                    GROUP BY user_id
-                """, (org_id,))
-                month_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
-
-                cur.execute("""
-                    SELECT user_id, COUNT(*) FROM usage_events
-                    WHERE org_id=%s
-                    GROUP BY user_id
-                """, (org_id,))
-                total_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
-
                 # users in this org
                 cur.execute("""
                     SELECT id, username, COALESCE(active, TRUE) AS active
@@ -5198,15 +5056,12 @@ def director_api_users():
                     ORDER BY username ASC
                 """, (org_id,))
                 for uid2, uname, act in cur.fetchall():
-    users.append({
-        "id": int(uid2),
-        "username": uname or "",
-        "active": bool(act),
-        "balance": bal_map.get(int(uid2)),
-        # added fields for the table
-        "month": month_counts.get(int(uid2), 0),
-        "total": total_counts.get(int(uid2), 0)
-    })
+                    users.append({
+                        "id": int(uid2),
+                        "username": uname or "",
+                        "active": bool(act),
+                        "balance": bal_map.get(int(uid2))
+                    })
 
         return jsonify({"ok": True, "org_id": org_id, "users": users})
     except Exception as e:
@@ -5423,72 +5278,6 @@ def director_api_create_user():
         return jsonify({"ok": True, "id": new_id, "username": u, "seed_granted": granted})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
-
-@app.post("/director/api/toggle")
-def director_api_toggle():
-    """Enable/disable a user in my org. Body: {user:<username>, active:'1'|'0'}"""
-    try:
-        me = int(session.get("user_id") or 0)
-    except Exception:
-        me = 0
-    if me <= 0:
-        return jsonify({"ok": False, "error": "not_logged_in"}), 401
-
-    my_org = _current_user_org_id()
-    if not my_org:
-        return jsonify({"ok": False, "error": "no_org"}), 400
-
-    data = request.get_json(silent=True) or {}
-    uname = (data.get("user") or "").strip().lower()
-    want_active = str(data.get("active") or "1") == "1"
-    if not uname or uname in ("admin",):
-        return jsonify({"ok": False, "error": "bad_username"}), 400
-
-    row = db_query_one("SELECT id FROM users WHERE username=%s AND org_id=%s", (uname, my_org))
-    if not row:
-        return jsonify({"ok": False, "error": "user_not_found"}), 404
-
-    ok = db_execute("UPDATE users SET active=%s WHERE id=%s", (want_active, int(row[0])))
-    return jsonify({"ok": bool(ok)} if ok else ({"ok": False, "error": "update_failed"}, 500))
-
-
-@app.post("/director/api/invite")
-def director_api_invite():
-    """Create a user in my org. Body: {user:<username>}"""
-    try:
-        me = int(session.get("user_id") or 0)
-    except Exception:
-        me = 0
-    if me <= 0:
-        return jsonify({"ok": False, "error": "not_logged_in"}), 401
-
-    my_org = _current_user_org_id()
-    if not my_org:
-        return jsonify({"ok": False, "error": "no_org"}), 400
-
-    data = request.get_json(silent=True) or {}
-    uname = (data.get("user") or "").strip()
-    if not uname:
-        return jsonify({"ok": False, "error": "missing_user"}), 400
-    lu = uname.lower()
-    if lu in ("admin", "director"):
-        return jsonify({"ok": False, "error": "reserved_username"}), 400
-
-    # refuse dup
-    if db_query_one("SELECT 1 FROM users WHERE username=%s", (uname,)):
-        return jsonify({"ok": False, "error": "username_taken"}), 400
-
-    # simple initial password; director can reset later
-    initial_password = "changeme"
-    ok = db_execute(
-        "INSERT INTO users (username, password_hash, org_id, active) VALUES (%s,%s,%s,TRUE)",
-        (uname, _hash_pw(initial_password), my_org)
-    )
-    if not ok:
-        return jsonify({"ok": False, "error": "insert_failed"}), 500
-
-    row = db_query_one("SELECT id FROM users WHERE username=%s", (uname,))
-    return jsonify({"ok": True, "id": int(row[0]) if row else None, "username": uname})        
 # --- Canonical per-user dashboard payload (feeds the four tiles in one call) ---
 
 @app.get("/me/dashboard")
@@ -6302,161 +6091,207 @@ def director_ui():
          LIMIT 50
     """, (my_org, my_org)) or []
 
-    html = r"""
+        html = f"""
 <!doctype html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>Director - Org Console</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-    <style>
+  <meta charset="utf-8" />
+  <title>Lustra — Director Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
     :root{
-      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#eff4fb; --card:#ffffff;
-      --brand:#2563eb; --brand2:#22d3ee; --ok:#16a34a; --warn:#d97706; --bad:#b91c1c;
-      --shadow:0 10px 24px rgba(2,6,23,.06), 0 1px 2px rgba(2,6,23,.06)
+      /* Lustra brand — keep in sync with HOMEPAGE_HTML */
+      --blue:#2563eb;      /* vivid indigo */
+      --blue-2:#22d3ee;   /* bright cyan  */
+      --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+      --bg:#f5f8fd; --card:#ffffff; --shadow:0 10px 28px rgba(13,59,102,.08);
+      --ok:#16a34a; --warn:#d97706; --bad:#b91c1c;
     }
-    body{font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
-    .wrap{max-width:1180px;margin:28px auto 56px;padding:0 28px}
 
-    header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-    header .back{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:12px;background:#f1f5f9;border:1px solid #e5e7eb;color:#0b1220;text-decoration:none;font-weight:800}
-    header .back:hover{background:#e9eef6}
-    h1{margin:0;font-size:32px;letter-spacing:-.01em}
-    #orgBadge{margin-left:8px;color:var(--muted);font-weight:800}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+      background:var(--bg); color:var(--ink);
+    }
+    .wrap{max-width:1200px;margin:24px auto 64px;padding:0 20px}
 
-    .section{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:18px 20px;margin:14px 0}
+    /* Top nav (matches homepage) */
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:18px}
 
-    table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
-    thead th{background:#f8fafc;font-weight:900;text-align:left;padding:12px;border-bottom:1px solid var(--line)}
-    tbody td{padding:12px;border-bottom:1px solid #f1f5f9}
-    tbody tr:hover{background:#fbfdff}
-    .pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;border:1px solid #d1fae5;background:#ecfdf5;color:#065f46}
-    .pill.off{border-color:#fee2e2;background:#fef2f2;color:#991b1b}
+    /* Page header */
+    .pagehead{
+      display:flex;align-items:center;gap:12px;margin:8px 0 18px
+    }
+    .back{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:10px 12px;border-radius:12px;background:#fff;
+      border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--ink)
+    }
+    .back:hover{background:#f8fafc}
+    h1{margin:0;font-size:28px;letter-spacing:-.01em}
+    .org{color:var(--muted);font-weight:800;margin-left:6px}
 
-    .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-    .controls input,.controls select{padding:10px 12px;border:1px solid var(--line);border-radius:12px;min-width:180px;font-size:14px;background:#fff;box-shadow:inset 0 1px 2px rgba(2,6,23,.03)}
-    button{padding:10px 14px;border:none;border-radius:12px;font-weight:900;cursor:pointer;background:#f1f5f9;border:1px solid #e5e7eb;color:#0b1220}
-    .btn.primary,button.primary{background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;box-shadow:var(--shadow);border:none}
-    .btn.danger,button.danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+    /* Cards / sections */
+    .card{
+      background:var(--card);border:1px solid var(--line);border-radius:18px;
+      padding:16px 16px; box-shadow:var(--shadow)
+    }
+    .card h2{margin:0 0 10px;font-size:18px;color:var(--blue)}
+    .pill{
+      display:inline-block;padding:4px 10px;border:1px solid var(--line);
+      border-radius:999px;font-size:12px;background:#f8fafc
+    }
+    .pill.ok{color:var(--ok);border-color:#bbf7d0;background:#f0fdf4}
+    .pill.warn{color:var(--warn);border-color:#fde68a;background:#fffbeb}
+    .pill.bad{color:var(--bad);border-color:#fecaca;background:#fef2f2}
+
+    /* Grid layout */
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
+
+    /* Tables */
+    .table-wrap{overflow:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:14px}
+    th{position:sticky;top:0;background:#f8fafc;font-weight:800}
+    td.muted,th.muted{color:var(--muted)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+
+    /* Inputs & buttons */
+    input[type=text],input[type=number]{
+      padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;
+      font-size:14px; box-shadow:inset 0 1px 2px rgba(2,6,23,.03); outline:none
+    }
+    input[type=text]:focus, input[type=number]:focus{
+      border-color:#93c5fd; box-shadow:0 0 0 3px rgba(59,130,246,.18)
+    }
+    .btn{
+      display:inline-block;padding:10px 14px;border:1px solid var(--line);
+      border-radius:12px;font-weight:900;cursor:pointer;background:#f8fafc;color:#0b1220;text-decoration:none
+    }
+    .btn:hover{background:#eef2f7}
+    .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;box-shadow:var(--shadow)}
+    .btn.danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
 
     .muted{color:var(--muted);font-size:13px}
-    .grid{display:grid;gap:16px}
+
+    /* Small utility spacing */
+    .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .mt6{margin-top:6px} .mt10{margin-top:10px} .mt14{margin-top:14px} .mt18{margin-top:18px}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <header>
+    <!-- top nav like homepage -->
+    <div class="nav">
+      <a class="brand" href="/">Lustra</a>
+      <div>
+        <a href="/about">About</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/login">Sign in</a>
+      </div>
+    </div>
+
+    <!-- page header -->
+    <div class="pagehead">
       <a class="back" href="/app">← Back</a>
       <h1>Director Console</h1>
-      <span id="orgBadge" class="muted"></span>
-    </header>
-
-    <div class="section">
-      <h2>Org Balance</h2>
-      <div id="balance" class="muted">Loading…</div>
+      <span class="org">{org_name if 'org_name' in locals() else ''}</span>
     </div>
 
-    <div class="grid">
-      <div class="section">
+    <!-- balance overview -->
+    <div class="card">
+      <h2>Org Balance</h2>
+      <div class="row">
+        <span class="pill">Credits: {bal}</span>
+        <span class="muted">Last 30d: {last30} • Today: {today}</span>
+      </div>
+    </div>
+
+    <!-- two-column layout -->
+    <div class="grid mt14">
+
+      <!-- Users card -->
+      <div class="card">
         <h2>Users</h2>
-        <div class="controls">
-          <input id="newUser" placeholder="new username" />
-          <button id="inviteBtn" class="btn primary">Invite</button>
+        <div class="row mt6">
+          <form method="post" action="/director/user/create" class="row" onsubmit="return true">
+            <input type="text" name="username" placeholder="new username" required />
+            <button class="btn primary" type="submit">Invite</button>
+          </form>
         </div>
-        <div class="muted" id="uMsg" style="margin-top:6px"></div>
-        <div style="margin-top:10px;overflow:auto">
-          <table id="usersTbl">
-            <thead><tr>
-              <th>User</th><th>Status</th><th>This month</th><th>Total</th><th>Actions</th>
-            </tr></thead>
-            <tbody></tbody>
+
+        <div class="table-wrap mt10">
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th class="muted">Monthly cap</th>
+                <th class="muted">Active</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {"".join([
+                f"<tr>"
+                f"<td>{u[1]}</td>"
+                f"<td class='muted'>{('-' if u[2] is None else u[2])}</td>"
+                f"<td class='muted'>{('Yes' if (u[3] if u[3] is not None else True) else 'No')}</td>"
+                f"<td class='actions'>"
+                  f"<form method='post' action='/director/user/toggle' style='display:inline'>"
+                    f"<input type='hidden' name='user_id' value='{u[0]}'/>"
+                    f"<button class='btn' type='submit'>Toggle</button>"
+                  f"</form>"
+                  f"<form method='post' action='/director/user/cap' style='display:inline'>"
+                    f"<input type='hidden' name='user_id' value='{u[0]}'/>"
+                    f"<input type='number' name='monthly_cap' min='0' placeholder='set cap' />"
+                    f"<button class='btn' type='submit'>Set cap</button>"
+                  f"</form>"
+                f"</td>"
+                f"</tr>"
+              for u in users])}
+            </tbody>
           </table>
         </div>
       </div>
 
-      <div class="section">
+      <!-- Recent activity card -->
+      <div class="card">
         <h2>Recent activity</h2>
-        <div style="overflow:auto">
-          <table id="actTbl">
-            <thead><tr>
-              <th>When</th><th>User</th><th>Candidate</th><th>Filename</th><th class="muted">Delta</th><th class="muted">Reason</th>
-            </tr></thead>
-            <tbody></tbody>
+        <div class="table-wrap mt6">
+          <table>
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>User</th>
+                <th>Candidate</th>
+                <th>File</th>
+                <th class="muted">Δ</th>
+                <th class="muted">Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {"".join([
+                f"<tr>"
+                f"<td>{r[0].strftime('%Y-%m-%d %H:%M:%S') if r[0] else '-'}</td>"
+                f"<td>{(r[1] or '(unknown)')}</td>"
+                f"<td>{(r[2] or '')}</td>"
+                f"<td class='muted'>{(r[3] or '')}</td>"
+                f"<td class='muted'>{('' if r[4] is None else r[4])}</td>"
+                f"<td class='muted'>{(r[5] or '')}</td>"
+                f"</tr>"
+              for r in recent])}
+            </tbody>
           </table>
         </div>
       </div>
+
     </div>
   </div>
-
-  <script>
-  async function json(url, opts) {
-    const r = await fetch(url, opts || {});
-    if (!r.ok) throw new Error(await r.text());
-    return await r.json();
-  }
-
-  async function loadDashboard(){
-    const d = await json('/director/api/dashboard');
-    document.getElementById('orgBadge').textContent = d.org_name || '';
-    const b = document.getElementById('balance');
-    b.innerHTML = `
-      <div class="pill" style="margin-right:8px">Credits: ${d.credits}</div>
-      <span class="muted">Last 30d: ${d.last30} • Today: ${d.today}</span>
-    `;
-  }
-
-  async function loadUsers(){
-    const d = await json('/director/api/users');
-    const tb = document.querySelector('#usersTbl tbody');
-    tb.innerHTML = d.users.map(u => `
-      <tr>
-        <td>${u.username}</td>
-        <td>${u.active ? '<span class="pill">active</span>' : '<span class="pill off">disabled</span>'}</td>
-        <td>${u.month_usage}</td>
-        <td>${u.total_usage}</td>
-        <td>
-          <button class="${u.active ? 'danger' : 'primary'} toggle" data-user="${u.username}" data-active="${u.active ? '0' : '1'}">${u.active ? 'Disable' : 'Enable'}</button>
-        </td>
-      </tr>
-    `).join('');
-  }
-
-  // actions
-  document.addEventListener('click', async (e) => {
-    const t = e.target;
-    if (t.classList.contains('toggle')) {
-      const user = t.getAttribute('data-user');
-      const active = t.getAttribute('data-active');
-      t.disabled = true;
-      try {
-        await json('/director/api/toggle', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user, active: active === '1'})});
-        await loadUsers();
-      } catch(err) {
-        alert('Toggle failed: ' + err.message);
-      } finally {
-        t.disabled = false;
-      }
-    }
-    if (t.id === 'inviteBtn') {
-      const name = document.getElementById('newUser').value.trim();
-      if (!name) return;
-      t.disabled = true;
-      try {
-        await json('/director/api/invite', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({user:name})});
-        document.getElementById('uMsg').textContent = 'Invitation created.';
-        document.getElementById('newUser').value = '';
-        await loadUsers();
-      } catch(err) {
-        document.getElementById('uMsg').textContent = 'Invite failed: ' + err.message;
-      } finally {
-        t.disabled = false;
-      }
-    }
-  });
-
-  // initial load
-  (async () => { await loadUsers(); await loadDashboard(); })();
-  </script>
 </body>
 </html>
     """
@@ -7824,66 +7659,4 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

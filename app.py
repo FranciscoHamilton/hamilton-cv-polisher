@@ -6091,8 +6091,7 @@ def director_ui():
          LIMIT 50
     """, (my_org, my_org)) or []
 
-    html = f"""
-<!doctype html>
+    html = r"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -6101,92 +6100,51 @@ def director_ui():
   <style>
     :root{
       /* Lustra brand — keep in sync with HOMEPAGE_HTML */
-      --blue:#2563eb;      /* vivid indigo */
-      --blue-2:#22d3ee;   /* bright cyan  */
+      --blue:#2563eb;
+      --blue-2:#22d3ee;
       --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
       --bg:#f5f8fd; --card:#ffffff; --shadow:0 10px 28px rgba(13,59,102,.08);
       --ok:#16a34a; --warn:#d97706; --bad:#b91c1c;
     }
-
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0;
-      font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
-      background:var(--bg); color:var(--ink);
-    }
+    body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
     .wrap{max-width:1200px;margin:24px auto 64px;padding:0 20px}
-
-    /* Top nav (matches homepage) */
     .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
     .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
     .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:18px}
-
-    /* Page header */
-    .pagehead{
-      display:flex;align-items:center;gap:12px;margin:8px 0 18px
-    }
-    .back{
-      display:inline-flex;align-items:center;gap:6px;
-      padding:10px 12px;border-radius:12px;background:#fff;
-      border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--ink)
-    }
+    .pagehead{display:flex;align-items:center;gap:12px;margin:8px 0 18px}
+    .back{display:inline-flex;align-items:center;gap:6px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--line);text-decoration:none;font-weight:800;color:var(--ink)}
     .back:hover{background:#f8fafc}
     h1{margin:0;font-size:28px;letter-spacing:-.01em}
     .org{color:var(--muted);font-weight:800;margin-left:6px}
-
-    /* Cards / sections */
-    .card{
-      background:var(--card);border:1px solid var(--line);border-radius:18px;
-      padding:16px 16px; box-shadow:var(--shadow)
-    }
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px 16px;box-shadow:var(--shadow)}
     .card h2{margin:0 0 10px;font-size:18px;color:var(--blue)}
-    .pill{
-      display:inline-block;padding:4px 10px;border:1px solid var(--line);
-      border-radius:999px;font-size:12px;background:#f8fafc
-    }
+    .pill{display:inline-block;padding:4px 10px;border:1px solid var(--line);border-radius:999px;font-size:12px;background:#f8fafc}
     .pill.ok{color:var(--ok);border-color:#bbf7d0;background:#f0fdf4}
     .pill.warn{color:var(--warn);border-color:#fde68a;background:#fffbeb}
     .pill.bad{color:var(--bad);border-color:#fecaca;background:#fef2f2}
-
-    /* Grid layout */
     .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     @media (max-width:1000px){ .grid{grid-template-columns:1fr} }
-
-    /* Tables */
     .table-wrap{overflow:auto}
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px 8px;text-align:left;border-bottom:1px solid #f1f5f9;font-size:14px}
     th{position:sticky;top:0;background:#f8fafc;font-weight:800}
     td.muted,th.muted{color:var(--muted)}
     .actions{display:flex;gap:8px;flex-wrap:wrap}
-
-    /* Inputs & buttons */
-    input[type=text],input[type=number]{
-      padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;
-      font-size:14px; box-shadow:inset 0 1px 2px rgba(2,6,23,.03); outline:none
-    }
-    input[type=text]:focus, input[type=number]:focus{
-      border-color:#93c5fd; box-shadow:0 0 0 3px rgba(59,130,246,.18)
-    }
-    .btn{
-      display:inline-block;padding:10px 14px;border:1px solid var(--line);
-      border-radius:12px;font-weight:900;cursor:pointer;background:#f8fafc;color:#0b1220;text-decoration:none
-    }
+    input[type=text],input[type=number]{padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:14px;box-shadow:inset 0 1px 2px rgba(2,6,23,.03);outline:none}
+    input[type=text]:focus,input[type=number]:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(59,130,246,.18)}
+    .btn{display:inline-block;padding:10px 14px;border:1px solid var(--line);border-radius:12px;font-weight:900;cursor:pointer;background:#f8fafc;color:#0b1220;text-decoration:none}
     .btn:hover{background:#eef2f7}
     .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;box-shadow:var(--shadow)}
     .btn.danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
-
     .muted{color:var(--muted);font-size:13px}
-
-    /* Small utility spacing */
     .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .mt6{margin-top:6px} .mt10{margin-top:10px} .mt14{margin-top:14px} .mt18{margin-top:18px}
+    .mt6{margin-top:6px}.mt10{margin-top:10px}.mt14{margin-top:14px}.mt18{margin-top:18px}
   </style>
 </head>
 <body>
   <div class="wrap">
-    <!-- top nav like homepage -->
     <div class="nav">
       <a class="brand" href="/">Lustra</a>
       <div>
@@ -6196,30 +6154,26 @@ def director_ui():
       </div>
     </div>
 
-    <!-- page header -->
     <div class="pagehead">
       <a class="back" href="/app">← Back</a>
       <h1>Director Console</h1>
-      <span class="org">{org_name if 'org_name' in locals() else ''}</span>
+      <span class="org">{{ org_name }}</span>
     </div>
 
-    <!-- balance overview -->
     <div class="card">
       <h2>Org Balance</h2>
       <div class="row">
-        <span class="pill">Credits: {bal}</span>
-        <span class="muted">Last 30d: {last30} • Today: {today}</span>
+        <span class="pill">Credits: {{ bal }}</span>
+        <span class="muted">Last 30d: {{ last30 }} • Today: {{ today }}</span>
       </div>
     </div>
 
-    <!-- two-column layout -->
     <div class="grid mt14">
 
-      <!-- Users card -->
       <div class="card">
         <h2>Users</h2>
         <div class="row mt6">
-          <form method="post" action="/director/user/create" class="row" onsubmit="return true">
+          <form method="post" action="/director/user/create" class="row">
             <input type="text" name="username" placeholder="new username" required />
             <button class="btn primary" type="submit">Invite</button>
           </form>
@@ -6236,30 +6190,29 @@ def director_ui():
               </tr>
             </thead>
             <tbody>
-              {"".join([
-                f"<tr>"
-                f"<td>{u[1]}</td>"
-                f"<td class='muted'>{('-' if u[2] is None else u[2])}</td>"
-                f"<td class='muted'>{('Yes' if (u[3] if u[3] is not None else True) else 'No')}</td>"
-                f"<td class='actions'>"
-                  f"<form method='post' action='/director/user/toggle' style='display:inline'>"
-                    f"<input type='hidden' name='user_id' value='{u[0]}'/>"
-                    f"<button class='btn' type='submit'>Toggle</button>"
-                  f"</form>"
-                  f"<form method='post' action='/director/user/cap' style='display:inline'>"
-                    f"<input type='hidden' name='user_id' value='{u[0]}'/>"
-                    f"<input type='number' name='monthly_cap' min='0' placeholder='set cap' />"
-                    f"<button class='btn' type='submit'>Set cap</button>"
-                  f"</form>"
-                f"</td>"
-                f"</tr>"
-              for u in users])}
+              {% for u in users %}
+              <tr>
+                <td>{{ u[1] }}</td>
+                <td class="muted">{{ '-' if u[2] is none else u[2] }}</td>
+                <td class="muted">{{ 'Yes' if (u[3] if u[3] is not none else True) else 'No' }}</td>
+                <td class="actions">
+                  <form method="post" action="/director/user/toggle" style="display:inline">
+                    <input type="hidden" name="user_id" value="{{ u[0] }}"/>
+                    <button class="btn" type="submit">Toggle</button>
+                  </form>
+                  <form method="post" action="/director/user/cap" style="display:inline">
+                    <input type="hidden" name="user_id" value="{{ u[0] }}"/>
+                    <input type="number" name="monthly_cap" min="0" placeholder="set cap" />
+                    <button class="btn" type="submit">Set cap</button>
+                  </form>
+                </td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Recent activity card -->
       <div class="card">
         <h2>Recent activity</h2>
         <div class="table-wrap mt6">
@@ -6275,16 +6228,16 @@ def director_ui():
               </tr>
             </thead>
             <tbody>
-              {"".join([
-                f"<tr>"
-                f"<td>{r[0].strftime('%Y-%m-%d %H:%M:%S') if r[0] else '-'}</td>"
-                f"<td>{(r[1] or '(unknown)')}</td>"
-                f"<td>{(r[2] or '')}</td>"
-                f"<td class='muted'>{(r[3] or '')}</td>"
-                f"<td class='muted'>{('' if r[4] is None else r[4])}</td>"
-                f"<td class='muted'>{(r[5] or '')}</td>"
-                f"</tr>"
-              for r in recent])}
+              {% for r in recent %}
+              <tr>
+                <td>{{ (r[0].strftime('%Y-%m-%d %H:%M:%S') if r[0] else '-') }}</td>
+                <td>{{ r[1] or '(unknown)' }}</td>
+                <td>{{ r[2] or '' }}</td>
+                <td class="muted">{{ r[3] or '' }}</td>
+                <td class="muted">{{ '' if r[4] is none else r[4] }}</td>
+                <td class="muted">{{ r[5] or '' }}</td>
+              </tr>
+              {% endfor %}
             </tbody>
           </table>
         </div>
@@ -6293,9 +6246,16 @@ def director_ui():
     </div>
   </div>
 </body>
-</html>
-    """    
-    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+</html>"""
+return render_template_string(
+    html,
+    org_name=org_name if 'org_name' in locals() else '',
+    bal=bal,
+    last30=last30,
+    today=today,
+    users=users,
+    recent=recent,
+)
 
 # --- Friendly 402 page (Out of credits) ---
 def _render_out_of_credits(reason_text=None):
@@ -7659,5 +7619,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 

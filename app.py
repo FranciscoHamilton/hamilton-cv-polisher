@@ -6217,26 +6217,39 @@ def director_ui():
   <meta charset="utf-8">
   <title>Director - Org Console</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    :root {{ --bg:#fff; --ink:#111; --muted:#666; --line:#e6e6e6; --ok:#0a7f14; --warn:#d28500; --bad:#b00020; }}
-    body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--ink); margin:0; padding:20px; }}
-    header {{ display:flex; gap:12px; align-items:center; margin-bottom:18px; }}
-    header .back {{ text-decoration:none; padding:8px 10px; border:1px solid var(--line); border-radius:10px; }}
-    h1 {{ font-size:22px; margin:0; }}
-    h2 {{ margin:22px 0 10px; }}
-    .muted {{ color: var(--muted); font-size:14px; }}
-    .grid {{ display:grid; gap:12px; }}
-    table {{ border-collapse: collapse; width: 100%; }}
-    th, td {{ border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: middle; }}
-    th {{ background: #fafafa; }}
-    .pill {{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-size:12px; }}
-    .pill.ok {{ color: var(--ok); font-weight:600; }}
-    .pill.off {{ color: var(--bad); font-weight:700; }}
-    .controls {{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }}
-    .controls input {{ padding:8px; border:1px solid var(--line); border-radius:8px; min-width:180px; }}
-    .controls button {{ padding:8px 12px; border:1px solid var(--line); border-radius:10px; background:#f7f7f7; cursor:pointer; }}
-    .msg {{ margin-top:6px; font-size:14px; }}
-    .small {{ font-size:12px; color:var(--muted); }}
+    <style>
+    :root{
+      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#eff4fb; --card:#ffffff;
+      --brand:#2563eb; --brand2:#22d3ee; --ok:#16a34a; --warn:#d97706; --bad:#b91c1c;
+      --shadow:0 10px 24px rgba(2,6,23,.06), 0 1px 2px rgba(2,6,23,.06)
+    }
+    body{font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1180px;margin:28px auto 56px;padding:0 28px}
+
+    header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+    header .back{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:12px;background:#f1f5f9;border:1px solid #e5e7eb;color:#0b1220;text-decoration:none;font-weight:800}
+    header .back:hover{background:#e9eef6}
+    h1{margin:0;font-size:32px;letter-spacing:-.01em}
+    #orgBadge{margin-left:8px;color:var(--muted);font-weight:800}
+
+    .section{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:18px 20px;margin:14px 0}
+
+    table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+    thead th{background:#f8fafc;font-weight:900;text-align:left;padding:12px;border-bottom:1px solid var(--line)}
+    tbody td{padding:12px;border-bottom:1px solid #f1f5f9}
+    tbody tr:hover{background:#fbfdff}
+    .pill{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;border:1px solid #d1fae5;background:#ecfdf5;color:#065f46}
+    .pill.off{border-color:#fee2e2;background:#fef2f2;color:#991b1b}
+
+    .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .controls input,.controls select{padding:10px 12px;border:1px solid var(--line);border-radius:12px;min-width:180px;font-size:14px;background:#fff;box-shadow:inset 0 1px 2px rgba(2,6,23,.03)}
+    button{padding:10px 14px;border:none;border-radius:12px;font-weight:900;cursor:pointer;background:#f1f5f9;border:1px solid #e5e7eb;color:#0b1220}
+    .btn.primary,button.primary{background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;box-shadow:var(--shadow);border:none}
+    .btn.danger,button.danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+
+    .muted{color:var(--muted);font-size:13px}
+    .grid{display:grid;gap:16px}
+    @media(min-width:1000px){.grid{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -7825,6 +7838,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

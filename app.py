@@ -6091,7 +6091,7 @@ def director_ui():
          LIMIT 50
     """, (my_org, my_org)) or []
 
-        html = f"""
+    html = f"""
 <!doctype html>
 <html lang="en">
 <head>
@@ -6294,7 +6294,7 @@ def director_ui():
   </div>
 </body>
 </html>
-    """
+    """    
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 # --- Friendly 402 page (Out of credits) ---
@@ -7659,4 +7659,5 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 

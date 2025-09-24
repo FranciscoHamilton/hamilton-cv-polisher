@@ -2015,37 +2015,68 @@ DIRECTOR_LOGIN_HTML = r"""
   <title>Director access</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#ffffff}
+    :root{
+      --blue:#0a4d8c; --blue-2:#003366;
+      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+      --bg:#eef3fb; --card:#ffffff;
+      --shadow:0 6px 24px rgba(2,6,23,.06), 0 1px 2px rgba(2,6,23,.06)
+    }
     body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:520px;margin:48px auto;padding:0 18px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px}
-    label{font-weight:600;font-size:13px}
-    input[type=password]{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;margin-top:6px}
-    button{width:100%;margin-top:12px;background:linear-gradient(90deg,var(--blue),#0a4d8c);color:#fff;border:none;border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer}
-    .muted{color:var(--muted);font-size:12px;text-align:center;margin-top:8px}
-    .err{margin-top:8px;color:#b91c1c;font-weight:700;font-size:12px}
+    .wrap{max-width:1100px;margin:28px auto 56px;padding:0 18px}
+    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+    .brand{font-weight:900;color:#0f172a;text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:18px}
+
+    .page{display:flex;justify-content:center}
+    .card{
+      width:100%;max-width:720px;
+      background:var(--card);border:1px solid var(--line);
+      border-radius:22px;padding:22px 24px;box-shadow:var(--shadow)
+    }
+    h3{margin:2px 0 12px;color:var(--blue);font-size:22px;letter-spacing:.2px}
+
+    label{display:block;font-weight:800;font-size:14px;margin:12px 0 6px}
+    input[type=password]{
+      width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#fff;font-size:15px;
+      outline:none; box-shadow:inset 0 1px 2px rgba(2,6,23,.03)
+    }
+    input[type=password]:focus{
+      border-color:#93c5fd; box-shadow:0 0 0 3px rgba(59,130,246,.18)
+    }
+
+    button{
+      width:100%;margin-top:14px;
+      background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;border-radius:14px;
+      padding:14px 16px;font-weight:900;cursor:pointer;box-shadow:var(--shadow)
+    }
+    button:hover{transform:translateY(-1px)}
+    .muted{color:var(--muted);font-size:12.5px;text-align:center;margin-top:10px}
+    .err{margin-top:8px;color:#b91c1c;font-weight:800;font-size:12px}
     a{color:var(--blue);text-decoration:none}
   </style>
 </head>
 <body>
   <div class="wrap">
-      <div class="nav" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-      <a class="brand" href="/" style="font-weight:900;color:#0f172a;text-decoration:none;font-size:22px;letter-spacing:.2px">Lustra</a>
+    <div class="nav">
+      <a class="brand" href="/">Lustra</a>
       <div>
         <a href="/about">About</a>
         <a href="/pricing" style="margin-left:18px">Pricing</a>
         <a href="/login" style="margin-left:18px">Sign in</a>
       </div>
     </div>
-    <div class="card">
-      <h3>Director verification</h3>
-      <!--DERR-->
-      <form method="post" action="/director/login">
-        <label for="dp">Director password</label>
-        <input id="dp" type="password" name="password" autofocus required />
-        <button type="submit">Enter</button>
-      </form>
-      <div class="muted"><a href="/director/forgot">Forgot director password?</a> · <a href="/app">Back</a></div>
+
+    <div class="page">
+      <div class="card">
+        <h3>Director verification</h3>
+        <!--DERR-->
+        <form method="post" action="/director/login" autocomplete="off">
+          <label for="dp">Director password</label>
+          <input id="dp" type="password" name="password" autofocus required />
+          <button type="submit">Enter</button>
+        </form>
+        <div class="muted"><a href="/director/forgot">Forgot director password?</a> · <a href="/app">Back</a></div>
+      </div>
     </div>
   </div>
 </body>
@@ -2060,20 +2091,49 @@ DIRECTOR_HTML = r"""
   <title>Director — Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{--blue:#003366;--ink:#111827;--muted:#6b7280;--line:#e5e7eb;--bg:#f2f6fb;--card:#ffffff;--ok:#16a34a}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:1100px;margin:28px auto;padding:0 18px}
-    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px}
-    h1{margin:0 0 12px;color:var(--blue);font-size:22px}
-    h3{margin:0 0 10px;color:var(--blue);font-size:16px}
-    .k{color:var(--muted);font-size:12px}
-    table{width:100%;border-collapse:collapse}
-    th,td{border-bottom:1px solid var(--line);padding:8px;text-align:left;font-size:13px}
-    .actions a,.actions button{display:inline-block;margin-right:6px;margin-top:6px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-weight:700;text-decoration:none;color:var(--blue);cursor:pointer}
-    .ok{color:var(--ok);font-weight:700}
-    input,select{padding:8px;border:1px solid var(--line);border-radius:10px}
-    form.inline{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+      <style>
+    :root{
+      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb; --bg:#eff4fb; --card:#ffffff;
+      --brand:#2563eb; --brand2:#22d3ee; --success:#16a34a; --danger:#b91c1c;
+      --shadow:0 10px 24px rgba(2,6,23,.06), 0 1px 2px rgba(2,6,23,.06)
+    }
+    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;background:var(--bg);color:var(--ink)}
+    .wrap{max-width:1180px;margin:28px auto 56px;padding:0 28px}
+
+    /* page header + back link */
+    .pagehead{display:flex;align-items:center;gap:14px;margin:6px 0 16px}
+    .back{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:12px;
+      background:#f1f5f9;border:1px solid #e5e7eb;color:#0b1220;text-decoration:none;font-weight:800}
+    .back:hover{background:#e9eef6}
+    h1{margin:0;font-size:32px;letter-spacing:-.01em}
+    .org{color:var(--muted);font-weight:800;margin-left:8px}
+
+    /* cards / sections */
+    .section{background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:18px 20px;margin:14px 0}
+
+    /* tables */
+    table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--line);border-radius:14px;overflow:hidden;background:#fff}
+    thead th{background:#f8fafc;font-weight:900;text-align:left;padding:12px;border-bottom:1px solid var(--line)}
+    tbody td{padding:12px;border-bottom:1px solid #f1f5f9}
+    tbody tr:hover{background:#fbfdff}
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:800;border:1px solid #d1fae5;background:#ecfdf5;color:#065f46}
+    .badge.danger{border-color:#fee2e2;background:#fef2f2;color:#991b1b}
+
+    /* inputs & buttons */
+    input[type="text"], input[type="password"], input[type="number"], select{
+      width:100%;max-width:260px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;font-size:14px;outline:none;background:#fff;
+      box-shadow:inset 0 1px 2px rgba(2,6,23,.03)
+    }
+    input:focus, select:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(59,130,246,.18)}
+    .btn{display:inline-block;padding:10px 14px;border:none;border-radius:12px;font-weight:900;cursor:pointer}
+    .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand2));color:#fff;box-shadow:var(--shadow)}
+    .btn.ghost{background:#f1f5f9;border:1px solid #e5e7eb;color:#0b1220}
+    .btn.danger{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
+
+    /* little notes */
+    .muted{color:var(--muted);font-size:13px}
+    .grid2{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}
+    @media(max-width:980px){ .grid2{grid-template-columns:1fr} }
   </style>
 </head>
 <body>
@@ -7765,6 +7825,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

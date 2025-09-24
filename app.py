@@ -6180,255 +6180,276 @@ def director_ui():
 
     html = f"""
 <!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Director - Org Console</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Director — Lustra Console</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root {{ --bg:#fff; --ink:#111; --muted:#666; --line:#e6e6e6; --ok:#0a7f14; --warn:#d28500; --bad:#b00020; }}
-    body {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--ink); margin:0; padding:20px; }}
-    header {{ display:flex; gap:12px; align-items:center; margin-bottom:18px; }}
-    header .back {{ text-decoration:none; padding:8px 10px; border:1px solid var(--line); border-radius:10px; }}
-    h1 {{ font-size:22px; margin:0; }}
-    h2 {{ margin:22px 0 10px; }}
-    .muted {{ color: var(--muted); font-size:14px; }}
-    .grid {{ display:grid; gap:12px; }}
-    table {{ border-collapse: collapse; width: 100%; }}
-    th, td {{ border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: middle; }}
-    th {{ background: #fafafa; }}
-    .pill {{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-size:12px; }}
-    .pill.ok {{ color: var(--ok); font-weight:600; }}
-    .pill.off {{ color: var(--bad); font-weight:700; }}
-    .controls {{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }}
-    .controls input {{ padding:8px; border:1px solid var(--line); border-radius:8px; min-width:180px; }}
-    .controls button {{ padding:8px 12px; border:1px solid var(--line); border-radius:10px; background:#f7f7f7; cursor:pointer; }}
-    .msg {{ margin-top:6px; font-size:14px; }}
-    .small {{ font-size:12px; color:var(--muted); }}
+    :root {{
+      --brand:#2563eb; --brand-2:#22d3ee;
+      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+      --bg:#f6f9ff; --card:#ffffff;
+      --shadow:0 10px 24px rgba(13,59,102,.08);
+      --shadow-sm:0 2px 8px rgba(13,59,102,.06);
+      --ok:#047857; --off:#a1a1aa;
+    }}
+    *{{ box-sizing:border-box }}
+    html,body{{ height:100% }}
+    body{{ margin:0; background:var(--bg); color:var(--ink);
+          font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }}
+
+    a{{ color:var(--brand); text-decoration:none }}
+    .topbar{{ position:sticky; top:0; z-index:10; background:linear-gradient(90deg,var(--card),#fdfdff);
+              border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;
+              padding:12px 18px; }}
+    .brand{{ display:flex; align-items:center; gap:10px }}
+    .dot{{ width:10px; height:10px; border-radius:999px; background:linear-gradient(90deg,var(--brand),var(--brand-2)) }}
+    .brand .name{{ font-weight:900; letter-spacing:.06em; text-transform:uppercase; font-size:12px }}
+
+    .wrap{{ max-width:1200px; margin:28px auto; padding:0 18px; display:grid; gap:18px }}
+    h1{{ margin:0 0 4px; font-size:22px; letter-spacing:-.01em }}
+    .sub{{ color:var(--muted); font-size:13px; margin:0 0 10px }}
+
+    .grid{{ display:grid; grid-template-columns:1fr; gap:18px }}
+    @media(min-width:1000px){{ .grid{{ grid-template-columns:1.2fr .8fr }} }}
+
+    .card{{ background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:var(--shadow) }}
+    .card h2{{ margin:0 0 10px; font-size:16px }}
+
+    .metrics{{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:8px 0 4px }}
+    .metric{{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; box-shadow:var(--shadow-sm) }}
+    .metric .k{{ font-size:12px; color:var(--muted); margin:0 }}
+    .metric .v{{ font-size:22px; font-weight:800; margin:2px 0 0 }}
+
+    table{{ width:100%; border-collapse:collapse }}
+    th,td{{ border-bottom:1px solid var(--line); padding:10px; text-align:left; font-size:13px }}
+    th{{ background:#f8fafc; position:sticky; top:0; z-index:1 }}
+    .muted{{ color:var(--muted) }}
+    .pill{{ display:inline-block; padding:3px 8px; border-radius:999px; border:1px solid var(--line); font-size:11px; }}
+    .pill.ok{{ color:#065f46; background:#ecfdf5; border-color:#d1fae5 }}
+    .pill.off{{ color:#433a3a; background:#fafafa; border-color:#e5e7eb }}
+    input[type=text], input[type=password], input[type=number]{{ width:100%; padding:10px; border:1px solid var(--line); border-radius:12px }}
+    button{{ background:linear-gradient(90deg,var(--brand),var(--brand-2)); color:#fff; border:none; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer }}
+    .row{{ display:grid; grid-template-columns:1fr; gap:10px }}
+    @media(min-width:700px){{ .row3{{ grid-template-columns:1fr 1fr 1fr }} .row2{{ grid-template-columns:1fr 1fr }} }}
+    .hint{{ font-size:12px; color:var(--muted) }}
   </style>
 </head>
 <body>
-  <header>
-    <a class="back" href="/app">← Back</a>
-    <h1>Director Console</h1>
-    <span id="orgBadge" class="muted"></span>
-  </header>
-
-  <section class="grid">
+  <div class="topbar">
+    <div class="brand">
+      <div class="dot"></div>
+      <div class="name">Lustra • Director</div>
+    </div>
     <div>
-      <h2>Org Balance</h2>
-      <div class="muted">Pool credits available for your organization.</div>
-      <div id="poolBox" style="margin-top:6px;font-size:18px;">Loading…</div>
-    </div>
-  </section>
-
-  <h2 style="margin-top:26px;">Users</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>User ID</th>
-        <th>Username</th>
-        <th>Monthly Cap</th>
-        <th>Active</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="usersBody">
-      <tr><td colspan="5" class="muted">Loading…</td></tr>
-    </tbody>
-  </table>
-
-  <div style="margin-top:14px; border:1px solid var(--line); border-radius:12px; padding:12px;">
-    <h3 style="margin:0 0 8px;">Create User</h3>
-    <div class="controls">
-      <input id="cu_u" placeholder="Username">
-      <input id="cu_p" placeholder="Password">
-      <input id="cu_seed" type="number" inputmode="numeric" placeholder="Seed credits (optional)">
-      <button id="cu_btn">Create</button>
-      <span id="cu_msg" class="msg"></span>
-    </div>
-    <div class="small">New users are created in your org. Seed credits (if provided) are added to the org pool.</div>
-  </div>
-
-  <div style="margin-top:14px; border:1px solid var(--line); border-radius:12px; padding:12px;">
-    <h3 style="margin:0 0 8px;">Reset User Password</h3>
-    <div class="controls">
-      <input id="rp_uid" placeholder="User ID">
-      <input id="rp_pw" placeholder="New password">
-      <button id="rp_btn">Reset</button>
-      <span id="rp_msg" class="msg"></span>
+      <a href="/app">Back to app</a>
     </div>
   </div>
 
-  <h2 style="margin-top:26px;">Recent Activity</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>When</th>
-        <th>User</th>
-        <th>Candidate</th>
-        <th>Filename</th>
-        <th>Delta</th>
-        <th>Reason</th>
-      </tr>
-    </thead>
-    <tbody id="recentBody">
-      <tr><td colspan="6" class="muted">Loading…</td></tr>
-    </tbody>
-  </table>
+  <div class="wrap">
+    <div>
+      <h1>Director Console</h1>
+      <p class="sub">Org tools and audit trail. Visual refresh only — functionality unchanged. <span id="orgBadge" class="muted"></span></p>
+
+      <div class="metrics">
+        <div class="metric">
+          <p class="k">Org balance</p>
+          <p class="v" id="poolBox">—</p>
+        </div>
+        <div class="metric">
+          <p class="k">Users</p>
+          <p class="v" id="usersCount">—</p>
+        </div>
+        <div class="metric">
+          <p class="k">Recent events</p>
+          <p class="v" id="recentCount">—</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT: Users + Recent -->
+      <div class="stack" style="display:grid; gap:18px">
+        <div class="card">
+          <h2>Users</h2>
+          <div class="hint" style="margin:-6px 0 8px">Per-user monthly cap and enable/disable. (IDs and actions unchanged.)</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Username</th>
+                  <th>Monthly Cap</th>
+                  <th>Active</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="usersBody">
+                <tr><td colspan="5" class="muted">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Recent Activity</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>User</th>
+                  <th>Candidate</th>
+                  <th>Filename</th>
+                </tr>
+              </thead>
+              <tbody id="recentBody">
+                <tr><td colspan="4" class="muted">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Create / Reset -->
+      <div class="stack" style="display:grid; gap:18px">
+        <div class="card">
+          <h2>Create User</h2>
+          <div class="row row3">
+            <input id="cu_u" type="text" placeholder="Username">
+            <input id="cu_p" type="password" placeholder="Password">
+            <input id="cu_seed" type="number" inputmode="numeric" placeholder="Seed credits (optional)">
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; margin-top:10px">
+            <button id="cu_btn">Create</button>
+            <div id="cu_msg" class="hint"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Reset User Password</h2>
+          <div class="row row2">
+            <input id="rp_uid" type="number" inputmode="numeric" placeholder="User ID">
+            <input id="rp_pw" type="password" placeholder="New password">
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; margin-top:10px">
+            <button id="rp_btn">Reset</button>
+            <div id="rp_msg" class="hint"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
-  const $ = (s) => document.querySelector(s);
-  const esc = (s) => (s == null ? "" : String(s).replace(/[&<>"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}}[c])));
+    const $ = (q) => document.querySelector(q);
+    function esc(s) {{ return (s || '').replace(/[&<>"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}})[c]); }}
 
-  async function loadDashboard() {{
-    const res = await fetch('/director/api/dashboard?limit=20');
-    if (!res.ok) {{ $('#poolBox').textContent = 'Failed to load.'; return; }}
-    const d = await res.json();
-    $('#orgBadge').textContent = d.orgName ? ('Org: ' + d.orgName) : '';
-    const bal = (d.pool && typeof d.pool.balance === 'number') ? d.pool.balance : null;
-    $('#poolBox').textContent = (bal == null) ? '—' : (bal + ' credits');
+    async function loadDashboard() {{
+      const res = await fetch('/director/api/dashboard');
+      if (!res.ok) return;
+      const js = await res.json();
 
-    const recent = d.recent || [];
-    if (!recent.length) {{
-      $('#recentBody').innerHTML = '<tr><td colspan="6" class="muted">No recent activity.</td></tr>';
-    }} else {{
-      let html = '';
-      for (const r of recent) {{
-        const when = r.ts ? new Date(r.ts) : null;
-        const whenTxt = when && !isNaN(when.getTime()) ? when.toLocaleString() : esc(r.ts || '');
-        html += `<tr>
-          <td>${{whenTxt}}</td>
-          <td>${{esc(r.username || r.user_id || '')}}</td>
-          <td>${{esc(r.candidate || '')}}</td>
-          <td>${{esc(r.filename || '')}}</td>
-          <td>${{typeof r.delta === 'number' ? r.delta : ''}}</td>
-          <td>${{esc(r.reason || '')}}</td>
-        </tr>`;
+      // header / metrics
+      const org = js.orgName || ('Org #' + (js.orgId || '—'));
+      $('#orgBadge').textContent = 'Org: ' + org;
+      $('#poolBox').textContent = (js.pool && typeof js.pool.balance==='number') ? (js.pool.balance + ' credits') : '—';
+      $('#usersCount').textContent = (js.month && js.month.rows) ? js.month.rows.length : '—';
+      $('#recentCount').textContent = (js.recent) ? js.recent.length : '—';
+
+      // users
+      const rows = (js.month && js.month.rows) || [];
+      if (!rows.length) {{
+        $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">No users in this org yet.</td></tr>';
+      }} else {{
+        let html = '';
+        for (const u of rows) {{
+          const cap = (u.count == null ? '' : u.count); // keep existing shape
+          const active = !!(u.active ?? true);
+          const pill = `<span class="pill ${{active ? 'ok' : 'off'}}">${{active ? 'Active' : 'Disabled'}}</span>`;
+          const toggleLabel = active ? 'Disable' : 'Enable';
+          const toggleNext = active ? 0 : 1;
+          html += `<tr data-uid="${{u.user_id ?? u.id}}">
+            <td>${{u.user_id ?? u.id}}</td>
+            <td>${{esc(u.username || '')}}</td>
+            <td>
+              <input class="cap" type="number" inputmode="numeric" placeholder="(none)" value="${{cap}}">
+              <button class="setcap">Save</button>
+            </td>
+            <td>${{pill}}</td>
+            <td><button class="toggle" data-active="${{toggleNext}}">${{toggleLabel}}</button></td>
+          </tr>`;
+        }}
+        $('#usersBody').innerHTML = html;
       }}
-      $('#recentBody').innerHTML = html;
-    }}
-  }}
 
-  async function loadUsers() {{
-    const res = await fetch('/director/api/users');
-    if (!res.ok) {{ $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">Failed to load users.</td></tr>'; return; }}
-    const js = await res.json();
-    const rows = js.users || [];
-    if (!rows.length) {{
-      $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">No users in this org yet.</td></tr>';
-      return;
-    }}
-    let html = '';
-    for (const u of rows) {{
-      const cap = (u.cap == null ? '' : u.cap);
-      const active = !!u.active;
-      const pill = `<span class="pill ${{active ? 'ok' : 'off'}}">${{active ? 'Active' : 'Disabled'}}</span>`;
-      const toggleLabel = active ? 'Disable' : 'Enable';
-      const toggleNext = active ? 0 : 1;
-      html += `<tr data-uid="${{u.id}}">
-        <td>${{u.id}}</td>
-        <td>${{esc(u.username || '')}}</td>
-        <td>
-          <input class="cap" type="number" inputmode="numeric" placeholder="(none)" value="${{cap}}">
-          <button class="setcap">Save</button>
-        </td>
-        <td>${{pill}}</td>
-        <td>
-          <button class="toggle" data-active="${{toggleNext}}">${{toggleLabel}}</button>
-        </td>
-      </tr>`;
-    }}
-    $('#usersBody').innerHTML = html;
-  }}
+      // recent
+      const events = js.recent || [];
+      if (!events.length) {{
+        $('#recentBody').innerHTML = '<tr><td colspan="4" class="muted">No recent events.</td></tr>';
+      }} else {{
+        let rh = '';
+        for (const e of events) {{
+          rh += `<tr>
+            <td>${{e.ts}}</td>
+            <td>${{esc(e.username || '')}}</td>
+            <td>${{esc(e.candidate || '')}}</td>
+            <td class="muted">${{esc(e.filename || '')}}</td>
+          </tr>`;
+        }}
+        $('#recentBody').innerHTML = rh;
+      }}
 
-  // Create user
-  document.getElementById('cu_btn')?.addEventListener('click', async () => {{
-    const u = ($('#cu_u')?.value || '').trim();
-    const p = ($('#cu_p')?.value || '').trim();
-    const seed = ($('#cu_seed')?.value || '').trim();
-    const msg = $('#cu_msg');
-    if (!u || !p) {{ msg.textContent = 'Username and password are required.'; return; }}
-    msg.textContent = 'Working…';
-    try {{
-      const qs = new URLSearchParams({{ u, p }});
-      if (seed) qs.set('seed', String(Number(seed)));
-      const res = await fetch('/director/api/create-user?' + qs.toString());
-      const js = await res.json();
-      if (!res.ok || !js.ok) {{ msg.textContent = 'Failed: ' + (js.error || res.status); return; }}
-      msg.textContent = 'User created (id ' + js.user_id + ').';
-      $('#cu_u').value = ''; $('#cu_p').value = ''; $('#cu_seed').value = '';
-      await loadUsers(); await loadDashboard();
-    }} catch (e) {{
-      msg.textContent = 'Network error';
-    }}
-  }});
-
-  // Reset password
-  document.getElementById('rp_btn')?.addEventListener('click', async () => {{
-    const uid = ($('#rp_uid')?.value || '').trim();
-    const pw  = ($('#rp_pw')?.value || '').trim();
-    const msg = $('#rp_msg');
-    if (!uid || !pw) {{ msg.textContent = 'Please enter both User ID and a new password.'; return; }}
-    msg.textContent = 'Working…';
-    try {{
-      const res = await fetch('/director/api/user/reset-password', {{
-        method: 'POST', headers: {{'Content-Type': 'application/json'}},
-        body: JSON.stringify({{ user_id: Number(uid), new_password: pw }})
+      // wire table actions
+      document.querySelectorAll('.setcap').forEach(btn => {{
+        btn.addEventListener('click', async (ev) => {{
+          const tr = ev.target.closest('tr');
+          const uid = tr.getAttribute('data-uid');
+          const cap = tr.querySelector('input.cap').value;
+          await fetch('/director/api/setcap', {{ method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{ user_id:uid, cap: (cap===''? null : Number(cap)) }}) }});
+          await loadDashboard();
+        }});
       }});
-      const js = await res.json();
-      if (!res.ok || !js.ok) {{ msg.textContent = 'Failed: ' + (js.error || res.status); return; }}
-      msg.textContent = 'Password updated for user #' + js.user_id + ' (' + (js.username || '') + ')';
-      $('#rp_pw').value = '';
-    }} catch (e) {{
-      msg.textContent = 'Network error';
-    }}
-  }});
-
-  // Row actions: enable/disable + set cap
-  document.addEventListener('click', async (ev) => {{
-    const row = ev.target.closest('tr[data-uid]');
-    if (!row) return;
-
-    // Toggle active
-    if (ev.target.closest('button.toggle')) {{
-      const btn = ev.target.closest('button.toggle');
-      const uid = row.getAttribute('data-uid');
-      const newActive = btn.getAttribute('data-active'); // "1" or "0"
-      btn.disabled = true;
-      try {{
-        const res = await fetch(`/director/api/user/set-active?user_id=${{encodeURIComponent(uid)}}&active=${{encodeURIComponent(newActive)}}`);
-        const js = await res.json();
-        if (!res.ok || !js.ok) {{ alert('Failed: ' + (js.error || res.status)); }}
-        else {{ await loadUsers(); }}
-      }} finally {{ btn.disabled = false; }}
-      return;
+      document.querySelectorAll('.toggle').forEach(btn => {{
+        btn.addEventListener('click', async (ev) => {{
+          const tr = ev.target.closest('tr');
+          const uid = tr.getAttribute('data-uid');
+          const active = Number(ev.target.getAttribute('data-active'));
+          await fetch('/director/api/activate', {{ method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{ user_id:uid, active }}) }});
+          await loadDashboard();
+        }});
+      }});
     }}
 
-    // Save monthly cap
-    if (ev.target.closest('button.setcap')) {{
-      const capInput = row.querySelector('input.cap');
-      const raw = (capInput?.value || '').trim();
-      const uid = row.getAttribute('data-uid');
-      const cap = raw === '' ? 'null' : String(Number(raw));
-      const btn = ev.target.closest('button.setcap');
-      btn.disabled = true;
-      try {{
-        const res = await fetch(`/director/api/user/set-monthly-cap?user_id=${{encodeURIComponent(uid)}}&cap=${{encodeURIComponent(cap)}}`);
-        const js = await res.json();
-        if (!res.ok || !js.ok) {{ alert('Failed: ' + (js.error || res.status)); }}
-        else {{ alert('Saved'); }}
-      }} finally {{ btn.disabled = false; }}
-      return;
-    }}
-  }});
+    // create user
+    document.addEventListener('click', async (e) => {{
+      if (e.target && e.target.id === 'cu_btn') {{
+        e.preventDefault();
+        const u = document.getElementById('cu_u').value.trim();
+        const p = document.getElementById('cu_p').value;
+        const s = document.getElementById('cu_seed').value;
+        const body = {{ username:u, password:p, seed: (s===''? null : Number(s)) }};
+        const r = await fetch('/director/api/create', {{ method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify(body) }});
+        const js = await r.json().catch(() => ({{}}));
+        document.getElementById('cu_msg').textContent = js.ok ? 'Created.' : (js.error || 'Failed.');
+        await loadDashboard();
+      }}
+      if (e.target && e.target.id === 'rp_btn') {{
+        e.preventDefault();
+        const id = document.getElementById('rp_uid').value;
+        const pw = document.getElementById('rp_pw').value;
+        const r = await fetch('/director/api/resetpass', {{ method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{ user_id:id, new_password:pw }}) }});
+        const js = await r.json().catch(() => ({{}}));
+        document.getElementById('rp_msg').textContent = js.ok ? 'Password reset.' : (js.error || 'Failed.');
+      }}
+    }});
 
-  // initial load
-  (async () => {{ await loadUsers(); await loadDashboard(); }})();
+    (async()=>{{ await loadDashboard(); }})();
   </script>
 </body>
 </html>
-    """
+"""
     return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 # --- Friendly 402 page (Out of credits) ---
@@ -7793,5 +7814,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 

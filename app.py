@@ -1656,12 +1656,14 @@ button[disabled]{opacity:.6;cursor:not-allowed}
   margin-top: 2px;            /* tighter spacing */
   color: #333;                /* softer than brand ink */
 }
-.kicker{color:var(--muted);font-size:12.5px;margin:8px 0 6px}
-.history{border:1px solid var(--line);border-radius:14px;max-height:300px;overflow:auto;background:var(--card)}
-.row{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line)}
+/* compact history list */
+.kicker{color:var(--muted);font-size:12px;margin:6px 0 4px}
+.history{border:1px solid var(--line);border-radius:12px;max-height:260px;overflow:auto;background:var(--card)}
+.row{display:flex;justify-content:space-between;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line);line-height:1.25}
 .row:last-child{border-bottom:none}
-.candidate{font-weight:700;font-size:13.5px}
-.tsm{color:var(--muted);font-size:12px}
+.candidate{font-weight:700;font-size:12.5px}
+.tsm{color:var(--muted);font-size:11.5px}
+.ts{color:var(--muted);font-size:11.5px}
 
 /* credits chip in stats */
 .chip{
@@ -5017,6 +5019,22 @@ def _current_user_org_id():
         print("org lookup failed:", e)
     return None
 
+    def _current_org_label() -> str:
+    """
+    Return the display name for the current user's org, or 'Lustra' if not logged in / no DB.
+    Visual-only helper for headers; does not change any polishing logic.
+    """
+    try:
+        default_label = os.getenv("APP_BRAND", "Lustra")
+        org_id = _current_user_org_id()
+        if not (DB_POOL and org_id):
+            return default_label
+        row = db_query_one("SELECT name FROM orgs WHERE id=%s", (org_id,))
+        name = (row[0] if row and row[0] else None)
+        return (name or default_label)
+    except Exception:
+        return os.getenv("APP_BRAND", "Lustra")
+
 def _month_bounds_utc():
     now = datetime.utcnow()
     start = datetime(now.year, now.month, 1)
@@ -7908,6 +7926,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

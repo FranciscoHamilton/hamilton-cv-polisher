@@ -616,122 +616,119 @@ HOMEPAGE_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
   /* ===== Consistent site header (brand + right links) across all pages ===== */
-:root{
-  --site-max: 1200px;
-  --site-pad-x: 24px;
-  --site-pad-y: 16px;
-}
-.sitebar, .topbar, header .sitebar, header .topbar{
-  max-width: var(--site-max);
-  margin: 0 auto;
-  padding: var(--site-pad-y) var(--site-pad-x);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.sitebar .brand, .topbar .brand{
-  display:flex; align-items:center; gap:10px;
-  font-weight: 900; letter-spacing: .02em; font-size: 22px;
-}
-.sitebar nav, .topbar .nav{
-  display:flex; align-items:center; gap:24px;
-}
-.sitebar a, .topbar a{
-  text-decoration:none; font-weight:800;
-}
-    :root{
-  --blue:#2563eb;      /* vivid indigo */
-  --blue-2:#22d3ee;    /* bright cyan  */
-  --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
-  --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
-}
-    *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+  :root{
+    --site-max: 1200px;
+    --site-pad-x: 24px;
+    --site-pad-y: 16px;
+  }
+  .sitebar, .topbar, header .sitebar, header .topbar{
+    max-width: var(--site-max);
+    margin: 0 auto;
+    padding: var(--site-pad-y) var(--site-pad-x);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .sitebar .brand, .topbar .brand{
+    display:flex; align-items:center; gap:10px;
+    font-weight: 900; letter-spacing: .02em; font-size: 22px;
+  }
+  .sitebar nav, .topbar .nav{
+    display:flex; align-items:center; gap:24px;
+  }
+  .sitebar a, .topbar a{
+    text-decoration:none; font-weight:800;
+  }
 
-    .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
+  /* Page theme */
+  :root{
+    --blue:#2563eb;      /* vivid indigo */
+    --blue-2:#22d3ee;    /* bright cyan  */
+    --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+    --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
+  }
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
 
-    /* top nav */
-    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+  .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
 
-    /* hero */
-    .hero{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:var(--shadow)}
-    .kicker{font-size:12px;letter-spacing:.14em;font-weight:900;color:var(--blue);margin-bottom:10px}
-    h1{font-size:48px;line-height:1.05;letter-spacing:-.01em;margin:0 0 10px}
-    .lead{font-size:17px;color:var(--muted);max-width:720px;margin:6px 0 16px}
-    .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
-    .btn{display:inline-block;padding:12px 16px;border-radius:12px;font-weight:800;text-decoration:none}
-    .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff}
-    .btn.secondary{background:#fff;border:1px solid var(--line);color:var(--blue)}
-    .meta{color:var(--muted);font-size:13px;margin-top:8px}
+  /* hero */
+  .hero{max-width:1100px;margin:20px auto;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:var(--shadow)}
+  .kicker{font-size:12px;letter-spacing:.14em;font-weight:900;color:var(--blue);margin-bottom:10px}
+  h1{font-size:48px;line-height:1.05;letter-spacing:-.01em;margin:0 0 10px}
+  .lead{font-size:17px;color:var(--muted);max-width:720px;margin:6px 0 16px}
+  .actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+  .btn{display:inline-block;padding:12px 16px;border-radius:12px;font-weight:800;text-decoration:none}
+  .btn.primary{background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff}
+  .btn.secondary{background:#fff;border:1px solid var(--line);color:var(--blue)}
+  .meta{color:var(--muted);font-size:13px;margin-top:8px}
 
-    /* features */
-    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
-    .card h3{margin:0 0 6px;font-size:18px;color:var(--blue)}
-    .card p{margin:0;color:var(--muted);font-size:14px}
+  /* features */
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px auto 0;max-width:1100px;padding:0 20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+  .card h3{margin:0 0 6px;font-size:18px;color:var(--blue)}
+  .card p{margin:0;color:var(--muted);font-size:14px}
 
-    /* stepper */
-    .stepper{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:18px}
-    .step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px}
-    .b{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;border:1px solid var(--line);font-weight:900;color:var(--blue)}
+  /* stepper */
+  .stepper{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:18px auto 0;max-width:1100px;padding:0 20px}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;align-items:center;gap:10px}
+  .b{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:999px;border:1px solid var(--line);font-weight:900;color:var(--blue)}
 
-    @media (max-width:900px){
-      h1{font-size:36px}
-      .lead{font-size:16px}
-      .grid3,.stepper{grid-template-columns:1fr}
-    }
+  @media (max-width:900px){
+    h1{font-size:36px}
+    .lead{font-size:16px}
+    .grid3,.stepper{grid-template-columns:1fr}
+  }
   </style>
 </head>
 <body>
   <header>
-  <div class="sitebar">
-    <a class="brand" href="/">Lustra</a>
-    <nav>
-      <a href="/about">About</a>
-      <a href="/pricing">Pricing</a>
-      <a href="/login">Sign in</a>
-    </nav>
+    <div class="sitebar">
+      <a class="brand" href="/">Lustra</a>
+      <nav>
+        <a href="/about">About</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/login">Sign in</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="kicker">BUILT BY RECRUITERS, FOR RECRUITERS</div>
+    <h1>Client-ready CVs.<br/>On your brand.<br/>In seconds.</h1>
+    <p class="lead">Lustra turns that 10–20 minute task into seconds!</p>
+    <div class="actions">
+      <a class="btn primary" href="/start">Contact Us</a>
+      <a class="btn secondary" href="/login">Sign in</a>
+    </div>
+    <div class="meta">Custom build per client · Keep your look · Fully tailored CVs</div>
   </div>
-</header>
 
-    <div class="hero">
-      <div class="kicker">BUILT BY RECRUITERS, FOR RECRUITERS</div>
-      <h1>Client-ready CVs.<br/>On your brand.<br/>In seconds.</h1>
-      <p class="lead">Lustra turns that 10–20 minute task into seconds!</p>
-      <div class="actions">
-        <a class="btn primary" href="/start">Contact Us</a>
-        <a class="btn secondary" href="/login">Sign in</a>
-      </div>
-      <div class="meta">Custom build per client · Keep your look · Fully tailored CVs</div>
+  <div class="grid3">
+    <div class="card">
+      <h3>On-brand output</h3>
+      <p>Your logo, fonts and spacing. Clean and consistent across the team.</p>
     </div>
+    <div class="card">
+      <h3>No learning curve</h3>
+      <p>Upload → Download. 15 minutes saved per CV, every time.</p>
+    </div>
+    <div class="card">
+      <h3>Built for recruiters</h3>
+      <p>No invented facts. We only structure what’s in the candidate’s CV.</p>
+    </div>
+  </div>
 
-    <div class="grid3">
-      <div class="card">
-        <h3>On-brand output</h3>
-        <p>Your logo, fonts and spacing. Clean and consistent across the team.</p>
-      </div>
-      <div class="card">
-        <h3>No learning curve</h3>
-        <p>Upload → Download. 15 minutes saved per CV, every time.</p>
-      </div>
-      <div class="card">
-        <h3>Built for recruiters</h3>
-        <p>No invented facts. We only structure what’s in the candidate’s CV.</p>
-      </div>
-    </div>
-
-    <div class="stepper">
-      <div class="step"><span class="b">1</span>Upload a CV</div>
-      <div class="step"><span class="b">2</span>We extract &amp; structure</div>
-      <div class="step"><span class="b">3</span>Download polished DOCX</div>
-    </div>
+  <div class="stepper">
+    <div class="step"><span class="b">1</span>Upload a CV</div>
+    <div class="step"><span class="b">2</span>We extract &amp; structure</div>
+    <div class="step"><span class="b">3</span>Download polished DOCX</div>
   </div>
 </body>
 </html>
 """
+
 DIRECTOR_HTML = r"""
 <!doctype html>
 <html>
@@ -858,99 +855,89 @@ ABOUT_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
   /* ===== Consistent site header (brand + right links) across all pages ===== */
-:root{
-  --site-max: 1200px;
-  --site-pad-x: 24px;
-  --site-pad-y: 16px;
-}
-.sitebar, .topbar, header .sitebar, header .topbar{
-  max-width: var(--site-max);
-  margin: 0 auto;
-  padding: var(--site-pad-y) var(--site-pad-x);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.sitebar .brand, .topbar .brand{
-  display:flex; align-items:center; gap:10px;
-  font-weight: 900; letter-spacing: .02em; font-size: 22px;
-}
-.sitebar nav, .topbar .nav{ display:flex; align-items:center; gap:24px; }
-.sitebar a, .topbar a{ text-decoration:none; font-weight:800; }
-    :root{
-  --blue:#2563eb;      /* vivid indigo */
-  --blue-2:#22d3ee;    /* bright cyan  */
-  --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
-  --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
-}
-    *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
+  :root{
+    --site-max: 1200px;
+    --site-pad-x: 24px;
+    --site-pad-y: 16px;
+  }
+  .sitebar, .topbar, header .sitebar, header .topbar{
+    max-width: var(--site-max);
+    margin: 0 auto;
+    padding: var(--site-pad-y) var(--site-pad-x);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .sitebar .brand, .topbar .brand{
+    display:flex; align-items:center; gap:10px;
+    font-weight: 900; letter-spacing: .02em; font-size: 22px;
+  }
+  .sitebar nav, .topbar .nav{
+    display:flex; align-items:center; gap:24px;
+  }
+  .sitebar a, .topbar a{
+    text-decoration:none; font-weight:800;
+  }
 
-    /* nav like homepage */
-    .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+  /* Page theme */
+  :root{
+    --blue:#2563eb; --blue-2:#22d3ee;
+    --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+    --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
+  }
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
 
-    .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:0;box-shadow:var(--shadow)}
-    .inner{max-width:780px;padding:24px}
-    h1{margin:6px 0 12px;font-size:28px;color:var(--blue)}
-h2{margin:18px 0 10px;font-size:18px;color:var(--blue)}
-p{margin:8px 0;color:var(--ink);font-size:13.5px;line-height:1.65}
-ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
-    .btn{display:inline-block;margin-top:14px;padding:12px 16px;border-radius:12px;background:linear-gradient(90deg,var(--blue),var(--blue-2));border:none;text-decoration:none;font-weight:800;color:#fff}
+  .wrap{max-width:900px;margin:28px auto 64px;padding:0 20px}
+  .hero{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:24px;box-shadow:var(--shadow)}
+  h1{font-size:36px;letter-spacing:-.01em;margin:0 0 10px;color:var(--blue)}
+  .lead{color:var(--muted);font-size:16px;margin:0 0 16px}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+  .card h3{margin:0 0 6px;font-size:18px;color:var(--blue)}
+  .card p{margin:0;color:var(--muted);font-size:14px}
+
+  @media (max-width:900px){
+    .grid{grid-template-columns:1fr}
+  }
   </style>
 </head>
 <body>
   <header>
-  <div class="sitebar">
-    <a class="brand" href="/">Lustra</a>
-    <nav>
-      <a href="/about">About</a>
-      <a href="/pricing">Pricing</a>
-      <a href="/login">Sign in</a>
-    </nav>
-  </div>
-</header>
-<div class="wrap">
+    <div class="sitebar">
+      <a class="brand" href="/">Lustra</a>
+      <nav>
+        <a href="/about">About</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/login">Sign in</a>
+      </nav>
+    </div>
+  </header>
 
-    <div class="card">
-      <div class="inner">
-        <h1>Built by recruiters, for recruiters</h1>
-        <p>Formatting CVs is necessary—but it’s not why you got into recruitment. After 10+ years running desks and a recruitment business, I’ve felt the pain first-hand: breaking flow to rework a CV, juggling fonts and spacing, fixing headers, and trying to keep branding consistent across the team.</p>
-        <p><strong>This tool turns that 10–20 minute task into seconds.</strong> Upload a raw CV (PDF, DOCX, or TXT). We extract the content, structure it, and lay it out in your company’s template. You download a polished, on-brand DOCX—ready to send.</p>
+  <div class="wrap">
+    <div class="hero">
+      <h1>About Lustra</h1>
+      <p class="lead">Built by recruiters, for recruiters — to turn a 10–20 minute formatting job into seconds, on-brand every time.</p>
 
-        <h2>Why it matters</h2>
-        <ul>
-          <li><strong>Time back on the desk:</strong> 15 minutes per CV ≈ 0.25 hours. At £20–£40/hour, that’s £5–£10 per CV. 50 CVs/month ≈ 12.5 hours saved → £250–£500/month in recruiter time.</li>
-          <li><strong>Consistency at scale:</strong> every consultant outputs the same, branded format.</li>
-          <li><strong>Better candidate & client experience:</strong> clean, readable CVs that reflect your brand.</li>
-        </ul>
-
-        <h2>How it works</h2>
-        <ul>
-          <li><strong>Upload</strong> a raw CV (PDF / DOCX / TXT).</li>
-          <li><strong>Extract & structure:</strong> we pull out the real content (experience, education, skills) without inventing facts.</li>
-          <li><strong>Lay out in your template:</strong> headers/footers, fonts, sizes and spacing are applied automatically.</li>
-          <li><strong>Download</strong> a polished DOCX.</li>
-        </ul>
-
-        <h2>Privacy & control</h2>
-        <ul>
-          <li>No CV content is stored by default—only basic usage metrics (filename + timestamp) for tracking volume and billing.</li>
-          <li>Your company template and logo are stored securely to ensure output is always on-brand.</li>
-        </ul>
-
-        <h2>What’s on the site</h2>
-        <ul>
-          <li>Multi-company login (soon): per-company routes and templates.</li>
-          <li>Director dashboards (soon): usage counts, CSV export, trends.</li>
-          <li>Credit plans: pay-as-you-go or monthly bundles.</li>
-          <li>Self-serve template builder (soon): upload a DOCX to switch branding instantly.</li>
-        </ul>
-
-        <a class="btn" href="/start">Start free trial</a>
+      <div class="grid">
+        <div class="card">
+          <h3>What we do</h3>
+          <p>Lustra takes an uploaded CV and produces a clean, client-ready DOCX that matches your brand: logo, spacing, sections, headings. It doesn’t invent or alter facts — it structures what’s already there.</p>
+        </div>
+        <div class="card">
+          <h3>Why it matters</h3>
+          <p>Consistency wins trust with clients. Your team saves time and your output looks like it came from one careful hand, even on busy days.</p>
+        </div>
+        <div class="card">
+          <h3>Who it’s for</h3>
+          <p>Executive search and recruitment teams who want fast, reliable, on-brand CVs — without training or complex setup.</p>
+        </div>
+        <div class="card">
+          <h3>Privacy</h3>
+          <p>We don’t keep your polished CVs. The Director dashboard only shows a lightweight trail for troubleshooting.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -970,148 +957,145 @@ PRICING_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
   /* ===== Consistent site header (brand + right links) across all pages ===== */
-:root{
-  --site-max: 1200px;
-  --site-pad-x: 24px;
-  --site-pad-y: 16px;
-}
-.sitebar, .topbar, header .sitebar, header .topbar{
-  max-width: var(--site-max);
-  margin: 0 auto;
-  padding: var(--site-pad-y) var(--site-pad-x);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-.sitebar .brand, .topbar .brand{
-  display:flex; align-items:center; gap:10px;
-  font-weight: 900; letter-spacing: .02em; font-size: 22px;
-}
-.sitebar nav, .topbar .nav{ display:flex; align-items:center; gap:24px; }
-.sitebar a, .topbar a{ text-decoration:none; font-weight:800; }
-    :root{
-      --brand:#2563eb; --brand-2:#22d3ee;
-      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
-      --bg:#f6f9ff; --card:#fff; --shadow:0 10px 24px rgba(13,59,102,.08);
-      --ok:#16a34a;
-      --acc-start:#06b6d4; --acc-growth:#2563eb; --acc-scale:#8b5cf6; --acc-packs:#f59e0b;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;padding:0}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
+  :root{
+    --site-max: 1200px;
+    --site-pad-x: 24px;
+    --site-pad-y: 16px;
+  }
+  .sitebar, .topbar, header .sitebar, header .topbar{
+    max-width: var(--site-max);
+    margin: 0 auto;
+    padding: var(--site-pad-y) var(--site-pad-x);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .sitebar .brand, .topbar .brand{
+    display:flex; align-items:center; gap:10px;
+    font-weight: 900; letter-spacing: .02em; font-size: 22px;
+  }
+  .sitebar nav, .topbar .nav{ display:flex; align-items:center; gap:24px; }
+  .sitebar a, .topbar a{ text-decoration:none; font-weight:800; }
 
-    /* NAV (match Home/About) */
-    .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
-    .nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
-    .brand{font-weight:900;color:var(--ink);text-decoration:none;font-size:26px;letter-spacing:.2px}
-    .nav-links a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+  /* Page theme */
+  :root{
+    --brand:#2563eb; --brand-2:#22d3ee;
+    --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
+    --bg:#f6f9ff; --card:#fff; --shadow:0 10px 24px rgba(13,59,102,.08);
+    --ok:#16a34a;
+    --acc-start:#06b6d4; --acc-growth:#2563eb; --acc-scale:#8b5cf6; --acc-packs:#f59e0b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink)}
 
-    /* PAGE BOX (like the white box on other pages) */
-    .pagebox{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:26px;
-      box-shadow:var(--shadow);
-      padding:24px 28px 26px;
-      margin:14px 0 12px;   /* adds space under the nav and above the note */
-    }
+  /* Page container */
+  .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
 
-    /* Hero inside box */
-    h1{margin:2px 0 8px;font-size:40px;letter-spacing:-.02em;color:#122033}
-    .lead{margin:0 0 14px;color:var(--muted);font-size:15px;max-width:880px}
+  /* Page box */
+  .pagebox{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:26px;
+    box-shadow:var(--shadow);
+    padding:24px 28px 26px;
+    margin:14px 0 12px;
+  }
 
-    /* Plans grid INSIDE the box */
-    .grid4{display:grid;gap:16px;grid-template-columns:repeat(4,1fr);align-items:stretch}
-    @media(max-width:1100px){ .grid4{grid-template-columns:repeat(2,1fr)} }
-    @media(max-width:680px){ .grid4{grid-template-columns:1fr} }
+  /* Hero inside page box */
+  h1{margin:2px 0 8px;font-size:40px;letter-spacing:-.02em;color:#122033}
+  .lead{margin:0 0 14px;color:var(--muted);font-size:15px;max-width:880px}
 
-    /* Card */
-    .card{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:20px;
-      box-shadow:var(--shadow);
-      overflow:hidden;
-      display:flex;flex-direction:column;
-      min-height:520px; /* smaller than before */
-    }
-    .inner{padding:14px 14px 16px;display:flex;flex-direction:column;height:100%}
-    .name{font-weight:900;color:#0b1220;font-size:12px;letter-spacing:.08em;margin:0 0 8px}
-    .qty{font-size:26px;font-weight:900;letter-spacing:-.01em}
-    .per{font-size:13px;color:var(--muted);font-weight:700;margin-left:6px}
+  /* Plans grid */
+  .grid4{display:grid;gap:16px;grid-template-columns:repeat(4,1fr);align-items:stretch}
+  @media(max-width:1100px){ .grid4{grid-template-columns:repeat(2,1fr)} }
+  @media(max-width:680px){ .grid4{grid-template-columns:1fr} }
 
-    .card.start  .name{color:var(--acc-start)}
-    .card.growth .name{color:var(--acc-growth)}
-    .card.scale  .name{color:var(--acc-scale)}
-    .card.packs  .name{color:var(--acc-packs)}
+  /* Plan card */
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:20px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    min-height:520px;
+  }
+  .inner{padding:14px 14px 16px;display:flex;flex-direction:column;height:100%}
+  .name{font-weight:900;color:#0b1220;font-size:12px;letter-spacing:.08em;margin:0 0 8px}
+  .qty{font-size:26px;font-weight:900;letter-spacing:-.01em}
+  .per{font-size:13px;color:var(--muted);font-weight:700;margin-left:6px}
 
-    /* Price chip */
-    .chip{
-      display:inline-flex;align-items:baseline;gap:6px;align-self:flex-start;margin-top:8px;
-      padding:8px 12px;border-radius:999px;background:#eef4ff;border:1px solid #dbeafe;color:#132a63;
-      font-weight:700;font-size:12px;
-    }
-    .chip .price-month{font-size:1.05em;color:#0b1220;font-weight:800}
-    .chip .dot{color:#8aa0c4;font-weight:700;line-height:1}
-    .chip .price-cv{font-size:.9em;color:#667792;font-weight:600}
+  .card.start  .name{color:var(--acc-start)}
+  .card.growth .name{color:var(--acc-growth)}
+  .card.scale  .name{color:var(--acc-scale)}
+  .card.packs  .name{color:var(--acc-packs)}
 
-    /* Features */
-    .feat{margin:12px 0 0 0;padding:0;list-style:none;color:#475569;font-size:12.5px}
-    .feat li{display:flex;align-items:center;gap:8px;margin-top:8px}
-    .tick{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
-      background:rgba(34,211,238,.18);color:#0891b2;font-weight:900;font-size:12px}
+  /* Price chip */
+  .chip{
+    display:inline-flex;align-items:baseline;gap:6px;align-self:flex-start;margin-top:8px;
+    padding:8px 12px;border-radius:999px;background:#eef4ff;border:1px solid #dbeafe;color:#132a63;
+    font-weight:700;font-size:12px;
+  }
+  .chip .price-month{font-size:1.05em;color:#0b1220;font-weight:800}
+  .chip .dot{color:#8aa0c4;font-weight:700;line-height:1}
+  .chip .price-cv{font-size:.9em;color:#667792;font-weight:600}
 
-    /* Packs block */
-    .packs-info{margin:10px 0 0 0;padding:10px;border:1px dashed #dbeafe;border-radius:14px;background:#f8fbff}
-    .packs-info .title{font-weight:900;color:#0b1220;font-size:12px;margin-bottom:6px;letter-spacing:.04em}
-    .packs-info ul{margin:0;padding-left:18px;font-size:12.5px;color:#334155}
-    .packs-info li{margin:4px 0}
+  /* Features */
+  .feat{margin:12px 0 0 0;padding:0;list-style:none;color:#475569;font-size:12.5px}
+  .feat li{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .tick{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;
+    background:rgba(34,211,238,.18);color:#0891b2;font-weight:900;font-size:12px}
 
-    .select{margin-top:10px}
-    .select select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-weight:700}
+  /* Packs block */
+  .packs-info{margin:10px 0 0 0;padding:10px;border:1px dashed #dbeafe;border-radius:14px;background:#f8fbff}
+  .packs-info .title{font-weight:900;color:#0b1220;font-size:12px;margin-bottom:6px;letter-spacing:.04em}
+  .packs-info ul{margin:0;padding-left:18px;font-size:12.5px;color:#334155}
+  .packs-info li{margin:4px 0}
 
-    /* Buttons closer to content */
-    .btn{
-  margin-top:auto;
-  align-self:center; width:220px;
-  padding:10px 14px; border-radius:18px;
-  text-align:center; font-weight:900; font-size:14px;
-  text-decoration:none; border:1px solid var(--line);
-  color:#0b1220; background:#fff;
-}
-    .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none}
-    .btn:hover{transform:translateY(-1px)}
+  .select{margin-top:10px}
+  .select select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-weight:700}
 
-    /* Note + Calculator spacing (calculator pulled up) */
-    .note{color:var(--muted);font-size:12px;margin:6px 0 4px}
+  /* Buttons */
+  .btn{
+    margin-top:auto;
+    align-self:center; width:220px;
+    padding:10px 14px; border-radius:18px;
+    text-align:center; font-weight:900; font-size:14px;
+    text-decoration:none; border:1px solid var(--line);
+    color:#0b1220; background:#fff;
+  }
+  .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none}
+  .btn:hover{transform:translateY(-1px)}
 
-    /* Calculator (unchanged UI) */
-    .card.calc{min-height:unset}
-    .card.calc .inner{align-items:stretch;text-align:left}
-    .card.calc .name{font-size:18px;color:var(--brand)}
-    .calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    @media(max-width:980px){ .calc-grid{grid-template-columns:1fr} }
-    .calc label{display:block;font-weight:900;margin-bottom:6px}
-    .calc input[type=number]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:inset 0 1px 2px rgba(2,6,23,.03)}
-    .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px}
-    .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
+  .note{color:var(--muted);font-size:12px;margin:6px 0 4px}
+
+  /* Calculator (unchanged UI) */
+  .card.calc{min-height:unset}
+  .card.calc .inner{align-items:stretch;text-align:left}
+  .card.calc .name{font-size:18px;color:var(--brand)}
+  .calc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  @media(max-width:980px){ .calc-grid{grid-template-columns:1fr} }
+  .calc label{display:block;font-weight:900;margin-bottom:6px}
+  .calc input[type=number]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff;box-shadow:inset 0 1px 2px rgba(2,6,23,.03)}
+  .calc-out{display:flex;flex-wrap:wrap;gap:24px;align-items:center;margin-top:12px}
+  .calc-out .n{font-weight:900;color:var(--brand);font-size:22px}
   </style>
 </head>
 
 <body>
   <header>
-  <div class="sitebar">
-    <a class="brand" href="/">Lustra</a>
-    <nav>
-      <a href="/about">About</a>
-      <a href="/pricing">Pricing</a>
-      <a href="/login">Sign in</a>
-    </nav>
-  </div>
-</header>
+    <div class="sitebar">
+      <a class="brand" href="/">Lustra</a>
+      <nav>
+        <a href="/about">About</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/login">Sign in</a>
+      </nav>
+    </div>
+  </header>
 
-  <!-- PAGE BOX with hero + plans (aligned with Lustra) -->
   <div class="wrap">
     <div class="pagebox">
       <h1>Plans</h1>
@@ -1120,66 +1104,66 @@ PRICING_HTML = r"""
       <div class="grid4">
         <!-- STARTER -->
         <div class="card start">
-  <div class="inner">
-    <div class="name">STARTER</div>
-    <div class="qty">100 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£150/mo</span><span class="dot">·</span><span class="price-cv">£1.50 per CV</span></span>
+          <div class="inner">
+            <div class="name">STARTER</div>
+            <div class="qty">100 polished CVs <span class="per">/ mo</span></div>
+            <span class="chip"><span class="price-month">£150/mo</span><span class="dot">·</span><span class="price-cv">£1.50 per CV</span></span>
 
-    <ul class="feat" style="margin-top:12px">
-      <li><span class="tick">✓</span><span>1 brand template included</span></li>
-      <li><span class="tick">✓</span><span>Up to 10 users</span></li>
-      <li><span class="tick">✓</span><span>Director dashboard</span></li>
-      <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
-      <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
-      <li><span class="tick">✓</span><span>Email support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.45/CV</strong></span></li>
-    </ul>
+            <ul class="feat" style="margin-top:12px">
+              <li><span class="tick">✓</span><span>1 brand template included</span></li>
+              <li><span class="tick">✓</span><span>Up to 10 users</span></li>
+              <li><span class="tick">✓</span><span>Director dashboard</span></li>
+              <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
+              <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
+              <li><span class="tick">✓</span><span>Email support</span></li>
+              <li><span class="tick">✓</span><span>Overage: <strong>£1.45/CV</strong></span></li>
+            </ul>
 
-    <a class="btn primary" href="/start">Choose Starter</a>
-  </div>
-</div>
+            <a class="btn primary" href="/start">Choose Starter</a>
+          </div>
+        </div>
 
         <!-- GROWTH -->
         <div class="card growth">
-  <div class="inner">
-    <div class="name">GROWTH</div>
-    <div class="qty">250 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£350/mo</span><span class="dot">·</span><span class="price-cv">£1.40 per CV</span></span>
+          <div class="inner">
+            <div class="name">GROWTH</div>
+            <div class="qty">250 polished CVs <span class="per">/ mo</span></div>
+            <span class="chip"><span class="price-month">£350/mo</span><span class="dot">·</span><span class="price-cv">£1.40 per CV</span></span>
 
-    <ul class="feat" style="margin-top:12px">
-      <li><span class="tick">✓</span><span>2 brand template included</span></li>
-      <li><span class="tick">✓</span><span>Up to 20 users</span></li>
-      <li><span class="tick">✓</span><span>Director dashboard</span></li>
-      <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
-      <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
-      <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.35/CV</strong></span></li>
-    </ul>
+            <ul class="feat" style="margin-top:12px">
+              <li><span class="tick">✓</span><span>2 brand template included</span></li>
+              <li><span class="tick">✓</span><span>Up to 20 users</span></li>
+              <li><span class="tick">✓</span><span>Director dashboard</span></li>
+              <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
+              <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
+              <li><span class="tick">✓</span><span>Priority support</span></li>
+              <li><span class="tick">✓</span><span>Overage: <strong>£1.35/CV</strong></span></li>
+            </ul>
 
-    <a class="btn primary" href="/start">Choose Growth</a>
-  </div>
-</div>
+            <a class="btn primary" href="/start">Choose Growth</a>
+          </div>
+        </div>
 
         <!-- SCALE -->
         <div class="card scale">
-  <div class="inner">
-    <div class="name">SCALE</div>
-    <div class="qty">500 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£650/mo</span><span class="dot">·</span><span class="price-cv">£1.30 per CV</span></span>
+          <div class="inner">
+            <div class="name">SCALE</div>
+            <div class="qty">500 polished CVs <span class="per">/ mo</span></div>
+            <span class="chip"><span class="price-month">£650/mo</span><span class="dot">·</span><span class="price-cv">£1.30 per CV</span></span>
 
-    <ul class="feat" style="margin-top:12px">
-      <li><span class="tick">✓</span><span>3 brand template included</span></li>
-      <li><span class="tick">✓</span><span>Up to 30 users</span></li>
-      <li><span class="tick">✓</span><span>Director dashboard</span></li>
-      <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
-      <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
-      <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.25/CV</strong></span></li>
-    </ul>
+            <ul class="feat" style="margin-top:12px">
+              <li><span class="tick">✓</span><span>3 brand template included</span></li>
+              <li><span class="tick">✓</span><span>Up to 30 users</span></li>
+              <li><span class="tick">✓</span><span>Director dashboard</span></li>
+              <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
+              <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
+              <li><span class="tick">✓</span><span>Priority support</span></li>
+              <li><span class="tick">✓</span><span>Overage: <strong>£1.25/CV</strong></span></li>
+            </ul>
 
-    <a class="btn primary" href="/start">Choose Scale</a>
-  </div>
-</div>
+            <a class="btn primary" href="/start">Choose Scale</a>
+          </div>
+        </div>
 
         <!-- BUY PACKS -->
         <div class="card packs">
@@ -1222,7 +1206,7 @@ PRICING_HTML = r"""
     <p class="note">Prices exclude VAT where applicable. Monthly credits reset each month. Packs never expire and are org-wide. We always use Monthly first, then Packs if available, otherwise Overage.</p>
   </div>
 
-  <!-- CALCULATOR (unchanged; only constants updated) -->
+  <!-- CALCULATOR -->
   <div class="wrap section">
     <div class="card calc">
       <div class="inner">
@@ -1243,15 +1227,15 @@ PRICING_HTML = r"""
   </div>
 
   <script>
-    /* Calculator unchanged — only plan constants updated */
+    /* Calculator — constants fixed to match the visible plans above */
     function fmt(n){ return new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(n); }
     function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
     const PLANS = [
-      { kind:'Monthly', key:'Starter', baseCredits:100, baseCost:150, baseRate:1.50, overRate:1.70 },
-      { kind:'Monthly', key:'Growth',  baseCredits:300, baseCost:420, baseRate:1.40, overRate:1.60 },
-      { kind:'Monthly', key:'Scale',   baseCredits:500, baseCost:650, baseRate:1.30, overRate:1.50 }
-      // Buy Packs are on-demand; not part of the "best monthly plan" picker.
+      { kind:'Monthly', key:'Starter', baseCredits:100, baseCost:150, baseRate:1.50, overRate:1.45 },
+      { kind:'Monthly', key:'Growth',  baseCredits:250, baseCost:350, baseRate:1.40, overRate:1.35 },
+      { kind:'Monthly', key:'Scale',   baseCredits:500, baseCost:650, baseRate:1.30, overRate:1.25 }
+      // Packs are on-demand; not part of the "best monthly plan" picker.
     ];
 
     function costFor(plan, volume){
@@ -2222,48 +2206,92 @@ DIRECTOR_LOGIN_HTML = r"""
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>Director access — Lustra</title>
+  <title>Director Login — Lustra</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root{
-      --brand:#2563eb; --brand-2:#22d3ee;
-      --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
-      --bg:#f6f9ff; --card:#ffffff; --shadow:0 10px 24px rgba(13,59,102,.08);
-    }
-    *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
-    a{color:var(--brand);text-decoration:none}
-    .wrap{max-width:560px;margin:56px auto;padding:0 18px}
-    .logo{display:flex;align-items:center;gap:10px;margin-bottom:18px}
-    .logo .dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
-    .logo .name{font-weight:900;letter-spacing:.06em;text-transform:uppercase;font-size:12px;color:#0b1220}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:var(--shadow)}
-    h1{margin:0 0 6px;font-size:22px;letter-spacing:-.01em}
-    .sub{color:var(--muted);font-size:14px;margin:0 0 14px}
-    label{font-weight:700;font-size:13px}
-    input[type=password]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px;margin-top:6px}
-    button{width:100%;margin-top:14px;background:linear-gradient(90deg,var(--brand),var(--brand-2));color:#fff;border:none;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer}
-    .muted{color:var(--muted);font-size:13px;margin-top:12px}
-    .err{background:#fee2e2;border:1px solid #fecaca;color:#991b1b;padding:10px;border-radius:12px;font-weight:700;margin:10px 0}
+  /* ===== Consistent site header (brand + right links) across all pages ===== */
+  :root{
+    --site-max: 1200px;
+    --site-pad-x: 24px;
+    --site-pad-y: 16px;
+  }
+  .sitebar, .topbar, header .sitebar, header .topbar{
+    max-width: var(--site-max);
+    margin: 0 auto;
+    padding: var(--site-pad-y) var(--site-pad-x);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .sitebar .brand, .topbar .brand{
+    display:flex; align-items:center; gap:10px;
+    font-weight: 900; letter-spacing: .02em; font-size: 22px;
+  }
+  .sitebar nav, .topbar .nav{
+    display:flex; align-items:center; gap:24px;
+  }
+  .sitebar a, .topbar a{
+    text-decoration:none; font-weight:800;
+  }
+
+  /* Page theme */
+  :root{
+    --blue:#2563eb; --blue-2:#22d3ee;
+    --ink:#0f172a; --muted:#5b677a; --line:#e5e7eb;
+    --bg:#f5f8fd; --card:#ffffff; --shadow: 0 10px 28px rgba(13,59,102,.08);
+  }
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);margin:0}
+
+  .wrap{max-width:1100px;margin:24px auto 64px;padding:0 20px}
+
+  /* Auth card */
+  .auth{max-width:520px;margin:32px auto 0;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 20px 22px;box-shadow:var(--shadow)}
+  h1{margin:0 0 8px;font-size:24px;color:var(--blue);letter-spacing:-.01em}
+  .lead{color:var(--muted);font-size:13px;margin:0 0 14px}
+
+  label{display:block;font-weight:700;font-size:13px;margin:10px 0 6px}
+  input[type=password]{width:100%;padding:12px;border:1px solid var(--line);border-radius:12px}
+  button{width:100%;margin-top:14px;background:linear-gradient(90deg,var(--blue),var(--blue-2));color:#fff;border:none;border-radius:12px;padding:12px 16px;font-weight:800;cursor:pointer;box-shadow:var(--shadow)}
+  .muted{color:var(--muted);font-size:12px;text-align:center;margin-top:10px}
+  .err{margin-top:8px;color:#b91c1c;font-weight:800;font-size:12px}
+
+  /* Compact top spacing like other pages */
+  .pagebox{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:18px;box-shadow:var(--shadow)}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="logo">
-      <div class="dot"></div><div class="name">Lustra • Director</div>
+  <header>
+    <div class="sitebar">
+      <a class="brand" href="/">Lustra</a>
+      <nav>
+        <a href="/about">About</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/login">Sign in</a>
+      </nav>
     </div>
-    <div class="card">
-      <h1>Sign in</h1>
-      <p class="sub">Enter the director password to access the console.</p>
-      <!--DERR-->
-      <form method="post" action="/director/login" autocomplete="off">
+  </header>
+
+  <div class="wrap">
+    <div class="pagebox auth">
+      <h1>Director Login</h1>
+      <p class="lead">Enter the director password to access the org console.</p>
+
+      <!-- IMPORTANT: keep form method/action and field names identical -->
+      <form method="POST" action="/director/login">
         <label for="password">Director password</label>
-        <input id="password" type="password" name="password" autofocus required />
-        <button type="submit">Continue</button>
+        <input id="password" name="password" type="password" required placeholder="••••••••">
+        <button type="submit">Enter</button>
+
+        {% if error %}
+          <div class="err">{{ error }}</div>
+        {% endif %}
       </form>
-      <div class="muted">
-        <a href="/director/forgot">Forgot director password?</a> · <a href="/app">Back to app</a>
-      </div>
+
+      <p class="muted" style="margin-top:14px">
+        Not a director? <a href="/app">Go back to the app</a>.
+      </p>
     </div>
   </div>
 </body>
@@ -3384,13 +3412,17 @@ APP_HTML = HTML
 def app_page():
     if is_admin():
         return redirect("/owner/console")
-    # Render template
+
+    # Render template — dynamic per-org branding (visual only; polishing logic untouched)
+    org_label = _current_org_label()
+    org_sub = os.getenv("APP_SUBTAGLINE", "Executive Search & Selection")
+
     html = render_template_string(
-    HTML,
-    show_director_link=bool(is_admin() or session.get("director")),
-    ORG_LABEL="Hamilton Recruitment",
-    ORG_SUB="Executive Search & Selection"
-)
+        HTML,
+        show_director_link=bool(is_admin() or session.get("director")),
+        ORG_LABEL=org_label,
+        ORG_SUB=org_sub
+    )
 
     # Inject Director link (if admin/director)
     if is_admin() or session.get("director"):
@@ -3408,7 +3440,7 @@ def app_page():
             )
         )
 
-        # Inject Owner link (admins only)
+    # Inject Owner link (admins only)
     if is_admin():
         html = html.replace(
             "</body>",
@@ -3423,6 +3455,7 @@ def app_page():
                 '</body>'
             )
         )
+
     # Inject Full History toggle
     html = html.replace(
         "</body>",
@@ -3472,7 +3505,7 @@ def app_page():
             ' if(show && !loaded) await loadSkills();'
             '});}'
             'var addForm=document.getElementById("skillAddForm");'
-            'if(addForm){addForm.addEventListener("submit",async function(ev){ev.preventDefault();'
+            'if(addForm){addEventListener("submit",async function(ev){ev.preventDefault();'
             ' var inp=document.getElementById("skillInput"); var v=(inp&&inp.value||"").trim(); if(!v)return;'
             ' try{await fetch("/skills/custom/add",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({skill:v})});'
             ' if(inp) inp.value=""; loaded=false; await loadSkills();}catch(e){console.log("add skill failed",e);}'
@@ -3481,7 +3514,7 @@ def app_page():
         )
     )
 
-                # Tweak Session Stats fonts (smaller values + history; keep titles bigger)
+    # Tweak Session Stats fonts (smaller values + history; keep titles bigger)
     html = html.replace(
         "</body>",
         (
@@ -3500,7 +3533,8 @@ def app_page():
             '}catch(e){console.log("stats css enforce failed",e);} })();</script></body>'
         )
     )
-        # Force smaller values + history inside Session Stats (titles untouched)
+
+    # Force smaller values + history inside Session Stats (titles untouched)
     html = html.replace(
         "</body>",
         (
@@ -3540,7 +3574,7 @@ def app_page():
         )
     )
 
-        # Force smaller values + history inside Session Stats (titles untouched)
+    # Force smaller values + history inside Session Stats (duplicate block retained as in your current code)
     html = html.replace(
         "</body>",
         (
@@ -3630,6 +3664,7 @@ def app_page():
             '})();</script></body>'
         )
     )
+
     # Inject Full History data loader (fires on first click)
     html = html.replace(
         "</body>",
@@ -3660,7 +3695,6 @@ def app_page():
             '})();</script></body>'
         )
     )
-    
 
     # --- Session Stats tiles: refresh on load and on demand ---
     html = html.replace("</body>", """
@@ -3698,6 +3732,7 @@ def app_page():
 </script>
 </body>""")
 
+    # Final response (keeps your no-store cache header)
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -6292,7 +6327,7 @@ def director_ui():
          LIMIT 50
     """, (my_org, my_org)) or []
 
-    html = f"""
+        html = f"""
 <!doctype html>
 <html lang="en">
 <head>
@@ -6300,6 +6335,29 @@ def director_ui():
   <title>Director — Lustra Console</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    /* ===== Consistent site header (brand + right links) across all pages ===== */
+    :root {{
+      --site-max: 1200px;
+      --site-pad-x: 24px;
+      --site-pad-y: 16px;
+    }}
+    .sitebar, .topbar, header .sitebar, header .topbar {{
+      max-width: var(--site-max);
+      margin: 0 auto;
+      padding: var(--site-pad-y) var(--site-pad-x);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }}
+    .sitebar .brand, .topbar .brand {{
+      display:flex; align-items:center; gap:10px;
+      font-weight: 900; letter-spacing: .02em; font-size: 22px;
+    }}
+    .sitebar nav, .topbar .nav {{ display:flex; align-items:center; gap:24px; }}
+    .sitebar a, .topbar a {{ text-decoration:none; font-weight:800; }}
+
+    /* Page theme */
     :root {{
       --brand:#2563eb; --brand-2:#22d3ee;
       --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
@@ -6312,14 +6370,7 @@ def director_ui():
     html,body{{ height:100% }}
     body{{ margin:0; background:var(--bg); color:var(--ink);
           font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }}
-
     a{{ color:var(--brand); text-decoration:none }}
-    .topbar{{ position:sticky; top:0; z-index:10; background:linear-gradient(90deg,var(--card),#fdfdff);
-              border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;
-              padding:12px 18px; }}
-    .brand{{ display:flex; align-items:center; gap:10px }}
-    .dot{{ width:10px; height:10px; border-radius:999px; background:linear-gradient(90deg,var(--brand),var(--brand-2)) }}
-    .brand .name{{ font-weight:900; letter-spacing:.06em; text-transform:uppercase; font-size:12px }}
 
     .wrap{{ max-width:1200px; margin:28px auto; padding:0 18px; display:grid; gap:18px }}
     h1{{ margin:0 0 4px; font-size:22px; letter-spacing:-.01em }}
@@ -6343,23 +6394,28 @@ def director_ui():
     .pill{{ display:inline-block; padding:3px 8px; border-radius:999px; border:1px solid var(--line); font-size:11px; }}
     .pill.ok{{ color:#065f46; background:#ecfdf5; border-color:#d1fae5 }}
     .pill.off{{ color:#433a3a; background:#fafafa; border-color:#e5e7eb }}
+
     input[type=text], input[type=password], input[type=number]{{ width:100%; padding:10px; border:1px solid var(--line); border-radius:12px }}
     button{{ background:linear-gradient(90deg,var(--brand),var(--brand-2)); color:#fff; border:none; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer }}
+
     .row{{ display:grid; grid-template-columns:1fr; gap:10px }}
     @media(min-width:700px){{ .row3{{ grid-template-columns:1fr 1fr 1fr }} .row2{{ grid-template-columns:1fr 1fr }} }}
     .hint{{ font-size:12px; color:var(--muted) }}
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="brand">
-      <div class="dot"></div>
-      <div class="name">Lustra • Director</div>
+  <header>
+    <div class="topbar">
+      <div class="brand">
+        <div class="dot" style="width:10px;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--brand-2))"></div>
+        <div class="name">{_current_org_label()} • Director</div>
+      </div>
+      <div class="nav">
+        <a href="/app">Back to app</a>
+        <a href="/director/logout">Logout</a>
+      </div>
     </div>
-    <div>
-      <a href="/app">Back to app</a>
-    </div>
-  </div>
+  </header>
 
   <div class="wrap">
     <div>
@@ -6479,7 +6535,7 @@ def director_ui():
       }} else {{
         let html = '';
         for (const u of rows) {{
-          const cap = (u.count == null ? '' : u.count); // keep existing shape
+          const cap = (u.count == null ? '' : u.count);
           const active = !!(u.active ?? true);
           const pill = `<span class="pill ${{active ? 'ok' : 'off'}}">${{active ? 'Active' : 'Disabled'}}</span>`;
           const toggleLabel = active ? 'Disable' : 'Enable';
@@ -6536,7 +6592,7 @@ def director_ui():
       }});
     }}
 
-    // create user
+    // create user + reset password (unchanged)
     document.addEventListener('click', async (e) => {{
       if (e.target && e.target.id === 'cu_btn') {{
         e.preventDefault();
@@ -7928,6 +7984,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

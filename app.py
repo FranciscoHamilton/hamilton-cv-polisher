@@ -5012,21 +5012,18 @@ def _current_user_org_id():
         print("org lookup failed:", e)
     return None
 
-    def _current_org_label() -> str:
-    """
-    Return the display name for the current user's org, or 'Lustra' if not logged in / no DB.
-    Visual-only helper for headers; does not change any polishing logic.
-    """
+   def _current_org_label() -> str:
+    """Return the display name for the current user's org, or 'Lustra' if unavailable."""
+    org_id = _current_org_id()
+    if not org_id:
+        return "Lustra"
     try:
-        default_label = os.getenv("APP_BRAND", "Lustra")
-        org_id = _current_user_org_id()
-        if not (DB_POOL and org_id):
-            return default_label
-        row = db_query_one("SELECT name FROM orgs WHERE id=%s", (org_id,))
-        name = (row[0] if row and row[0] else None)
-        return (name or default_label)
-    except Exception:
-        return os.getenv("APP_BRAND", "Lustra")
+        with get_db() as con:
+            row = con.execute("SELECT label FROM orgs WHERE id = ?", (org_id,)).fetchone()
+        return row[0] if row and row[0] else "Lustra"
+    except Exception as e:
+        print("current_org_label failed:", e)
+        return "Lustra"
 
 def _month_bounds_utc():
     now = datetime.utcnow()
@@ -7940,6 +7937,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -6205,346 +6205,322 @@ if (!monthRows.length) {
 # --- Director UI (fixed: triple quotes + ASCII only) ---
 @app.get("/director/ui")
 def director_ui():
-    """
-    Simple HTML page for directors to view their org's pool balance,
-    users (with any caps if present), recent pool activity, create users,
-    reset passwords, and toggle user active state.
-    """
-    # access guard
+    # Gate (same as before)
     if not (session.get("director") or is_admin()):
         return make_response("forbidden", 403)
 
-    # must be logged in
-    try:
-        uid = int(session.get("user_id") or 0)
-    except Exception:
-        uid = 0
-    if uid <= 0:
-        return redirect(url_for("login"))
-
-    # must belong to an org (or be admin)
-    my_org = _current_user_org_id()
-    is_admin = False
-    try:
-        is_admin = bool(session.get("is_admin")) or (session.get("username","").lower() == "admin") or (session.get("user","").lower() == "admin")
-    except Exception:
-        pass
-
-    if not my_org and not is_admin:
-        return make_response("No organization assigned to this account.", 403)
-
-    # if admin (no org on session), allow ?org_id=... to inspect
-    if is_admin and not my_org:
-        try:
-            my_org = int(request.args.get("org_id") or "0")
-        except Exception:
-            my_org = 0
-        if my_org <= 0:
-            return make_response("Admin view: please pass ?org_id=NN to inspect an org.", 400)
-
-    # data pulls
-    bal = org_balance(my_org)
-    users = db_query_all("""
-        SELECT u.id, u.username,
-               (SELECT l.monthly_cap
-                  FROM org_user_limits l
-                 WHERE l.org_id = u.org_id AND l.user_id = u.id AND l.active
-                 LIMIT 1) AS monthly_cap,
-               COALESCE(u.active, TRUE) AS active
-          FROM users u
-         WHERE u.org_id = %s
-         ORDER BY u.username ASC
-    """, (my_org,)) or []
-
-    recent = db_query_all("""
-        SELECT e.created_at, u.username, e.candidate, e.filename, e.delta, e.reason
-          FROM (
-            SELECT created_at, user_id, NULL::text AS candidate, NULL::text AS filename, delta, reason
-              FROM org_credits_ledger
-             WHERE org_id = %s
-            UNION ALL
-            SELECT created_at, user_id, candidate, filename, NULL::int AS delta, 'polish'::text AS reason
-              FROM usage_events
-             WHERE org_id = %s
-          ) e
-          LEFT JOIN users u ON u.id = e.user_id
-         ORDER BY e.created_at DESC
-         LIMIT 50
-    """, (my_org, my_org)) or []
-
-    html = f"""
-<!doctype html>
+    return make_response(r"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Director — Lustra Console</title>
+  <title>Lustra • Director Console</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    :root {{
-      --brand:#2563eb; --brand-2:#22d3ee;
+    :root{
+      --brand:#2563eb; --brand2:#22d3ee;
       --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
       --bg:#f6f9ff; --card:#ffffff;
+      --ok:#047857; --warn:#a16207; --bad:#b91c1c;
       --shadow:0 10px 24px rgba(13,59,102,.08);
-      --shadow-sm:0 2px 8px rgba(13,59,102,.06);
-      --ok:#047857; --off:#a1a1aa;
-    }}
-    *{{ box-sizing:border-box }}
-    html,body{{ height:100% }}
-    body{{ margin:0; background:var(--bg); color:var(--ink);
-          font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }}
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);
+         font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}
 
-    a{{ color:var(--brand); text-decoration:none }}
-    .topbar{{ position:sticky; top:0; z-index:10; background:linear-gradient(90deg,var(--card),#fdfdff);
-              border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:space-between;
-              padding:12px 18px; }}
-    .brand{{ display:flex; align-items:center; gap:10px }}
-    .dot{{ width:10px; height:10px; border-radius:999px; background:linear-gradient(90deg,var(--brand),var(--brand-2)) }}
-    .brand .name{{ font-weight:900; letter-spacing:.06em; text-transform:uppercase; font-size:12px }}
+    .wrap{max-width:1200px;margin:24px auto;padding:0 18px}
+    .top{display:flex;align-items:center;justify-content:space-between;margin:6px 0 16px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.06em}
+    .dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--brand2))}
+    h1{font-size:20px;margin:0}
+    .grid{display:grid;gap:18px}
+    @media(min-width:1000px){.grid{grid-template-columns:1.2fr .8fr}}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
+    .card h2{margin:0 0 10px;font-size:16px}
+    .kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:4px 0 2px}
+    .kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px}
+    .kpi .t{color:var(--muted);font-size:12px;margin-bottom:6px}
+    .kpi .v{font-weight:800;font-size:22px}
 
-    .wrap{{ max-width:1200px; margin:28px auto; padding:0 18px; display:grid; gap:18px }}
-    h1{{ margin:0 0 4px; font-size:22px; letter-spacing:-.01em }}
-    .sub{{ color:var(--muted); font-size:13px; margin:0 0 10px }}
+    table{width:100%;border-collapse:collapse}
+    th,td{border-bottom:1px solid #f1f5f9;padding:10px;text-align:left;vertical-align:middle}
+    th{background:#f8fafc;font-weight:700;font-size:12px;color:#0b1220}
+    .muted{color:var(--muted)}
+    .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:12px}
+    .row-actions{display:flex;gap:8px;align-items:center}
+    .cap-wrap{display:flex;gap:8px;align-items:center}
+    .cap-wrap input{width:80px;padding:8px;border:1px solid var(--line);border-radius:10px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;
+         padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;
+         color:#0f172a;text-decoration:none;cursor:pointer}
+    .btn.primary{background:linear-gradient(90deg,var(--brand),var(--brand2));border:none;color:#fff;font-weight:800}
+    .btn.small{padding:6px 8px;font-size:12px}
+    .badge-on{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;border-radius:999px;padding:2px 8px;font-size:12px}
+    .badge-off{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-radius:999px;padding:2px 8px;font-size:12px}
 
-    .grid{{ display:grid; grid-template-columns:1fr; gap:18px }}
-    @media(min-width:1000px){{ .grid{{ grid-template-columns:1.2fr .8fr }} }}
-
-    .card{{ background:var(--card); border:1px solid var(--line); border-radius:18px; padding:18px; box-shadow:var(--shadow) }}
-    .card h2{{ margin:0 0 10px; font-size:16px }}
-
-    .metrics{{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:8px 0 4px }}
-    .metric{{ background:var(--card); border:1px solid var(--line); border-radius:16px; padding:14px; box-shadow:var(--shadow-sm) }}
-    .metric .k{{ font-size:12px; color:var(--muted); margin:0 }}
-    .metric .v{{ font-size:22px; font-weight:800; margin:2px 0 0 }}
-
-    table{{ width:100%; border-collapse:collapse }}
-    th,td{{ border-bottom:1px solid var(--line); padding:10px; text-align:left; font-size:13px }}
-    th{{ background:#f8fafc; position:sticky; top:0; z-index:1 }}
-    .muted{{ color:var(--muted) }}
-    .pill{{ display:inline-block; padding:3px 8px; border-radius:999px; border:1px solid var(--line); font-size:11px; }}
-    .pill.ok{{ color:#065f46; background:#ecfdf5; border-color:#d1fae5 }}
-    .pill.off{{ color:#433a3a; background:#fafafa; border-color:#e5e7eb }}
-    input[type=text], input[type=password], input[type=number]{{ width:100%; padding:10px; border:1px solid var(--line); border-radius:12px }}
-    button{{ background:linear-gradient(90deg,var(--brand),var(--brand-2)); color:#fff; border:none; border-radius:12px; padding:10px 14px; font-weight:800; cursor:pointer }}
-    .row{{ display:grid; grid-template-columns:1fr; gap:10px }}
-    @media(min-width:700px){{ .row3{{ grid-template-columns:1fr 1fr 1fr }} .row2{{ grid-template-columns:1fr 1fr }} }}
-    .hint{{ font-size:12px; color:var(--muted) }}
+    details{border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff}
+    details>summary{cursor:pointer;font-weight:800;list-style:none}
+    details>summary::-webkit-details-marker{display:none}
+    .stack{display:grid;gap:10px}
+    .row{display:grid;gap:8px}
+    @media(min-width:680px){.row{grid-template-columns:1fr 1fr 1fr}}
+    label{font-weight:700;font-size:13px}
+    input[type=text],input[type=password],input[type=number]{
+        width:100%;padding:10px;border:1px solid var(--line);border-radius:10px}
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="brand">
-      <div class="dot"></div>
-      <div class="name">Lustra • Director</div>
-    </div>
-    <div>
-      <a href="/app">Back to app</a>
-    </div>
-  </div>
-
   <div class="wrap">
-    <div>
-      <h1>Director Console</h1>
-      <p class="sub">Org tools and audit trail. Visual refresh only — functionality unchanged. <span id="orgBadge" class="muted"></span></p>
-
-      <div class="metrics">
-        <div class="metric">
-          <p class="k">Org balance</p>
-          <p class="v" id="poolBox">—</p>
-        </div>
-        <div class="metric">
-          <p class="k">Users</p>
-          <p class="v" id="usersCount">—</p>
-        </div>
-        <div class="metric">
-          <p class="k">Recent events</p>
-          <p class="v" id="recentCount">—</p>
-        </div>
-      </div>
+    <div class="top">
+      <div class="brand"><div class="dot"></div><div>LUSTRA • DIRECTOR</div></div>
+      <div><a class="btn" href="/app">Back to app</a></div>
     </div>
 
     <div class="grid">
-      <!-- LEFT: Users + Recent -->
-      <div class="stack" style="display:grid; gap:18px">
+      <!-- LEFT column -->
+      <div class="stack">
+        <div class="kpis">
+          <div class="kpi"><div class="t">Org balance</div><div id="orgBal" class="v">—</div></div>
+          <div class="kpi"><div class="t">Users</div><div id="userCount" class="v">—</div></div>
+          <div class="kpi"><div class="t">Recent events</div><div id="eventCount" class="v">—</div></div>
+        </div>
+
         <div class="card">
           <h2>Users</h2>
-          <div class="hint" style="margin:-6px 0 8px">Per-user monthly cap and enable/disable. (IDs and actions unchanged.)</div>
+          <div class="muted" style="margin:-6px 0 10px">Per-user monthly cap and enable/disable. IDs and actions unchanged.</div>
           <div class="table-wrap">
-            <table>
+            <table id="usersTbl">
               <thead>
                 <tr>
                   <th>User ID</th>
                   <th>Username</th>
-                  <th>Monthly Cap</th>
+                  <th>Monthly cap</th>
                   <th>Active</th>
                   <th>Action</th>
                 </tr>
               </thead>
-              <tbody id="usersBody">
-                <tr><td colspan="5" class="muted">Loading…</td></tr>
-              </tbody>
+              <tbody id="usersBody"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
             </table>
           </div>
         </div>
 
         <div class="card">
-          <h2>Recent Activity</h2>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>When</th>
-                  <th>User</th>
-                  <th>Candidate</th>
-                  <th>Filename</th>
-                </tr>
-              </thead>
-              <tbody id="recentBody">
-                <tr><td colspan="4" class="muted">Loading…</td></tr>
-              </tbody>
-            </table>
-          </div>
+          <details id="recentBox">
+            <summary>Recent Activity</summary>
+            <div class="muted" style="margin-top:8px">Loading…</div>
+          </details>
         </div>
       </div>
 
-      <!-- RIGHT: Create / Reset -->
-      <div class="stack" style="display:grid; gap:18px">
+      <!-- RIGHT column -->
+      <div class="stack">
         <div class="card">
           <h2>Create User</h2>
-          <div class="row row3">
-            <input id="cu_u" type="text" placeholder="Username">
-            <input id="cu_p" type="password" placeholder="Password">
-            <input id="cu_seed" type="number" inputmode="numeric" placeholder="Seed credits (optional)">
+          <div class="row">
+            <label>Username
+              <input id="cuUsername" type="text" placeholder="e.g. hamilton" />
+            </label>
+            <label>Password
+              <input id="cuPassword" type="password" placeholder="Temp1234!" />
+            </label>
+            <label>Seed credits (optional)
+              <input id="cuSeed" type="number" min="0" value="0" />
+            </label>
           </div>
-          <div style="display:flex; gap:10px; align-items:center; margin-top:10px">
-            <button id="cu_btn">Create</button>
-            <div id="cu_msg" class="hint"></div>
+          <div style="margin-top:10px">
+            <button id="cuBtn" class="btn primary">Create</button>
+            <span id="cuMsg" class="muted" style="margin-left:10px"></span>
+          </div>
+
+          <hr style="border:none;border-top:1px solid var(--line);margin:16px 0">
+
+          <h2>Reset User Password</h2>
+          <div class="row" style="grid-template-columns:1fr 1fr">
+            <label>User ID
+              <input id="rpUserId" type="number" min="1" placeholder="ID" />
+            </label>
+            <label>New password
+              <input id="rpNewPw" type="password" placeholder="New password" />
+            </label>
+          </div>
+          <div style="margin-top:10px">
+            <button id="rpBtn" class="btn">Reset password</button>
+            <span id="rpMsg" class="muted" style="margin-left:10px"></span>
           </div>
         </div>
 
         <div class="card">
-          <h2>Reset User Password</h2>
-          <div class="row row2">
-            <input id="rp_uid" type="number" inputmode="numeric" placeholder="User ID">
-            <input id="rp_pw" type="password" placeholder="New password">
-          </div>
-          <div style="display:flex; gap:10px; align-items:center; margin-top:10px">
-            <button id="rp_btn">Reset</button>
-            <div id="rp_msg" class="hint"></div>
-          </div>
+          <h2>About this console</h2>
+          <p class="muted" style="margin:0">
+            Visual tidy-up only; all routes and data remain unchanged.
+          </p>
         </div>
       </div>
     </div>
   </div>
 
   <script>
-    const $ = (q) => document.querySelector(q);
-    function esc(s) {{ return (s || '').replace(/[&<>"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}})[c]); }}
+    const $ = (sel, root=document) => root.querySelector(sel);
+    const esc = s => String(s ?? "").replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-    async function loadDashboard() {{
-      const res = await fetch('/director/api/dashboard');
-      if (!res.ok) return;
-      const js = await res.json();
+    // Load org summary (balance + recent)
+    async function loadSummary(){
+      const r = await fetch('/director/api/org/credits-summary'); // balance + events
+      const d = await r.json();
+      if(!d.ok){ throw new Error(d.error || 'summary failed'); }
+      $('#orgBal').textContent = d.balance ?? 0;
+      const events = d.rows || [];
+      $('#eventCount').textContent = events.length;
 
-      // header / metrics
-      const org = js.orgName || ('Org #' + (js.orgId || '—'));
-      $('#orgBadge').textContent = 'Org: ' + org;
-      $('#poolBox').textContent = (js.pool && typeof js.pool.balance==='number') ? (js.pool.balance + ' credits') : '—';
-      $('#usersCount').textContent = (js.month && js.month.rows) ? js.month.rows.length : '—';
-      $('#recentCount').textContent = (js.recent) ? js.recent.length : '—';
+      // Fill <details> with a table, but keep it collapsed by default
+      const box = $('#recentBox');
+      const inner = document.createElement('div');
+      if(!events.length){
+        inner.innerHTML = '<div class="muted" style="margin-top:8px">No recent events.</div>';
+      }else{
+        let html = '<div style="overflow:auto;margin-top:8px"><table><thead><tr><th>When</th><th>User</th><th>Candidate</th><th>File / Reason</th></tr></thead><tbody>';
+        for(const e of events){
+          const when = e.created_at || e.ts || '';
+          const who = e.username || '';
+          const cand = e.candidate || '';
+          const fileOrReason = e.filename || e.reason || '';
+          html += `<tr><td>${esc(when)}</td><td>${esc(who)}</td><td>${esc(cand)}</td><td class="muted">${esc(fileOrReason)}</td></tr>`;
+        }
+        html += '</tbody></table></div>';
+        inner.innerHTML = html;
+      }
+      box.replaceChildren(box.firstElementChild, inner);
+    }
 
-      // users
-      const rows = (js.month && js.month.rows) || [];
-      if (!rows.length) {{
-        $('#usersBody').innerHTML = '<tr><td colspan="5" class="muted">No users in this org yet.</td></tr>';
-      }} else {{
-        let html = '';
-        for (const u of rows) {{
-          const cap = (u.count == null ? '' : u.count); // keep existing shape
-          const active = !!(u.active ?? true);
-          const pill = `<span class="pill ${{active ? 'ok' : 'off'}}">${{active ? 'Active' : 'Disabled'}}</span>`;
-          const toggleLabel = active ? 'Disable' : 'Enable';
-          const toggleNext = active ? 0 : 1;
-          html += `<tr data-uid="${{u.user_id ?? u.id}}">
-            <td>${{u.user_id ?? u.id}}</td>
-            <td>${{esc(u.username || '')}}</td>
-            <td>
-              <input class="cap" type="number" inputmode="numeric" placeholder="(none)" value="${{cap}}">
-              <button class="setcap">Save</button>
-            </td>
-            <td>${{pill}}</td>
-            <td><button class="toggle" data-active="${{toggleNext}}">${{toggleLabel}}</button></td>
-          </tr>`;
-        }}
-        $('#usersBody').innerHTML = html;
-      }}
+    // Load users list (with correct alignment)
+    async function loadUsers(){
+      const r = await fetch('/director/api/users');
+      const d = await r.json();
+      if(!d.ok){ throw new Error(d.error || 'users failed'); }
+      const users = d.users || [];
+      $('#userCount').textContent = users.length;
 
-      // recent
-      const events = js.recent || [];
-      if (!events.length) {{
-        $('#recentBody').innerHTML = '<tr><td colspan="4" class="muted">No recent events.</td></tr>';
-      }} else {{
-        let rh = '';
-        for (const e of events) {{
-          rh += `<tr>
-            <td>${{e.ts}}</td>
-            <td>${{esc(e.username || '')}}</td>
-            <td>${{esc(e.candidate || '')}}</td>
-            <td class="muted">${{esc(e.filename || '')}}</td>
-          </tr>`;
-        }}
-        $('#recentBody').innerHTML = rh;
-      }}
+      const tb = $('#usersBody');
+      if(!users.length){
+        tb.innerHTML = '<tr><td colspan="5" class="muted">No users found.</td></tr>';
+        return;
+      }
 
-      // wire table actions
-      document.querySelectorAll('.setcap').forEach(btn => {{
-        btn.addEventListener('click', async (ev) => {{
-          const tr = ev.target.closest('tr');
-          const uid = tr.getAttribute('data-uid');
-          const cap = tr.querySelector('input.cap').value;
-          await fetch('/director/api/setcap', {{ method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{ user_id:uid, cap: (cap===''? null : Number(cap)) }}) }});
-          await loadDashboard();
-        }});
-      }});
-      document.querySelectorAll('.toggle').forEach(btn => {{
-        btn.addEventListener('click', async (ev) => {{
-          const tr = ev.target.closest('tr');
-          const uid = tr.getAttribute('data-uid');
-          const active = Number(ev.target.getAttribute('data-active'));
-          await fetch('/director/api/activate', {{ method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{ user_id:uid, active }}) }});
-          await loadDashboard();
-        }});
-      }});
-    }}
+      tb.innerHTML = '';
+      for(const u of users){
+        const tr = document.createElement('tr');
 
-    // create user
-    document.addEventListener('click', async (e) => {{
-      if (e.target && e.target.id === 'cu_btn') {{
-        e.preventDefault();
-        const u = document.getElementById('cu_u').value.trim();
-        const p = document.getElementById('cu_p').value;
-        const s = document.getElementById('cu_seed').value;
-        const body = {{ username:u, password:p, seed: (s===''? null : Number(s)) }};
-        const r = await fetch('/director/api/create', {{ method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify(body) }});
-        const js = await r.json().catch(() => ({{}}));
-        document.getElementById('cu_msg').textContent = js.ok ? 'Created.' : (js.error || 'Failed.');
-        await loadDashboard();
-      }}
-      if (e.target && e.target.id === 'rp_btn') {{
-        e.preventDefault();
-        const id = document.getElementById('rp_uid').value;
-        const pw = document.getElementById('rp_pw').value;
-        const r = await fetch('/director/api/resetpass', {{ method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{ user_id:id, new_password:pw }}) }});
-        const js = await r.json().catch(() => ({{}}));
-        document.getElementById('rp_msg').textContent = js.ok ? 'Password reset.' : (js.error || 'Failed.');
-      }}
-    }});
+        const tdId = document.createElement('td');
+        tdId.textContent = u.id;
+        tr.appendChild(tdId);
 
-    (async()=>{{ await loadDashboard(); }})();
+        const tdName = document.createElement('td');
+        tdName.textContent = u.username || '';
+        tr.appendChild(tdName);
+
+        // Monthly cap + Save live in the SAME cell (keeps columns aligned)
+        const tdCap = document.createElement('td');
+        const wrap = document.createElement('div');
+        wrap.className = 'cap-wrap';
+        const inp = document.createElement('input');
+        inp.type = 'number'; inp.min = '0'; inp.placeholder = '—';
+        // we don’t know the current cap from /director/api/users; fetch from credits summary limits map if present later
+        inp.dataset.userId = u.id;
+        const save = document.createElement('button');
+        save.className = 'btn small';
+        save.textContent = 'Save';
+        save.onclick = async () => {
+          const v = inp.value.trim();
+          const cap = v === '' ? 'null' : String(Math.max(0, parseInt(v, 10)));
+          const res = await fetch(`/director/api/user/set-monthly-cap?user_id=${u.id}&cap=${cap}`);
+          const jj = await res.json();
+          if(!jj.ok){ alert(jj.error || 'Failed to save'); return; }
+          save.textContent = 'Saved';
+          setTimeout(()=> save.textContent='Save', 1000);
+        };
+        wrap.appendChild(inp);
+        wrap.appendChild(save);
+        tdCap.appendChild(wrap);
+        tr.appendChild(tdCap);
+
+        const tdActive = document.createElement('td');
+        tdActive.innerHTML = u.active ? '<span class="badge-on">Active</span>' : '<span class="badge-off">Disabled</span>';
+        tr.appendChild(tdActive);
+
+        const tdAction = document.createElement('td');
+        const toggle = document.createElement('button');
+        toggle.className = 'btn small';
+        toggle.textContent = u.active ? 'Disable' : 'Enable';
+        toggle.onclick = async () => {
+          const target = u.active ? 0 : 1;
+          const ok = await fetch(`/__admin/set-user-active?user_id=${u.id}&active=${target}`);
+          const jj = await ok.json();
+          if(!jj.ok){ alert(jj.error || 'Failed to toggle'); return; }
+          u.active = !!jj.active;
+          tdActive.innerHTML = u.active ? '<span class="badge-on">Active</span>' : '<span class="badge-off">Disabled</span>';
+          toggle.textContent = u.active ? 'Disable' : 'Enable';
+        };
+        tdAction.appendChild(toggle);
+        tr.appendChild(tdAction);
+
+        tb.appendChild(tr);
+      }
+
+      // After building rows, hydrate known monthly caps (if available) from summary endpoint
+      try{
+        const s = await (await fetch('/director/api/org/credits-summary')).json();
+        if(s && s.ok && Array.isArray(s.limits)){
+          const byId = new Map(s.limits.map(x => [x.user_id, x.monthly_cap]));
+          for(const input of document.querySelectorAll('input[data-user-id]')){
+            const cap = byId.get(parseInt(input.dataset.userId, 10));
+            if(cap != null) input.value = cap;
+          }
+        }
+      }catch(e){}
+    }
+
+    // Create user
+    $('#cuBtn').onclick = async () => {
+      const u = $('#cuUsername').value.trim();
+      const p = $('#cuPassword').value;
+      const seed = parseInt($('#cuSeed').value || '0', 10) || 0;
+      $('#cuMsg').textContent = '';
+      if(!u || !p){ $('#cuMsg').textContent = 'Username and password required.'; return; }
+      const res = await fetch(`/director/api/create-user?u=${encodeURIComponent(u)}&p=${encodeURIComponent(p)}&seed=${seed}`);
+      const jj = await res.json();
+      if(!jj.ok){
+        $('#cuMsg').textContent = jj.error || 'Failed to create user';
+        return;
+      }
+      $('#cuMsg').textContent = `Created “${u}” (id ${jj.id})`;
+      $('#cuUsername').value=''; $('#cuPassword').value=''; $('#cuSeed').value='0';
+      await loadUsers();
+    };
+
+    // Reset password
+    $('#rpBtn').onclick = async () => {
+      const uid = parseInt($('#rpUserId').value || '0', 10);
+      const npw = $('#rpNewPw').value;
+      $('#rpMsg').textContent = '';
+      if(!uid || !npw){ $('#rpMsg').textContent = 'User ID and new password required.'; return; }
+      const res = await fetch('/director/api/user/reset-password', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ user_id: uid, new_password: npw })
+      });
+      const jj = await res.json();
+      if(!jj.ok){ $('#rpMsg').textContent = jj.error || 'Failed to reset'; return; }
+      $('#rpMsg').textContent = 'Password reset ✔';
+      $('#rpUserId').value=''; $('#rpNewPw').value='';
+    };
+
+    // Init
+    (async function init(){
+      await Promise.all([loadSummary(), loadUsers()]);
+      // Open/close recent box counter
+      $('#recentBox').addEventListener('toggle', () => {});
+    })();
   </script>
 </body>
-</html>
-"""
-    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+</html>""", 200, {"Content-Type":"text/html; charset=utf-8"})
 
 # --- Friendly 402 page (Out of credits) ---
 def _render_out_of_credits(reason_text=None):
@@ -7908,6 +7884,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

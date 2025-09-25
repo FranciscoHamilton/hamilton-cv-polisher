@@ -3408,20 +3408,20 @@ def _count_since(months: int) -> int:
 # ---------- App + API ----------
 APP_HTML = HTML
 
+# ---------- App + API ----------
+APP_HTML = HTML
+
 @app.get("/app")
 def app_page():
     if is_admin():
         return redirect("/owner/console")
 
-    # Render template — dynamic per-org branding (visual only; polishing logic untouched)
-    org_label = _current_org_label()
-    org_sub = os.getenv("APP_SUBTAGLINE", "Executive Search & Selection")
-
+    # Render main page with org branding (visual only)
     html = render_template_string(
         HTML,
         show_director_link=bool(is_admin() or session.get("director")),
-        ORG_LABEL=org_label,
-        ORG_SUB=org_sub
+        ORG_LABEL="Hamilton Recruitment",
+        ORG_SUB="Executive Search & Selection",
     )
 
     # Inject Director link (if admin/director)
@@ -3437,7 +3437,7 @@ def app_page():
                 '.dir-link:hover{box-shadow:0 2px 6px rgba(0,0,0,0.12)}'
                 '</style>'
                 '</body>'
-            )
+            ),
         )
 
     # Inject Owner link (admins only)
@@ -3453,10 +3453,10 @@ def app_page():
                 '.owner-link:hover{box-shadow:0 2px 6px rgba(0,0,0,0.12)}'
                 '</style>'
                 '</body>'
-            )
+            ),
         )
 
-    # Inject Full History toggle
+    # Full History toggle handler
     html = html.replace(
         "</body>",
         (
@@ -3471,10 +3471,10 @@ def app_page():
             ' if(s && typeof window.refreshStats==="function") window.refreshStats();'
             '});'
             '})();</script></body>'
-        )
+        ),
     )
 
-    # Inject Skills toggle + lazy loader
+    # Skills toggle + lazy loader
     html = html.replace(
         "</body>",
         (
@@ -3505,16 +3505,16 @@ def app_page():
             ' if(show && !loaded) await loadSkills();'
             '});}'
             'var addForm=document.getElementById("skillAddForm");'
-            'if(addForm){addEventListener("submit",async function(ev){ev.preventDefault();'
+            'if(addForm){addForm.addEventListener("submit",async function(ev){ev.preventDefault();'
             ' var inp=document.getElementById("skillInput"); var v=(inp&&inp.value||"").trim(); if(!v)return;'
             ' try{await fetch("/skills/custom/add",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({skill:v})});'
             ' if(inp) inp.value=""; loaded=false; await loadSkills();}catch(e){console.log("add skill failed",e);}'
             '});}'
             '})();</script></body>'
-        )
+        ),
     )
 
-    # Tweak Session Stats fonts (smaller values + history; keep titles bigger)
+    # Session Stats CSS: smaller values (titles kept larger)
     html = html.replace(
         "</body>",
         (
@@ -3531,10 +3531,10 @@ def app_page():
             ' }'
             ' if(box){ box.id="sessionStats"; }'
             '}catch(e){console.log("stats css enforce failed",e);} })();</script></body>'
-        )
+        ),
     )
 
-    # Force smaller values + history inside Session Stats (titles untouched)
+    # Shrink numbers inside Session Stats (keep labels readable)
     html = html.replace(
         "</body>",
         (
@@ -3571,50 +3571,10 @@ def app_page():
             '    for(var i=0;i<items.length;i++){ try{items[i].style.fontSize="13px";}catch(e){} }'
             '  }'
             '}catch(e){console.log("stats font tweak failed",e);} })();</script></body>'
-        )
+        ),
     )
 
-    # Force smaller values + history inside Session Stats (duplicate block retained as in your current code)
-    html = html.replace(
-        "</body>",
-        (
-            '<script>(function(){try{'
-            '  var hs=document.querySelectorAll("h2"), card=null;'
-            '  for(var i=0;i<hs.length;i++){'
-            '    var t=(hs[i].textContent||"").trim().toLowerCase();'
-            '    if(t==="session stats"){ card=hs[i].closest(".card")||hs[i].parentElement; break; }'
-            '  }'
-            '  if(!card){return;}'
-            '  function shrink(el){ try{el.style.fontSize="13px"; el.style.lineHeight="1.3";}catch(e){} }'
-            '  var titles=["Downloads this month","Last Candidate","Last Polished","Credits Used"];'
-            '  titles.forEach(function(title){'
-            '    var nodes=card.querySelectorAll("*"), label=null;'
-            '    for(var i=0;i<nodes.length;i++){'
-            '      var n=nodes[i];'
-            '      if(n.children.length===0){'
-            '        var txt=(n.textContent||"").trim();'
-            '        if(txt.toLowerCase()===title.toLowerCase()){ label=n; break; }'
-            '      }'
-            '    }'
-            '    if(label){'
-            '      var parent=label.parentElement;'
-            '      if(parent){'
-            '        var kids=parent.children;'
-            '        for(var k=0;k<kids.length;k++){ if(kids[k]!==label){ shrink(kids[k]); } }'
-            '      }'
-            '    }'
-            '  });'
-            '  var hist=document.getElementById("history");'
-            '  if(hist){'
-            '    shrink(hist);'
-            '    var items=hist.querySelectorAll("*");'
-            '    for(var i=0;i<items.length;i++){ try{items[i].style.fontSize="13px";}catch(e){} }'
-            '  }'
-            '}catch(e){console.log("stats font tweak failed",e);} })();</script></body>'
-        )
-    )
-
-    # Inject Uploading/Processing/Downloading overlay + XHR downloader
+    # Upload/Process/Download overlay + XHR downloader
     html = html.replace(
         "</body>",
         (
@@ -3662,10 +3622,10 @@ def app_page():
             ' }catch(_){hide();form.submit();}'
             '});'
             '})();</script></body>'
-        )
+        ),
     )
 
-    # Inject Full History data loader (fires on first click)
+    # Full History loader (lazy)
     html = html.replace(
         "</body>",
         (
@@ -3693,46 +3653,41 @@ def app_page():
             '}'
             'if(t){ t.addEventListener("click", function(){ if(!loaded) load(); }); }'
             '})();</script></body>'
-        )
+        ),
     )
 
-    # --- Session Stats tiles: refresh on load and on demand ---
-    html = html.replace("</body>", """
+    # Session Stats tiles: refresh on load and on demand
+    html = html.replace(
+        "</body>",
+        """
 <script>
-  // Fills: #downloadsMonth, #lastCandidate, #lastTime, #creditsUsed (and #creditsBalance if present)
   window.refreshStats = async function(){
     try {
       const r = await fetch('/me/dashboard', { cache: 'no-store' });
       if (!r.ok) return;
       const d = await r.json();
       const set = (sel, val) => { const el = document.querySelector(sel); if (el) el.textContent = (val ?? '').toString(); };
-
       set('#downloadsMonth', d.downloadsMonth);
       set('#lastCandidate', d.lastCandidate || '');
-
       if (d.lastTime) {
         const dt = new Date(d.lastTime);
         set('#lastTime', isNaN(dt.getTime()) ? d.lastTime : dt.toLocaleString());
       } else {
         set('#lastTime','');
       }
-
-      // Credits used and (optional) balance
       if (typeof d.creditsUsed === 'number') set('#creditsUsed', d.creditsUsed);
       if (typeof d.creditsBalance === 'number') set('#creditsBalance', d.creditsBalance);
     } catch (e) {
       console.log('refreshStats failed', e);
     }
   };
-
-  // Auto-run once when the page loads
   document.addEventListener('DOMContentLoaded', () => {
     if (window.refreshStats) window.refreshStats();
   });
 </script>
-</body>""")
+</body>""",
+    )
 
-    # Final response (keeps your no-store cache header)
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -7984,6 +7939,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

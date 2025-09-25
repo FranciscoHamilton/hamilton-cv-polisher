@@ -1996,8 +1996,8 @@ if (skillForm){
     <div class="nav">
       <div class="brand-logo"><img src="/logo" alt="Hamilton Logo" onerror="this.style.display='none'"/></div>
       <div class="brand-head">
-        <p class="brand-title">Hamilton Recruitment</p>
-        <p class="brand-sub">Executive Search &amp; Selection</p>
+        <p class="brand-title">{{ ORG_LABEL }}</p>
+        <p class="brand-sub">{{ ORG_SUB }}</p>
       </div>
       <div style="margin-left:auto; display:flex; gap:8px;">
         <!-- NEW: Director button -->
@@ -3386,9 +3386,11 @@ def app_page():
         return redirect("/owner/console")
     # Render template
     html = render_template_string(
-        HTML,
-        show_director_link=bool(is_admin() or session.get("director"))
-    )
+    HTML,
+    show_director_link=bool(is_admin() or session.get("director")),
+    ORG_LABEL="Hamilton Recruitment",
+    ORG_SUB="Executive Search & Selection"
+)
 
     # Inject Director link (if admin/director)
     if is_admin() or session.get("director"):
@@ -7926,6 +7928,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

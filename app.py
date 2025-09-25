@@ -3505,7 +3505,7 @@ def app_page():
             ' if(show && !loaded) await loadSkills();'
             '});}'
             'var addForm=document.getElementById("skillAddForm");'
-            'if(addForm){addEventListener("submit",async function(ev){ev.preventDefault();'
+            'if(addForm){addForm.addEventListener("submit",async function(ev){ev.preventDefault();'
             ' var inp=document.getElementById("skillInput"); var v=(inp&&inp.value||"").trim(); if(!v)return;'
             ' try{await fetch("/skills/custom/add",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({skill:v})});'
             ' if(inp) inp.value=""; loaded=false; await loadSkills();}catch(e){console.log("add skill failed",e);}'
@@ -3514,7 +3514,7 @@ def app_page():
         ),
     )
 
-    # Session Stats CSS: smaller values (titles kept larger)
+    # Session Stats: make body text smaller (keep titles the same)
     html = html.replace(
         "</body>",
         (
@@ -3534,7 +3534,7 @@ def app_page():
         ),
     )
 
-    # Shrink numbers inside Session Stats (keep labels readable)
+    # Session Stats: shrink numeric values + history (titles untouched)
     html = html.replace(
         "</body>",
         (
@@ -3574,7 +3574,7 @@ def app_page():
         ),
     )
 
-    # Upload/Process/Download overlay + XHR downloader
+    # Uploading/Processing/Downloading overlay + XHR downloader
     html = html.replace(
         "</body>",
         (
@@ -3625,7 +3625,7 @@ def app_page():
         ),
     )
 
-    # Full History loader (lazy)
+    # Full History data loader (fires on first click)
     html = html.replace(
         "</body>",
         (
@@ -3656,7 +3656,7 @@ def app_page():
         ),
     )
 
-    # Session Stats tiles: refresh on load and on demand (triple-quoted argument; still indented)
+    # Session Stats tiles: refresh on load and on demand
     html = html.replace(
         "</body>",
         """
@@ -3688,7 +3688,7 @@ def app_page():
 </body>""",
     )
 
-    # Final response (no-store cache)
+    # Final response (keeps your no-store cache header)
     resp = make_response(html)
     resp.headers["Cache-Control"] = "no-store"
     return resp
@@ -7940,6 +7940,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

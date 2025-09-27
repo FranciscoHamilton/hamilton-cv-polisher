@@ -3224,6 +3224,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         "skills": "PROFESSIONAL SKILLS",
         "experience": "PROFESSIONAL EXPERIENCE",
         "education": "EDUCATION",
+        "references": "REFERENCES",
     }
     try:
         oid = _current_user_org_id()
@@ -3286,12 +3287,14 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
 
     exp = cv.get("experience") or []
-    if exp:
+       if exp:
         _add_section_heading(doc, labels["experience"])
         first = True
         for role in exp:
             if not first:
-                g = doc.add_paragraph(); g.paragraph_format.space_after = Pt(8); _tone_runs(g, size=11, bold=False)
+                g = doc.add_paragraph()
+                g.paragraph_format.space_after = Pt(8)
+                _tone_runs(g, size=11, bold=False)
             first = False
 
             title_company = " — ".join([x for x in [role.get("job_title",""), role.get("company","")] if x]).strip()
@@ -3306,16 +3309,22 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             loc = (role.get("location") or "").strip()
             meta = " | ".join([x for x in [dates, loc] if x])
             if meta:
-                meta_p = doc.add_paragraph(meta); meta_p.paragraph_format.space_after = Pt(6); _tone_runs(meta_p, size=11, bold=False)
+                meta_p = doc.add_paragraph(meta)
+                meta_p.paragraph_format.space_after = Pt(6)
+                _tone_runs(meta_p, size=11, bold=False)
 
             if role.get("bullets"):
                 for b in role["bullets"]:
                     bp = doc.add_paragraph(b, style="List Bullet")
-                    bp.paragraph_format.space_before = Pt(0); bp.paragraph_format.space_after = Pt(0)
+                    bp.paragraph_format.space_before = Pt(0)
+                    bp.paragraph_format.space_after = Pt(0)
                     _tone_runs(bp, size=11, bold=False)
             elif role.get("raw_text"):
-                rp = doc.add_paragraph(role["raw_text"]); rp.paragraph_format.space_after = Pt(0); _tone_runs(rp, size=11, bold=False)
+                rp = doc.add_paragraph(role["raw_text"])
+                rp.paragraph_format.space_after = Pt(0)
+                _tone_runs(rp, size=11, bold=False)
 
+    # --- Education ---
     if edu:
         _add_section_heading(doc, labels["education"])
         for ed in edu:
@@ -3330,13 +3339,22 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             loc = (ed.get("location") or "").strip()
             meta = " | ".join([x for x in [dates, loc] if x])
             if meta:
-                meta_p = doc.add_paragraph(meta); meta_p.paragraph_format.space_after = Pt(2); _tone_runs(meta_p, size=11, bold=False)
+                meta_p = doc.add_paragraph(meta)
+                meta_p.paragraph_format.space_after = Pt(2)
+                _tone_runs(meta_p, size=11, bold=False)
 
             if ed.get("bullets"):
                 for b in ed["bullets"]:
                     bp = doc.add_paragraph(b, style="List Bullet")
-                    bp.paragraph_format.space_before = Pt(0); bp.paragraph_format.space_after = Pt(0)
+                    bp.paragraph_format.space_before = Pt(0)
+                    bp.paragraph_format.space_after = Pt(0)
                     _tone_runs(bp, size=11, bold=False)
+
+    # --- References (fixed text) ---
+    _add_section_heading(doc, labels["references"])
+    p = doc.add_paragraph("Full references are available on request")
+    p.paragraph_format.space_after = Pt(0)
+    _tone_runs(p, size=11, bold=False)
 
     _ensure_primary_header_spacer(doc)
 
@@ -7908,6 +7926,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

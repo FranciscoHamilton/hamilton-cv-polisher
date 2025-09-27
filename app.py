@@ -2098,6 +2098,49 @@ if (skillForm){
       </div>
     </div>
   </div>
+  <script>
+(function(){
+  const btn = document.getElementById('historyToggle');
+  const panel = document.getElementById('history');
+  if (!btn || !panel) return;
+
+  let loaded = false, loading = false;
+
+  async function loadOnce() {
+    if (loaded || loading) return;
+    loading = true;
+    panel.innerHTML = '<div class="muted">Loading…</div>';
+    try {
+      const r = await fetch('/me/history', { cache: 'no-store' });
+      const j = await r.json();
+      const rows = Array.isArray(j?.history) ? j.history : Array.isArray(j) ? j : [];
+      panel.innerHTML = rows.length
+        ? rows.map(it => `
+            <div class="row" style="padding:6px 0;border-bottom:1px solid var(--line)">
+              <div>
+                <div class="candidate">${it.candidate || it.filename || '—'}</div>
+                ${it.filename ? `<div class="ts">${it.filename}</div>` : ''}
+              </div>
+              <div class="ts">${it.ts || ''}</div>
+            </div>
+          `).join('')
+        : '<div class="muted">(no history yet)</div>';
+      loaded = true;
+    } catch(e) {
+      panel.innerHTML = '<div class="muted">Could not load history.</div>';
+    } finally {
+      loading = false;
+    }
+  }
+
+  btn.addEventListener('click', async () => {
+    const opening = (panel.style.display === 'none' || panel.style.display === '');
+    panel.style.display = opening ? 'block' : 'none';
+    btn.textContent = opening ? 'Hide' : 'Show';
+    if (opening) await loadOnce();
+  });
+})();
+</script>
 </body>
 </html>
 """
@@ -8025,6 +8068,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -1660,6 +1660,12 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 .history{border:1px solid var(--line);border-radius:14px;max-height:300px;overflow:auto;background:var(--card)}
 .row{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:none}
+
+/* Full history type sizes (scoped) */
+#history { font-size: 11.5px; }           /* base for the list */
+#history .row strong { font-size: 12px; } /* candidate name */
+#history .muted { font-size: 11px; }      /* timestamp + filename */
+
 .candidate{font-weight:700;font-size:13.5px}
 .tsm{color:var(--muted);font-size:12px}
 
@@ -7926,6 +7932,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

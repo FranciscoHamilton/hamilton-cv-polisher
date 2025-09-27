@@ -3217,7 +3217,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         doc = Docx()
 
     _remove_all_body_content(doc)
-        # Profile-based labels (optional, per-org)
+    # Profile-based labels (optional, per-org)
     labels = {
         "summary": "EXECUTIVE SUMMARY",
         "certifications": "PROFESSIONAL QUALIFICATIONS",
@@ -3287,7 +3287,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
 
     exp = cv.get("experience") or []
-       if exp:
+    if exp:
         _add_section_heading(doc, labels["experience"])
         first = True
         for role in exp:
@@ -7926,6 +7926,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

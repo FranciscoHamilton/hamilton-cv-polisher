@@ -3276,16 +3276,15 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     if quals:
         _add_section_heading(doc, labels["certifications"])
         for q in quals:
-            p = doc.add_paragraph(q)  # no bullet style
-            p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after = Pt(0)
+            p = doc.add_paragraph(q)
+            p.paragraph_format.space_before = Pt(0); p.paragraph_format.space_after = Pt(0)
             _tone_runs(p, size=11, bold=False)
 
     skills = cv.get("skills") or []
-        if skills:
-            _add_section_heading(doc, labels["skills"])
-            line = " | ".join(skills)
-            p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
+    if skills:
+        _add_section_heading(doc, labels["skills"])
+        line = " | ".join(skills)
+        p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
 
     exp = cv.get("experience") or []
     if exp:
@@ -7927,23 +7926,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

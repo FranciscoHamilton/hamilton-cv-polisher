@@ -2058,8 +2058,8 @@ if (skillForm){
   <div class="stat"><div class="k">Last Candidate</div><div class="v" id="lastCandidate">—</div></div>
   <div class="stat"><div class="k">Last Polished</div><div class="v" id="lastTime">—</div></div>
   <div class="stat">
-    <div class="k">Credits Used</div>
-    <div class="v" id="creditsUsed">0 / 0</div>
+    <div class="k">Credits Left</div>
+    <div class="v" id="creditsLeft">—</div>
   </div>
 </div>
 
@@ -3722,8 +3722,27 @@ def app_page():
       }
 
       // Credits used and (optional) balance
-      if (typeof d.creditsUsed === 'number') set('#creditsUsed', d.creditsUsed);
-      if (typeof d.creditsBalance === 'number') set('#creditsBalance', d.creditsBalance);
+      // Credits left: prefer org/user remaining from /me/credits; fall back to balance from /me/dashboard
+try {
+  const mc = await fetch('/me/credits', { cache: 'no-store' });
+  if (mc.ok) {
+    const j = await mc.json();
+    if (j && j.ok) {
+      const left = (j.myRemainingThisMonth != null) ? j.myRemainingThisMonth
+                 : (j.balance != null) ? j.balance
+                 : null;
+      const el = document.querySelector('#creditsLeft') || document.querySelector('#creditsUsed'); // fallback
+      if (el) el.textContent = (left == null) ? '—' : String(left);
+    }
+  }
+} catch(e) { /* ignore */ }
+
+// Also keep the old dashboard call working (already present):
+if (typeof d.creditsBalance === 'number') {
+  const el = document.querySelector('#creditsLeft') || document.querySelector('#creditsUsed');
+  if (el && el.textContent === '—') el.textContent = d.creditsBalance;
+}
+
     } catch (e) {
       console.log('refreshStats failed', e);
     }
@@ -8006,6 +8025,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

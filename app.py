@@ -3273,15 +3273,15 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         date_span = " – ".join([x for x in [(ed.get("start_date") or "").strip(), (ed.get("end_date") or "").strip()] if x]).strip(" –")
         line = " | ".join([s for s in [deg, inst, date_span] if s])
         if line: quals.append(line)
-    if quals:
+if quals:
     _add_section_heading(doc, labels["certifications"])
     for q in quals:
-        p = doc.add_paragraph(q)  # ← no bullet style
+        p = doc.add_paragraph(q)  # no bullet style
         p.paragraph_format.space_before = Pt(0)
         p.paragraph_format.space_after = Pt(0)
         _tone_runs(p, size=11, bold=False)
 
-    skills = cv.get("skills") or []
+skills = cv.get("skills") or []
     if skills:
         _add_section_heading(doc, labels["skills"])
         line = " | ".join(skills)
@@ -7927,6 +7927,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

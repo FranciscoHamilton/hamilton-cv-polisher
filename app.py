@@ -3482,7 +3482,16 @@ def app_page():
             ' const r=await fetch("/skills",{cache:"no-store"});'
             ' const j=await r.json();'
             ' var all=(j.effective||[]).slice().sort(function(a,b){return a.localeCompare(b)});'
-            ' window.skillsState=j; showUnifiedSkills(); if(window.renderSkillsUnified){ window.renderSkillsUnified(); }'
+            ' var allEl=document.getElementById("skillsAll"); var hdr=document.getElementById("skillsAllHeader");'
+            ' if(allEl){allEl.style.display="block";allEl.innerHTML=all.map(s=>"<span class=\\"chip\\" style=\\"margin:4px 6px 0 0;display:inline-block\\">"+s+"</span>").join("")}'
+            ' if(hdr){hdr.style.display="block"}'
+            ' var cust=document.getElementById("customSkills");'
+            ' if(cust){var c=(j.custom||[]).slice().sort((a,b)=>a.localeCompare(b));'
+            '  cust.innerHTML=c.length?c.map(s=>"<span class=\\"chip\\" style=\\"margin:4px 6px 0 0;display:inline-block\\">"+s+"</span>").join(""):"<span class=\\"muted\\">(none)</span>"}'
+            ' var base=document.getElementById("baseSkills");'
+            ' if(base){var dis=new Set(j.base_disabled||[]);'
+            '  var b=(j.base||[]).filter(s=>!dis.has(s)).sort((a,b)=>a.localeCompare(b));'
+            '  base.innerHTML=b.length?b.map(s=>"<span class=\\"chip\\" style=\\"margin:4px 6px 0 0;display:inline-block\\">"+s+"</span>").join(""):"<span class=\\"muted\\">(none)</span>"}'
             ' loaded=true;'
             '}catch(e){var allEl=document.getElementById("skillsAll");if(allEl)allEl.innerHTML="<span class=\\"muted\\">Could not load skills.</span>";}}'
             'if(btn&&panel){btn.addEventListener("click",async function(){'
@@ -7932,6 +7941,8 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
+
 
 
 

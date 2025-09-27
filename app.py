@@ -1674,9 +1674,12 @@ button[disabled]{opacity:.6;cursor:not-allowed}
   display:inline-block;border:1px dashed var(--line);border-radius:12px;padding:6px 10px;font-weight:800;
   color:var(--blue);background:#fff
 }
-/* Skills pills – smaller + black */
+/* Skills pills – smaller + black (only the unified list) */
 #skillsAll .pill{ font-size:10px; color:#000; }
 #skillsAll .pill .x{ font-size:10px; }
+
+/* if any pill label ends up inside an <a>, make it black too */
+#skillsAll .pill a{ color:#000; }
 .pill{
   display:inline-flex;align-items:center;gap:6px;
   padding:3px 8px;border:1px solid var(--line);border-radius:999px;

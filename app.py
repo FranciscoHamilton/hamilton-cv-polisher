@@ -6691,23 +6691,23 @@ def director_ui():
     }
 
     async function deleteSelectedUser(){
-      const sel = document.getElementById('delUserSelect');
-      if(!sel) return;
-      const uid = parseInt(sel.value || '0', 10);
-      if(!uid){ alert('Pick a user to delete.'); return; }
-      if(!confirm('Delete this user? This cannot be undone.')) return;
+  const sel = document.getElementById('delUserSelect');
+  if(!sel) return;
+  const uid = parseInt(sel.value || '0', 10);
+  if(!uid){ alert('Pick a user to delete.'); return; }
+  if(!confirm('Delete this user? This cannot be undone.')) return;
 
-      const fd = new FormData(); fd.append('user_id', String(uid));
-      const r = await fetch('/director/user/delete', { method:'POST', body: fd });
-      const j = await r.json().catch(()=>({ok:false, error:'bad_json'}));
-      if(j.ok){
-        alert('User deleted.');
-        await loadUsersForDelete();
-        if (typeof loadDashboard === 'function') await loadDashboard();
-      } else {
-        alert('Delete failed: ' + (j.error || 'unknown'));
-      }
-    }
+  const fd = new FormData(); fd.append('user_id', String(uid));
+  const r = await fetch('/director/user/delete', { method:'POST', body: fd });
+  const j = await r.json().catch(()=>({ok:false, error:'bad_json'}));
+  if(j.ok){
+    alert('User deleted.');
+    await loadUsersForDelete();
+    if (typeof loadDashboard === 'function') await loadDashboard(); // refresh table
+  } else {
+    alert('Delete failed: ' + (j.error || 'unknown'));
+  }
+}
 
 document.addEventListener('DOMContentLoaded', ()=>{
   const btn = document.getElementById('delUserBtn');
@@ -8225,6 +8225,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

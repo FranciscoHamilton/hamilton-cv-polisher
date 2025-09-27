@@ -4539,103 +4539,6 @@ def admin_set_user_active():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500    
 
-    # --- Director: list users for dropdown (scoped to org unless admin) ---
-@app.get("/director/users")
-def director_list_users():
-    # guard (director or admin)
-    try:
-        uname = (session.get("user") or "").strip().lower()
-        is_dir = (
-            bool(session.get("is_director"))
-            or bool(session.get("is_admin"))
-            or (uname in ("admin", "director"))
-        )
-    except Exception:
-        is_dir = False
-
-    if not is_dir:
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-    if not DB_POOL:
-        return jsonify({"ok": False, "error": "db_unavailable"}), 500
-
-    org_id = session.get("org_id")
-    try:
-        if session.get("is_admin"):
-            rows = db_query_all(
-                "SELECT id, username, COALESCE(active,1) AS active, org_id "
-                "FROM users ORDER BY username ASC",
-                (),
-            )
-        else:
-            rows = db_query_all(
-                "SELECT id, username, COALESCE(active,1) AS active, org_id "
-                "FROM users WHERE org_id=%s ORDER BY username ASC",
-                (org_id,),
-            )
-    except Exception as e:
-        return jsonify({"ok": False, "error": f"query_failed: {e}"}), 500
-
-    users = [
-        {"id": r[0], "username": r[1], "active": int(r[2]) == 1, "org_id": r[3]}
-        for r in (rows or [])
-    ]
-    return jsonify({"ok": True, "users": users})
-
-
-# --- Director: delete a user (cannot delete 'admin'; respect org scope) ---
-@app.post("/director/user/delete")
-def director_user_delete():
-    # guard
-    try:
-        uname = (session.get("user") or "").strip().lower()
-        is_dir = (
-            bool(session.get("is_director"))
-            or bool(session.get("is_admin"))
-            or (uname in ("admin", "director"))
-        )
-    except Exception:
-        is_dir = False
-
-    if not is_dir:
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-    if not DB_POOL:
-        return jsonify({"ok": False, "error": "db_unavailable"}), 500
-
-    # read params (accept form or JSON)
-    try:
-        payload = request.get_json(silent=True) or {}
-        uid = int(request.values.get("user_id") or payload.get("user_id") or 0)
-    except Exception:
-        uid = 0
-
-    if uid <= 0:
-        return jsonify({"ok": False, "error": "user_id required"}), 400
-
-    # look up target user
-    row = db_query_one("SELECT id, username, org_id FROM users WHERE id=%s", (uid,))
-    if not row:
-        return jsonify({"ok": False, "error": "user_not_found"}), 404
-
-    target_username = (row[1] or "").strip().lower()
-    target_org = row[2]
-
-    # hard protection: never delete root admin
-    if target_username == "admin":
-        return jsonify({"ok": False, "error": "cannot_delete_admin"}), 403
-
-    # org scoping: directors can delete only inside their org
-    if not session.get("is_admin"):
-        my_org = session.get("org_id")
-        if not my_org or int(my_org) != int(target_org):
-            return jsonify({"ok": False, "error": "wrong_org"}), 403
-
-    # delete (ensure FKs cascade if needed)
-    ok = db_execute("DELETE FROM users WHERE id=%s", (uid,))
-    if not ok:
-        return jsonify({"ok": False, "error": "delete_failed"}), 500
-
-    return jsonify({"ok": True, "deleted_user_id": uid})
-
 # --- Admin: ONE-TIME migration to enable org-shared credits ---
 @app.get("/__admin/migrate_org_pool")
 def admin_migrate_org_pool():
@@ -6647,80 +6550,13 @@ def director_ui():
             <div id="rp_msg" class="hint"></div>
           </div>
         </div>
-        <!-- Delete User -->
-        <div class="card">
-                  <!-- Delete User -->
-        <div class="card">
-          <h2>Delete User</h2>
-          <div class="row row2">
-            <select id="delUserSelect" style="min-width:220px">
-              <option value="">Select user…</option>
-            </select>
-            <button id="delUserBtn" type="button">Delete</button>
-          </div>
-          <div class="hint" style="margin-top:6px">
-            Deletes the selected user in your org. You can’t delete the <strong>admin</strong> account.
-          </div>
-        </div>
       </div>
     </div>
   </div>
 
   <script>
     const $ = (q) => document.querySelector(q);
-    /* keep double braces if this whole HTML lives in a Python f-string */
     function esc(s) {{ return (s || '').replace(/[&<>"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}})[c]); }}
-
-    // Populate the dropdown (uses the same /director/api/dashboard you already call)
-    async function loadUsersForDelete(){
-      try{
-        const res = await fetch('/director/api/dashboard', {cache:'no-store'});
-        if(!res.ok) return;
-        const js = await res.json();
-        const sel = document.getElementById('delUserSelect');
-        if(!sel) return;
-
-        sel.innerHTML = '<option value="">Select user…</option>';
-        const rows = (js.month && js.month.rows) || [];
-        rows.forEach(function(u){
-          const id = (u.user_id ?? u.id);
-          const name = (u.username || '');
-          const active = (u.active ?? true);
-          const opt = document.createElement('option');
-          opt.value = String(id);
-          // IMPORTANT: avoid `${...}` so Python f-strings don't try to evaluate {…}
-          opt.textContent = name + ' (id ' + id + ')' + (active ? '' : ' — disabled');
-          sel.appendChild(opt);
-        });
-      }catch(e){}
-    }
-
-    // Delete selected user
-    async function deleteSelectedUser(){
-      const sel = document.getElementById('delUserSelect');
-      if(!sel) return;
-      const uid = parseInt(sel.value || '0', 10);
-      if(!uid){ alert('Pick a user to delete.'); return; }
-      if(!confirm('Delete this user? This cannot be undone.')) return;
-
-      const fd = new FormData();
-      fd.append('user_id', String(uid));
-      const r = await fetch('/director/user/delete', { method:'POST', body: fd });
-      const j = await r.json().catch(function(){ return {{ ok:false, error:'bad_json' }}; });
-      if(j && j.ok){
-        alert('User deleted.');
-        await loadUsersForDelete();
-        if (typeof loadDashboard === 'function') await loadDashboard(); // refresh table
-      } else {
-        alert('Delete failed: ' + (j && j.error ? j.error : 'unknown'));
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', function(){
-      const btn = document.getElementById('delUserBtn');
-      if(btn) btn.addEventListener('click', deleteSelectedUser);
-      loadUsersForDelete();
-    });
 
     async function loadDashboard() {{
       const res = await fetch('/director/api/dashboard');
@@ -8232,29 +8068,5 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

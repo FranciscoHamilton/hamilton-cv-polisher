@@ -1674,6 +1674,12 @@ button[disabled]{opacity:.6;cursor:not-allowed}
   display:inline-block;border:1px dashed var(--line);border-radius:12px;padding:6px 10px;font-weight:800;
   color:var(--blue);background:#fff
 }
+/* Skills list overrides (only inside the Skills card) */
+#skillsCard .chip{
+  font-size: 11px;     /* make smaller */
+  font-weight: 600;    /* less bold than default 800 */
+  color: #000;         /* black text */
+}
 /* Skills pills – smaller + black (only the unified list) */
 #skillsAll .pill{ font-size:10px; color:#000; }
 #skillsAll .pill .x{ font-size:10px; }
@@ -7935,6 +7941,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

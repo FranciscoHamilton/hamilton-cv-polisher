@@ -4540,76 +4540,101 @@ def admin_set_user_active():
         return jsonify({"ok": False, "error": str(e)}), 500    
 
     # --- Director: list users for dropdown (scoped to org unless admin) ---
-    @app.get("/director/users")
-    def director_list_users():
-        # guard (director or admin)
-        try:
-            uname = (session.get("user") or "").strip().lower()
-            is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
-        except Exception:
+@app.get("/director/users")
+def director_list_users():
+    # guard (director or admin)
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = (
+            bool(session.get("is_director"))
+            or bool(session.get("is_admin"))
+            or (uname in ("admin", "director"))
+        )
+    except Exception:
         is_dir = False
-        if not is_dir:
-            return jsonify({"ok": False, "error": "forbidden"}), 403
-        if not DB_POOL:
-            return jsonify({"ok": False, "error": "db_unavailable"}), 500
 
-        org_id = session.get("org_id")
-        try:
-            if session.get("is_admin"):
-                rows = db_query_all("SELECT id, username, COALESCE(active,1) AS active, org_id FROM users ORDER BY username ASC", ())
-            else:
-                rows = db_query_all("SELECT id, username, COALESCE(active,1) AS active, org_id FROM users WHERE org_id=%s ORDER BY username ASC", (org_id,))
-        except Exception as e:
-            return jsonify({"ok": False, "error": f"query_failed: {e}"}), 500
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "db_unavailable"}), 500
 
-        users = [{"id": r[0], "username": r[1], "active": int(r[2]) == 1, "org_id": r[3]} for r in (rows or [])]
-        return jsonify({"ok": True, "users": users})
+    org_id = session.get("org_id")
+    try:
+        if session.get("is_admin"):
+            rows = db_query_all(
+                "SELECT id, username, COALESCE(active,1) AS active, org_id "
+                "FROM users ORDER BY username ASC",
+                (),
+            )
+        else:
+            rows = db_query_all(
+                "SELECT id, username, COALESCE(active,1) AS active, org_id "
+                "FROM users WHERE org_id=%s ORDER BY username ASC",
+                (org_id,),
+            )
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"query_failed: {e}"}), 500
 
-    # --- Director: delete a user (cannot delete 'admin'; respect org scope) ---
-    @app.post("/director/user/delete")
-    def director_user_delete():
-        # guard
-        try:
-            uname = (session.get("user") or "").strip().lower()
-            is_dir = bool(session.get("is_director")) or bool(session.get("is_admin")) or (uname in ("admin", "director"))
-        except Exception:
-            is_dir = False
-        if not is_dir:
-            return jsonify({"ok": False, "error": "forbidden"}), 403
-        if not DB_POOL:
-            return jsonify({"ok": False, "error": "db_unavailable"}), 500
+    users = [
+        {"id": r[0], "username": r[1], "active": int(r[2]) == 1, "org_id": r[3]}
+        for r in (rows or [])
+    ]
+    return jsonify({"ok": True, "users": users})
 
-        # read params
-        try:
-            uid = int((request.values.get("user_id") or request.json.get("user_id") if request.is_json else 0) or 0)
-        except Exception:
-            uid = 0
-        if uid <= 0:
-            return jsonify({"ok": False, "error": "user_id required"}), 400
 
-        # look up target user
-        row = db_query_one("SELECT id, username, org_id FROM users WHERE id=%s", (uid,))
-        if not row:
-            return jsonify({"ok": False, "error": "user_not_found"}), 404
-        target_username = (row[1] or "").strip().lower()
-        target_org = row[2]
+# --- Director: delete a user (cannot delete 'admin'; respect org scope) ---
+@app.post("/director/user/delete")
+def director_user_delete():
+    # guard
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_dir = (
+            bool(session.get("is_director"))
+            or bool(session.get("is_admin"))
+            or (uname in ("admin", "director"))
+        )
+    except Exception:
+        is_dir = False
 
-        # hard protection: never allow deleting the root admin account
-        if target_username == "admin":
-            return jsonify({"ok": False, "error": "cannot_delete_admin"}), 403
+    if not is_dir:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "db_unavailable"}), 500
 
-        # org scoping: directors can only delete inside their org
-        if not session.get("is_admin"):
-            my_org = session.get("org_id")
-            if not my_org or int(my_org) != int(target_org):
-                return jsonify({"ok": False, "error": "wrong_org"}), 403
+    # read params (accept form or JSON)
+    try:
+        payload = request.get_json(silent=True) or {}
+        uid = int(request.values.get("user_id") or payload.get("user_id") or 0)
+    except Exception:
+        uid = 0
 
-        # perform delete (NOTE: if you have FKs, ensure ON DELETE CASCADE or clean up related rows)
-        ok = db_execute("DELETE FROM users WHERE id=%s", (uid,))
-        if not ok:
-            return jsonify({"ok": False, "error": "delete_failed"}), 500
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
 
-        return jsonify({"ok": True, "deleted_user_id": uid})
+    # look up target user
+    row = db_query_one("SELECT id, username, org_id FROM users WHERE id=%s", (uid,))
+    if not row:
+        return jsonify({"ok": False, "error": "user_not_found"}), 404
+
+    target_username = (row[1] or "").strip().lower()
+    target_org = row[2]
+
+    # hard protection: never delete root admin
+    if target_username == "admin":
+        return jsonify({"ok": False, "error": "cannot_delete_admin"}), 403
+
+    # org scoping: directors can delete only inside their org
+    if not session.get("is_admin"):
+        my_org = session.get("org_id")
+        if not my_org or int(my_org) != int(target_org):
+            return jsonify({"ok": False, "error": "wrong_org"}), 403
+
+    # delete (ensure FKs cascade if needed)
+    ok = db_execute("DELETE FROM users WHERE id=%s", (uid,))
+    if not ok:
+        return jsonify({"ok": False, "error": "delete_failed"}), 500
+
+    return jsonify({"ok": True, "deleted_user_id": uid})
 
 # --- Admin: ONE-TIME migration to enable org-shared credits ---
 @app.get("/__admin/migrate_org_pool")
@@ -8200,6 +8225,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

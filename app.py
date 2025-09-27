@@ -1660,7 +1660,7 @@ button[disabled]{opacity:.6;cursor:not-allowed}
 .history{border:1px solid var(--line);border-radius:14px;max-height:300px;overflow:auto;background:var(--card)}
 .row{display:flex;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line)}
 .row:last-child{border-bottom:none}
-.candidate{font-weight:700;font-size:13.5px}
+.candidate{font-weight:700;font-size:12px}
 .tsm{color:var(--muted);font-size:12px}
 
 /* credits chip in stats */
@@ -7926,6 +7926,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

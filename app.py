@@ -6559,18 +6559,25 @@ def director_ui():
     }}
 
     // create user
-    document.addEventListener('click', async (e) => {{
-      if (e.target && e.target.id === 'cu_btn') {{
+    document.addEventListener('click', async (e) => {
+      if (e.target && e.target.id === 'cu_btn') {
         e.preventDefault();
+
         const u = document.getElementById('cu_u').value.trim();
         const p = document.getElementById('cu_p').value;
-        const s = document.getElementById('cu_seed').value;
-        const body = {{ username:u, password:p, seed: (s===''? null : Number(s)) }};
-        const r = await fetch('/director/api/create', {{ method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify(body) }});
-        const js = await r.json().catch(() => ({{}}));
+        const s = document.getElementById('cu_seed').value.trim();
+
+        const url = new URL('/director/api/create-user', window.location.origin);
+        url.searchParams.set('u', u);
+        url.searchParams.set('p', p);
+        if (s !== '') url.searchParams.set('seed', String(Number(s)));
+
+        const r = await fetch(url.toString(), { credentials: 'same-origin' });
+        const js = await r.json().catch(() => ({}));
         document.getElementById('cu_msg').textContent = js.ok ? 'Created.' : (js.error || 'Failed.');
         await loadDashboard();
-      }}
+      }
+    });
       if (e.target && e.target.id === 'rp_btn') {{
         e.preventDefault();
         const id = document.getElementById('rp_uid').value;
@@ -7950,6 +7957,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

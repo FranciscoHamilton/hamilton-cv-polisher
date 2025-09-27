@@ -6611,6 +6611,32 @@ document.addEventListener('click', async (e) => {{
   }}
 }});
 
+// --- Recent Activity show/hide toggle (visibility only) ---
+document.addEventListener('DOMContentLoaded', () => {{
+  const btn = document.getElementById('ra_toggle');
+  const panel = document.getElementById('ra_panel');
+  if (!btn || !panel) return;
+
+  // restore last choice from localStorage
+  const hidden = localStorage.getItem('director_ra_hidden') === '1';
+  if (hidden) {{
+    panel.classList.add('hidden');
+    btn.textContent = 'Show';
+    btn.setAttribute('aria-expanded', 'false');
+  }} else {{
+    btn.setAttribute('aria-expanded', 'true');
+  }}
+
+  // toggle on click — only changes CSS display, nothing else
+  btn.addEventListener('click', (e) => {{
+    e.preventDefault();
+    const nowHidden = panel.classList.toggle('hidden');
+    btn.textContent = nowHidden ? 'Show' : 'Hide';
+    btn.setAttribute('aria-expanded', (!nowHidden).toString());
+    localStorage.setItem('director_ra_hidden', nowHidden ? '1' : '');
+  }});
+}});
+
     (async()=>{{ await loadDashboard(); }})();
   </script>
 </body>
@@ -7980,6 +8006,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

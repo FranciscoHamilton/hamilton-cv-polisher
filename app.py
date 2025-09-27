@@ -6649,6 +6649,8 @@ def director_ui():
         </div>
         <!-- Delete User -->
         <div class="card">
+                  <!-- Delete User -->
+        <div class="card">
           <h2>Delete User</h2>
           <div class="row row2">
             <select id="delUserSelect" style="min-width:220px">
@@ -6666,8 +6668,10 @@ def director_ui():
 
   <script>
     const $ = (q) => document.querySelector(q);
+    /* keep double braces if this whole HTML lives in a Python f-string */
     function esc(s) {{ return (s || '').replace(/[&<>"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}})[c]); }}
 
+    // Populate the dropdown (uses the same /director/api/dashboard you already call)
     async function loadUsersForDelete(){
       try{
         const res = await fetch('/director/api/dashboard', {cache:'no-store'});
@@ -6678,42 +6682,45 @@ def director_ui():
 
         sel.innerHTML = '<option value="">Select user…</option>';
         const rows = (js.month && js.month.rows) || [];
-        rows.forEach(u => {
+        rows.forEach(function(u){
           const id = (u.user_id ?? u.id);
           const name = (u.username || '');
           const active = (u.active ?? true);
           const opt = document.createElement('option');
           opt.value = String(id);
-          opt.textContent = `${name} (id ${id})${active ? '' : ' — disabled'}`;
+          // IMPORTANT: avoid `${...}` so Python f-strings don't try to evaluate {…}
+          opt.textContent = name + ' (id ' + id + ')' + (active ? '' : ' — disabled');
           sel.appendChild(opt);
         });
       }catch(e){}
     }
 
+    // Delete selected user
     async function deleteSelectedUser(){
-  const sel = document.getElementById('delUserSelect');
-  if(!sel) return;
-  const uid = parseInt(sel.value || '0', 10);
-  if(!uid){ alert('Pick a user to delete.'); return; }
-  if(!confirm('Delete this user? This cannot be undone.')) return;
+      const sel = document.getElementById('delUserSelect');
+      if(!sel) return;
+      const uid = parseInt(sel.value || '0', 10);
+      if(!uid){ alert('Pick a user to delete.'); return; }
+      if(!confirm('Delete this user? This cannot be undone.')) return;
 
-  const fd = new FormData(); fd.append('user_id', String(uid));
-  const r = await fetch('/director/user/delete', { method:'POST', body: fd });
-  const j = await r.json().catch(()=>({ok:false, error:'bad_json'}));
-  if(j.ok){
-    alert('User deleted.');
-    await loadUsersForDelete();
-    if (typeof loadDashboard === 'function') await loadDashboard(); // refresh table
-  } else {
-    alert('Delete failed: ' + (j.error || 'unknown'));
-  }
-}
+      const fd = new FormData();
+      fd.append('user_id', String(uid));
+      const r = await fetch('/director/user/delete', { method:'POST', body: fd });
+      const j = await r.json().catch(function(){ return {{ ok:false, error:'bad_json' }}; });
+      if(j && j.ok){
+        alert('User deleted.');
+        await loadUsersForDelete();
+        if (typeof loadDashboard === 'function') await loadDashboard(); // refresh table
+      } else {
+        alert('Delete failed: ' + (j && j.error ? j.error : 'unknown'));
+      }
+    }
 
-document.addEventListener('DOMContentLoaded', ()=>{
-  const btn = document.getElementById('delUserBtn');
-  if(btn) btn.addEventListener('click', deleteSelectedUser);
-  loadUsersForDelete();
-});
+    document.addEventListener('DOMContentLoaded', function(){
+      const btn = document.getElementById('delUserBtn');
+      if(btn) btn.addEventListener('click', deleteSelectedUser);
+      loadUsersForDelete();
+    });
 
     async function loadDashboard() {{
       const res = await fetch('/director/api/dashboard');
@@ -8225,6 +8232,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

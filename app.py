@@ -1132,7 +1132,7 @@ PRICING_HTML = r"""
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Email support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.45/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.60/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Starter</a>
@@ -1153,7 +1153,7 @@ PRICING_HTML = r"""
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.35/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.50/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Growth</a>
@@ -1174,7 +1174,7 @@ PRICING_HTML = r"""
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.25/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.40/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Scale</a>
@@ -1248,9 +1248,9 @@ PRICING_HTML = r"""
     function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
     const PLANS = [
-      { kind:'Monthly', key:'Starter', baseCredits:100, baseCost:150, baseRate:1.50, overRate:1.70 },
-      { kind:'Monthly', key:'Growth',  baseCredits:300, baseCost:420, baseRate:1.40, overRate:1.60 },
-      { kind:'Monthly', key:'Scale',   baseCredits:500, baseCost:650, baseRate:1.30, overRate:1.50 }
+      { kind:'Monthly', key:'Starter', baseCredits:100, baseCost:150, baseRate:1.50, overRate:1.60 },
+      { kind:'Monthly', key:'Growth',  baseCredits:300, baseCost:420, baseRate:1.40, overRate:1.50 },
+      { kind:'Monthly', key:'Scale',   baseCredits:500, baseCost:650, baseRate:1.30, overRate:1.40 }
       // Buy Packs are on-demand; not part of the "best monthly plan" picker.
     ];
 
@@ -8068,6 +8068,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

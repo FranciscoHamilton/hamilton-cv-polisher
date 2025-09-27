@@ -6428,9 +6428,22 @@ def director_ui():
           </div>
         </div>
 
+        <style>
+          .hidden {{ display: none; }}
+          .ra-toggle {{
+            padding: 8px 14px; border: 0; border-radius: 16px; cursor: pointer; font-weight: 600;
+            color: #fff; background: linear-gradient(180deg,#2ea5ff 0%,#1b8bff 100%);
+            box-shadow: 0 6px 16px rgba(27,139,255,.25);
+          }}
+        </style>
         <div class="card">
-          <h2>Recent Activity</h2>
-          <div class="table-wrap">
+          <div class="section" style="display:flex;align-items:center;justify-content:space-between;">
+            <h2>Recent Activity</h2>
+            <button id="ra_toggle" class="ra-toggle" aria-controls="ra_panel" aria-expanded="true">Hide</button>
+          </div>
+
+          <div id="ra_panel">
+            <div class="table-wrap">
             <table>
               <thead>
                 <tr>
@@ -6446,6 +6459,7 @@ def director_ui():
             </table>
           </div>
         </div>
+        
       </div>
 
       <!-- RIGHT: Create / Reset -->
@@ -7966,6 +7980,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

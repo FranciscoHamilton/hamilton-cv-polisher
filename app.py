@@ -6558,35 +6558,44 @@ def director_ui():
       }});
     }}
 
-    // create user
-    document.addEventListener('click', async (e) => {
-      if (e.target && e.target.id === 'cu_btn') {
-        e.preventDefault();
+    // create / reset actions
+document.addEventListener('click', async (e) => {{
+  if (e.target && e.target.id === 'cu_btn') {{
+    e.preventDefault();
 
-        const u = document.getElementById('cu_u').value.trim();
-        const p = document.getElementById('cu_p').value;
-        const s = document.getElementById('cu_seed').value.trim();
+    const u = document.getElementById('cu_u').value.trim();
+    const p = document.getElementById('cu_p').value;
+    const s = document.getElementById('cu_seed').value.trim();
 
-        const url = new URL('/director/api/create-user', window.location.origin);
-        url.searchParams.set('u', u);
-        url.searchParams.set('p', p);
-        if (s !== '') url.searchParams.set('seed', String(Number(s)));
+    const url = new URL('/director/api/create-user', window.location.origin);
+    url.searchParams.set('u', u);
+    url.searchParams.set('p', p);
+    if (s !== '') url.searchParams.set('seed', String(Number(s)));
 
-        const r = await fetch(url.toString(), { credentials: 'same-origin' });
-        const js = await r.json().catch(() => ({}));
-        document.getElementById('cu_msg').textContent = js.ok ? 'Created.' : (js.error || 'Failed.');
-        await loadDashboard();
-      }
-    });
-      if (e.target && e.target.id === 'rp_btn') {{
-        e.preventDefault();
-        const id = document.getElementById('rp_uid').value;
-        const pw = document.getElementById('rp_pw').value;
-        const r = await fetch('/director/api/resetpass', {{ method:'POST', headers:{{'Content-Type':'application/json'}}, body:JSON.stringify({{ user_id:id, new_password:pw }}) }});
-        const js = await r.json().catch(() => ({{}}));
-        document.getElementById('rp_msg').textContent = js.ok ? 'Password reset.' : (js.error || 'Failed.');
-      }}
+    const r = await fetch(url.toString(), {{ credentials: 'same-origin' }});
+    const js = await r.json().catch(() => ({{}}));
+    document.getElementById('cu_msg').textContent = js.ok ? 'Created.' : (js.error || 'Failed.');
+    if (js.ok) {{
+      document.getElementById('cu_u').value = '';
+      document.getElementById('cu_p').value = '';
+      document.getElementById('cu_seed').value = '';
+    }}
+    await loadDashboard();
+  }}
+
+  if (e.target && e.target.id === 'rp_btn') {{
+    e.preventDefault();
+    const id = document.getElementById('rp_uid').value;
+    const pw = document.getElementById('rp_pw').value;
+    const r = await fetch('/director/api/resetpass', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: JSON.stringify({{ user_id: id, new_password: pw }})
     }});
+    const js = await r.json().catch(() => ({{}}));
+    document.getElementById('rp_msg').textContent = js.ok ? 'Password reset.' : (js.error || 'Failed.');
+  }}
+}});
 
     (async()=>{{ await loadDashboard(); }})();
   </script>
@@ -7957,6 +7966,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

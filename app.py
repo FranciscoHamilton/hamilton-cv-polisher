@@ -6591,59 +6591,76 @@ def director_ui():
     // quick actions
     document.addEventListener('click', async (e) => {{
       if (e.target && e.target.id === 'cu_btn') {{
+        e.preventDefault();
         const u = document.getElementById('cu_u').value.trim();
         const p = document.getElementById('cu_p').value;
         const s = document.getElementById('cu_seed').value.trim();
+
         const url = new URL('/director/api/create-user', location.origin);
         if (u) url.searchParams.set('u', u);
         if (p) url.searchParams.set('p', p);
         if (s !== '') url.searchParams.set('seed', String(Number(s||0)));
-        const r = await fetch(url.toString()); const js = await r.json().catch(()=>({{}}));
+
+        const r = await fetch(url.toString());
+        const js = await r.json().catch(() => ({{}}));
         document.getElementById('cu_msg').textContent = js.ok ? 'Created.' : (js.error || 'Failed.');
-        if (js.ok) {{ document.getElementById('cu_u').value=''; document.getElementById('cu_p').value=''; document.getElementById('cu_seed').value=''; await loadDash(); }}
+
+        if (js.ok) {{
+          document.getElementById('cu_u').value = '';
+          document.getElementById('cu_p').value = '';
+          document.getElementById('cu_seed').value = '';
+          const refresh = window.loadDashboard || window.loadDash;
+          if (typeof refresh === 'function') {{ await refresh(); }}
+        }}
       }}
+
       if (e.target && e.target.id === 'rp_btn') {{
+        e.preventDefault();
         const id = Number(document.getElementById('rp_uid').value);
         const pw = document.getElementById('rp_pw').value;
-        if (!id || !pw) {{ document.getElementById('rp_msg').textContent='User ID and new password required.'; return; }}
-        const url = '/director/api/user/reset-password?user_id='+id+'&password='+encodeURIComponent(pw);
-        const r = await fetch(url); const js = await r.json().catch(()=>({{}}));
+        if (!id || !pw) {{
+          document.getElementById('rp_msg').textContent = 'User ID and new password required.';
+          return;
+        }}
+        // Uses your existing GET endpoint & param name (?password=...)
+        const url = '/director/api/user/reset-password?user_id=' + id + '&password=' + encodeURIComponent(pw);
+        const r = await fetch(url);
+        const js = await r.json().catch(() => ({{}}));
         document.getElementById('rp_msg').textContent = js.ok ? 'Password reset.' : (js.error || 'Failed.');
       }}
     }});
 
-    loadDash();
-  </script>
-</body></html>
-""")
+    // --- Recent Activity show/hide toggle (visibility only) ---
+    document.addEventListener('DOMContentLoaded', () => {{
+      const btn = document.getElementById('ra_toggle');
+      const panel = document.getElementById('ra_panel');
+      if (!btn || !panel) return;
 
-// --- Recent Activity show/hide toggle (visibility only) ---
-document.addEventListener('DOMContentLoaded', () => {{
-  const btn = document.getElementById('ra_toggle');
-  const panel = document.getElementById('ra_panel');
-  if (!btn || !panel) return;
+      // restore last choice from localStorage
+      const hidden = localStorage.getItem('director_ra_hidden') === '1';
+      if (hidden) {{
+        panel.classList.add('hidden');
+        btn.textContent = 'Show';
+        btn.setAttribute('aria-expanded', 'false');
+      }} else {{
+        btn.setAttribute('aria-expanded', 'true');
+      }}
 
-  // restore last choice from localStorage
-  const hidden = localStorage.getItem('director_ra_hidden') === '1';
-  if (hidden) {{
-    panel.classList.add('hidden');
-    btn.textContent = 'Show';
-    btn.setAttribute('aria-expanded', 'false');
-  }} else {{
-    btn.setAttribute('aria-expanded', 'true');
-  }}
+      // toggle on click - only changes CSS display, nothing else
+      btn.addEventListener('click', (e) => {{
+        e.preventDefault();
+        const nowHidden = panel.classList.toggle('hidden');
+        btn.textContent = nowHidden ? 'Show' : 'Hide';
+        btn.setAttribute('aria-expanded', (!nowHidden).toString());
+        localStorage.setItem('director_ra_hidden', nowHidden ? '1' : '');
+      }});
+    }});
 
-  /* toggle on click - only changes CSS display, nothing else */
-  btn.addEventListener('click', (e) => {{
-    e.preventDefault();
-    const nowHidden = panel.classList.toggle('hidden');
-    btn.textContent = nowHidden ? 'Show' : 'Hide';
-    btn.setAttribute('aria-expanded', (!nowHidden).toString());
-    localStorage.setItem('director_ra_hidden', nowHidden ? '1' : '');
-  }});
-}});
-
-    (async()=>{{ await loadDashboard(); }})();
+    // initial load (works with either loadDashboard() or loadDash())
+    (async () => {{
+      const refresh = window.loadDashboard || window.loadDash;
+      if (typeof refresh === 'function') {{ await refresh(); }}
+    }})();
   </script>
 </body>
 </html>
@@ -7922,6 +7939,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

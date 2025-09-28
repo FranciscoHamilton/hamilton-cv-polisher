@@ -6633,7 +6633,7 @@ document.addEventListener('DOMContentLoaded', () => {{
     btn.setAttribute('aria-expanded', 'true');
   }}
 
-  // toggle on click — only changes CSS display, nothing else
+  /* toggle on click - only changes CSS display, nothing else */
   btn.addEventListener('click', (e) => {{
     e.preventDefault();
     const nowHidden = panel.classList.toggle('hidden');
@@ -7922,6 +7922,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

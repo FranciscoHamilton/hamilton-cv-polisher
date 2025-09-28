@@ -606,6 +606,90 @@ def _log_trial(entry: dict):
     TRIALS.append(entry)
     TRIALS_FILE.write_text(json.dumps(TRIALS, indent=2), encoding="utf-8")
 
+# ============================
+# Director — Users API (add-on)
+# ============================
+# Drop-in routes to power the new Users card:
+# - List users (with active monthly cap)
+# - Set monthly cap
+# - Enable/Disable user
+# - Delete user (ON DELETE CASCADE handles history)
+#
+# These use your existing db_* helpers defined earlier in the file.
+
+from flask import request, jsonify
+
+def _dir_get_user_cap(user_id: int):
+    row = db_query_one("""
+        SELECT monthly_cap
+          FROM org_user_limits
+         WHERE user_id = %s AND active = TRUE
+         ORDER BY created_at DESC
+         LIMIT 1
+    """, (user_id,))
+    return int(row[0]) if row and row[0] is not None else None
+
+@app.get("/director/api/users")
+def director_api_list_users():
+    rows = db_query_all("""
+        SELECT id, username, COALESCE(active, TRUE) AS active
+          FROM users
+         ORDER BY LOWER(username)
+    """)
+    out = []
+    for uid, uname, active in rows:
+        out.append({
+            "id": int(uid),
+            "username": uname,
+            "active": bool(active),
+            "monthly_cap": _dir_get_user_cap(uid),
+        })
+    return jsonify({"ok": True, "users": out})
+
+@app.post("/director/api/users/<int:user_id>/cap")
+def director_api_set_cap(user_id: int):
+    payload = request.get_json(silent=True) or {}
+    cap_raw = payload.get("monthly_cap", None)
+
+    # Interpret "", 0, null as "no cap"
+    monthly_cap = None
+    try:
+        if cap_raw is not None and str(cap_raw).strip() != "":
+            monthly_cap = int(cap_raw)
+            if monthly_cap < 0:
+                monthly_cap = None
+    except Exception:
+        monthly_cap = None
+
+    # Deactivate previous active rows
+    db_execute("UPDATE org_user_limits SET active = FALSE WHERE user_id=%s AND active=TRUE", (user_id,))
+
+    # Get org_id for consistency
+    row = db_query_one("SELECT org_id FROM users WHERE id=%s", (user_id,))
+    org_id = int(row[0]) if row and row[0] is not None else None
+
+    # Insert new rule if a cap is set
+    if monthly_cap is not None:
+        db_execute("""
+            INSERT INTO org_user_limits (org_id, user_id, monthly_cap, active)
+            VALUES (%s, %s, %s, TRUE)
+        """, (org_id, user_id, monthly_cap))
+
+    return jsonify({"ok": True, "user_id": user_id, "monthly_cap": monthly_cap})
+
+@app.post("/director/api/users/<int:user_id>/toggle")
+def director_api_toggle_user(user_id: int):
+    payload = request.get_json(silent=True) or {}
+    target_active = bool(payload.get("active", False))
+    ok = db_execute("UPDATE users SET active=%s WHERE id=%s", (target_active, user_id))
+    return jsonify({"ok": bool(ok), "user_id": user_id, "active": target_active})
+
+@app.delete("/director/api/users/<int:user_id>")
+def director_api_delete_user(user_id: int):
+    # Safe: related rows (usage_events, credits_ledger) use ON DELETE CASCADE in your schema.
+    ok = db_execute("DELETE FROM users WHERE id=%s", (user_id,))
+    return jsonify({"ok": bool(ok), "user_id": user_id})
+
 # ------------------------ Public Home ------------------------
 HOMEPAGE_HTML = r"""
 <!doctype html>
@@ -6469,26 +6553,157 @@ def director_ui():
     <div class="grid">
       <!-- LEFT: Users + Recent -->
       <div class="stack" style="display:grid; gap:18px">
-        <div class="card">
-          <h2>Users</h2>
-          <div class="hint" style="margin:-6px 0 8px">Per-user monthly cap and enable/disable. (IDs and actions unchanged.)</div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>User ID</th>
-                  <th>Username</th>
-                  <th>Monthly Cap</th>
-                  <th>Active</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="usersBody">
-                <tr><td colspan="5" class="muted">Loading…</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <!-- New Users card (drop-in replacement) -->
+<style>
+  .users-card{border:1px solid #e5e7eb;background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(2,6,23,.04)}
+  .users-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #f1f5f9}
+  .users-head h2{margin:0;font-size:18px}
+  .users-wrap{padding:10px 12px 4px}
+  .users-row{display:grid;grid-template-columns:90px 1.2fr 1fr 120px 220px;gap:12px;align-items:center;padding:10px 8px;border-bottom:1px solid #f8fafc}
+  .users-row.header{font-weight:800;color:#334155;background:#f8fafc;border-top-left-radius:12px;border-top-right-radius:12px}
+  .users-row:last-child{border-bottom:none}
+  .cap-input{width:100%;padding:10px 12px;border:1px solid #e5e7eb;border-radius:12px;font-weight:700}
+  .pill-ok{display:inline-block;padding:6px 10px;border-radius:999px;background:#ecfdf5;color:#065f46;font-weight:800;font-size:12px;text-align:center}
+  .pill-off{display:inline-block;padding:6px 10px;border-radius:999px;background:#fef2f2;color:#991b1b;font-weight:800;font-size:12px;text-align:center}
+  .btn-sm{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:12px;border:none;font-weight:900;cursor:pointer}
+  .btn-save{background:linear-gradient(90deg,#2563eb,#22d3ee);color:#fff}
+  .btn-toggle{background:#fff;border:1px solid #e5e7eb}
+  .btn-del{background:#fff;border:1px solid #fecaca;color:#b91c1c}
+  .users-actions{display:flex;gap:10px}
+  .users-empty{padding:16px;color:#64748b}
+  @media (max-width:980px){
+    .users-row{grid-template-columns:60px 1fr 120px 140px 1fr}
+  }
+</style>
+
+<div class="users-card" id="usersBox">
+  <div class="users-head">
+    <h2>Users</h2>
+    <div style="color:#64748b;font-size:13px">Per-user monthly cap, enable/disable, or delete (safe — cascades).</div>
+  </div>
+
+  <div class="users-wrap">
+    <div class="users-row header">
+      <div>User&nbsp;ID</div>
+      <div>Username</div>
+      <div>Monthly Cap</div>
+      <div>Status</div>
+      <div>Actions</div>
+    </div>
+
+    <div id="usersRows"></div>
+    <div class="users-empty" id="usersEmpty" style="display:none">No users found.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const rowsEl = document.getElementById('usersRows');
+  const emptyEl = document.getElementById('usersEmpty');
+
+  function el(tag, attrs={}, children=[]){
+    const n = document.createElement(tag);
+    Object.entries(attrs).forEach(([k,v])=>{
+      if(k==='class') n.className=v;
+      else if(k==='text') n.textContent=v;
+      else n.setAttribute(k,v);
+    });
+    (Array.isArray(children)?children:[children]).forEach(c=>{ if(c) n.appendChild(c); });
+    return n;
+  }
+
+  async function api(url, opts={}){
+    const res = await fetch(url, Object.assign({headers:{'Content-Type':'application/json'}}, opts));
+    if(!res.ok) throw new Error('Request failed');
+    return await res.json();
+  }
+
+  function statusPill(active){
+    const span = el('span', {class: active ? 'pill-ok' : 'pill-off', text: active ? 'Active' : 'Disabled'});
+    return span;
+  }
+
+  function buildRow(u){
+    const row = el('div', {class:'users-row', 'data-id': u.id});
+
+    // id & username
+    row.appendChild(el('div', {text:String(u.id)}));
+    row.appendChild(el('div', {text:u.username}));
+
+    // monthly cap
+    const cap = (u.monthly_cap === null || u.monthly_cap === undefined) ? '' : String(u.monthly_cap);
+    const capInput = el('input', {class:'cap-input', type:'number', min:'0', placeholder:'Unlimited', value:cap});
+    row.appendChild(el('div', {}, capInput));
+
+    // status pill
+    let pill = statusPill(u.active);
+    const pillCell = el('div', {}, pill);
+    row.appendChild(pillCell);
+
+    // actions
+    const btnSave = el('button', {class:'btn-sm btn-save', text:'Save'});
+    btnSave.addEventListener('click', async ()=>{
+      btnSave.disabled = true;
+      try{
+        const val = capInput.value.trim();
+        const body = (val === '' ? {monthly_cap:null} : {monthly_cap: Number(val)});
+        const res = await api(`/director/api/users/${u.id}/cap`, {method:'POST', body: JSON.stringify(body)});
+        capInput.value = (res.monthly_cap === null) ? '' : String(res.monthly_cap);
+      }catch(e){ alert('Failed to save cap'); }
+      finally{ btnSave.disabled = false; }
+    });
+
+    const btnToggle = el('button', {class:'btn-sm btn-toggle', text: u.active ? 'Disable' : 'Enable'});
+    btnToggle.addEventListener('click', async ()=>{
+      btnToggle.disabled = true;
+      try{
+        const target = !u.active;
+        const res = await api(`/director/api/users/${u.id}/toggle`, {method:'POST', body: JSON.stringify({active: target})});
+        u.active = !!res.active;
+        const newPill = statusPill(u.active);
+        pill.replaceWith(newPill); pill = newPill;
+        btnToggle.textContent = u.active ? 'Disable' : 'Enable';
+      }catch(e){ alert('Failed to toggle user'); }
+      finally{ btnToggle.disabled = false; }
+    });
+
+    const btnDelete = el('button', {class:'btn-sm btn-del', text:'Delete'});
+    btnDelete.addEventListener('click', async ()=>{
+      const confirmTxt = `Delete user "${u.username}" (ID ${u.id})? This will remove the account and cascade usage/history.`;
+      if(!confirm(confirmTxt)) return;
+      btnDelete.disabled = true;
+      try{
+        await api(`/director/api/users/${u.id}`, {method:'DELETE'});
+        row.remove();
+        checkEmpty();
+      }catch(e){ alert('Failed to delete user'); }
+    });
+
+    const actions = el('div', {class:'users-actions'}, [btnSave, btnToggle, btnDelete]);
+    row.appendChild(actions);
+
+    return row;
+  }
+
+  function checkEmpty(){
+    const has = !!rowsEl.children.length;
+    emptyEl.style.display = has ? 'none' : 'block';
+  }
+
+  async function load(){
+    rowsEl.innerHTML = '';
+    try{
+      const data = await api('/director/api/users');
+      (data.users || []).forEach(u => rowsEl.appendChild(buildRow(u)));
+    }catch(e){
+      rowsEl.innerHTML = '';
+    }
+    checkEmpty();
+  }
+
+  document.addEventListener('DOMContentLoaded', load);
+})();
+</script>
 
         <style>
           .hidden {{ display: none; }}
@@ -8068,5 +8283,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 

@@ -6402,25 +6402,46 @@ if (!monthRows.length) {
 
 @app.get("/director/ui")
 def director_ui():
-    # require normal user login + director/admin flag
+    """
+    Director Console (polished UI).
+    - Shows org balance, users, recent events
+    - Set monthly cap, enable/disable, delete user
+    - Create user, reset password
+    """
+    # Must be logged in
     try:
         uid = int(session.get("user_id") or 0)
     except Exception:
         uid = 0
     if uid <= 0:
         return redirect("/login")
-    if not (session.get("director") or session.get("is_admin")):
+
+    # Must be director or admin
+    try:
+        am_admin = bool(session.get("is_admin")) or (session.get("user","").strip().lower() == "admin")
+    except Exception:
+        am_admin = False
+    if not (session.get("director") or am_admin):
         return make_response("forbidden", 403)
 
-    # Minimal org name for header
+    # Resolve org
     org_id = _current_user_org_id()
-    org_name = None
-    if DB_POOL and org_id:
-        r = db_query_one("SELECT name FROM orgs WHERE id=%s", (org_id,))
-        org_name = r[0] if r and r[0] else None
+    if not org_id and am_admin:
+        # allow admin to pass ?org_id=...
+        try:
+            org_id = int(request.args.get("org_id") or "0")
+        except Exception:
+            org_id = 0
+    if not org_id:
+        return make_response("No organization assigned to this account.", 403)
 
-    # INLINE polished UI (no DIRECTOR_HTML constant needed)
-    return render_template_string(f"""
+    org_name = None
+    if DB_POOL:
+        r = db_query_one("SELECT name FROM orgs WHERE id=%s", (org_id,))
+        org_name = (r[0] if r and r[0] else None)
+
+    # Inline HTML (ASCII only). JS braces are doubled to survive the Python f-string.
+    html = f"""
 <!doctype html>
 <html lang="en">
 <head>
@@ -6441,27 +6462,37 @@ def director_ui():
     header {{ display:flex; align-items:center; justify-content:space-between; gap:12px; }}
     h1 {{ margin:0 0 4px 0; font-size:28px; letter-spacing:.2px; }}
     .kicker {{ color:var(--muted); }}
-    .grid-metrics {{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; margin:18px 0; }}
+    .grid-metrics {{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:18px 0; }}
     .metric {{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
                padding:16px; box-shadow:0 8px 24px rgba(2,6,23,.08); }}
     .metric .label {{ color:var(--muted); font-size:12px; }}
     .metric .value {{ font-weight:800; font-size:26px; margin-top:6px; }}
+
+    .grid {{ display:grid; grid-template-columns:1.2fr .8fr; gap:16px; }}
     .card {{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius);
              padding:16px; box-shadow:0 8px 24px rgba(2,6,23,.08); }}
-    .grid {{ display:grid; grid-template-columns:1.2fr .8fr; gap:16px; }}
+
     table {{ width:100%; border-collapse:collapse; }}
     th,td {{ padding:10px 8px; text-align:left; border-bottom:1px solid var(--line); font-size:13px; }}
-    th {{ color:var(--muted); font-weight:600; }}
+    th {{ color:var(--muted); font-weight:600; background:#f8fafc; position:sticky; top:0; z-index:1; }}
     tr:hover td {{ background:#f8fbff; }}
     .pill {{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; border:1px solid var(--line); }}
     .pill.ok {{ background:#ecfdf5; color:#065f46; }}
     .pill.off {{ background:#fef2f2; color:#b91c1c; }}
+    .balance-ok {{ color:#065f46; }}
+    .balance-low {{ color:#92400e; }}
+    .balance-zero {{ color:#b91c1c; }}
+
     input,button {{ padding:10px 12px; border:1px solid var(--line); border-radius:12px; font-size:14px; }}
     button {{ cursor:pointer; background:#fff; }}
-    .btn {{ background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; border:none; }}
-    .btn-ghost {{ background:#fff; }}
-    .hint {{ color:var(--muted); font-size:12px; }}
-    @media (max-width: 980px) {{ .grid {{ grid-template-columns:1fr; }} .grid-metrics {{ grid-template-columns:1fr; }} }}
+    .btn {{ background:linear-gradient(135deg,var(--brand),var(--brand2)); color:#fff; border:0; }}
+    .btn.small {{ padding:8px 12px; border-radius:10px; }}
+    .btn.danger {{ background:linear-gradient(135deg,#ef4444,#f97316); }}
+
+    .row {{ display:grid; gap:10px; }}
+    @media (min-width:700px) {{ .row2 {{ grid-template-columns:1fr 1fr; }} .row3 {{ grid-template-columns:1fr 1fr 1fr; }} }}
+
+    .hidden {{ display:none; }}
   </style>
 </head>
 <body>
@@ -6469,168 +6500,194 @@ def director_ui():
     <header>
       <div>
         <h1>Director Console</h1>
-        <div class="kicker">Org tools and audit trail. Org: {org_name or ('#'+str(org_id) if org_id else '—')}</div>
+        <div class="kicker">Org tools and audit. Org: {esc := (org_name or f"Org #{org_id}")}</div>
       </div>
       <div><a href="/app">Back to app</a></div>
     </header>
 
-    <div class="grid-metrics">
-      <div class="metric"><div class="label">Org balance</div><div class="value"><span id="poolBox">—</span> credits</div></div>
-      <div class="metric"><div class="label">Users</div><div class="value" id="usersCount">—</div></div>
-      <div class="metric"><div class="label">Recent events</div><div class="value" id="recentCount">—</div></div>
-    </div>
+    <section class="grid-metrics">
+      <div class="metric"><div class="label">Org balance</div><div id="poolBox" class="value">—</div></div>
+      <div class="metric"><div class="label">Users</div><div id="usersCount" class="value">—</div></div>
+      <div class="metric"><div class="label">Recent events</div><div id="recentCount" class="value">—</div></div>
+    </section>
 
-    <div class="grid">
-      <div class="card">
-        <h2 style="margin:0 0 8px 0">Users</h2>
-        <div class="hint" style="margin-bottom:8px">Per-user monthly cap and enable/disable.</div>
-        <table>
-          <thead><tr><th>User ID</th><th>Username</th><th>Monthly Cap</th><th>Active</th><th>Action</th></tr></thead>
-          <tbody id="usersBody"><tr><td colspan="5" class="hint">Loading…</td></tr></tbody>
-        </table>
-      </div>
-
-      <div class="card">
-        <h2 style="margin:0 0 8px 0">Quick actions</h2>
-        <div class="hint">Create user (optional seed credits)</div>
-        <div style="display:grid; gap:8px; grid-template-columns:1fr 1fr 1fr auto; margin:8px 0 12px">
-          <input id="cu_u" placeholder="Username">
-          <input id="cu_p" type="password" placeholder="Password">
-          <input id="cu_seed" inputmode="numeric" placeholder="Seed credits (optional)">
-          <button id="cu_btn" class="btn">Create</button>
+    <section class="grid">
+      <div style="display:grid; gap:16px;">
+        <div class="card">
+          <h3 style="margin:0 0 8px">Users</h3>
+          <div class="kicker" style="margin:-4px 0 8px">Monthly cap, enable/disable, delete.</div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>User ID</th>
+                  <th>Username</th>
+                  <th>Monthly Cap</th>
+                  <th>Active</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersBody"><tr><td colspan="5" class="kicker">Loading…</td></tr></tbody>
+            </table>
+          </div>
         </div>
-        <div id="cu_msg" class="hint"></div>
 
-        <div class="hint" style="margin-top:14px">Reset password</div>
-        <div style="display:grid; gap:8px; grid-template-columns:1fr 1fr auto; margin:8px 0 12px">
-          <input id="rp_uid" inputmode="numeric" placeholder="User ID">
-          <input id="rp_pw" type="password" placeholder="New password">
-          <button id="rp_btn" class="btn-ghost">Reset</button>
+        <div class="card">
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <h3 style="margin:0">Recent Activity</h3>
+            <button id="ra_toggle" class="btn small" aria-controls="ra_panel" aria-expanded="true">Hide</button>
+          </div>
+          <div id="ra_panel" style="margin-top:8px;">
+            <div id="recentBox" class="kicker">Loading…</div>
+          </div>
         </div>
-        <div id="rp_msg" class="hint"></div>
       </div>
 
-      <div class="card" style="grid-column:1/-1">
-        <h2 style="margin:0 0 8px 0">Recent Activity</h2>
-        <table>
-          <thead><tr><th>When</th><th>User</th><th>Candidate</th><th class="hint">Filename</th></tr></thead>
-          <tbody id="recentBody"><tr><td colspan="4" class="hint">Loading…</td></tr></tbody>
-        </table>
+      <div style="display:grid; gap:16px;">
+        <div class="card">
+          <h3 style="margin:0 0 8px">Create User</h3>
+          <div class="row row3">
+            <input id="cu_u" type="text" placeholder="Username" />
+            <input id="cu_p" type="password" placeholder="Password" />
+            <input id="cu_seed" type="number" inputmode="numeric" placeholder="Seed credits (optional)" />
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; margin-top:10px">
+            <button id="cu_btn" class="btn">Create</button>
+            <div id="cu_msg" class="kicker"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin:0 0 8px">Reset User Password</h3>
+          <div class="row row2">
+            <input id="rp_uid" type="number" inputmode="numeric" placeholder="User ID" />
+            <input id="rp_pw" type="password" placeholder="New password" />
+          </div>
+          <div style="display:flex; gap:10px; align-items:center; margin-top:10px">
+            <button id="rp_btn" class="btn">Reset</button>
+            <div id="rp_msg" class="kicker"></div>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   </div>
 
   <script>
     const $ = (q) => document.querySelector(q);
-    const esc = (s) => (s||"").replace(/[&<>"]/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}}[c]));
-    async function loadDash() {{
-      const r = await fetch('/director/api/dashboard'); if (!r.ok) return;
-      const js = await r.json();
+    function esc(s) {{ return String(s || '').replace(/[&<>"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}})[c]); }}
 
-      $('#poolBox').textContent  = (js.pool && typeof js.pool.balance==='number') ? js.pool.balance : '—';
-      $('#usersCount').textContent  = (js.month && js.month.rows) ? js.month.rows.length : '—';
-      $('#recentCount').textContent = (js.recent) ? js.recent.length : '—';
+    async function loadDashboard() {{
+      // Fetch dashboard (for metrics) and users list (for table)
+      const [dRes, uRes] = await Promise.all([fetch('/director/api/dashboard'), fetch('/director/api/users')]);
+      const d = await dRes.json().catch(() => ({{}}));
+      const u = await uRes.json().catch(() => ({{}}));
 
-      const users = js.users || js.month.rows || [];
-      if (!users.length) {{
-        $('#usersBody').innerHTML = '<tr><td colspan="5" class="hint">No users.</td></tr>';
+      // Metrics
+      $('#poolBox').textContent  = (d.pool && typeof d.pool.balance === 'number') ? (d.pool.balance + ' credits') : '—';
+      $('#usersCount').textContent  = (u.users && Array.isArray(u.users)) ? u.users.length : '—';
+      $('#recentCount').textContent = (d.recent && Array.isArray(d.recent)) ? d.recent.length : '—';
+
+      // Users table
+      const rows = (u.users || []);
+      if (!rows.length) {{
+        $('#usersBody').innerHTML = '<tr><td colspan="5" class="kicker">No users yet.</td></tr>';
       }} else {{
         let html = '';
-        for (const u of users) {{
-          const id = u.id || u.user_id;
-          const name = u.username || '';
-          const active = !!(u.active ?? true);
-          const capVal = (u.monthly_cap == null ? '' : u.monthly_cap);
+        for (const usr of rows) {{
+          const id = usr.id ?? usr.user_id;
+          const uname = usr.username || '';
+          const active = !!(usr.active ?? true);
+          const pill = `<span class="pill ${{active ? 'ok' : 'off'}}">${{active ? 'Active' : 'Disabled'}}</span>`;
+          const toggleNext = active ? 0 : 1;
           html += `
             <tr data-uid="${{id}}">
               <td>${{id}}</td>
-              <td>${{esc(name)}}</td>
+              <td>${{esc(uname)}}</td>
               <td>
-                <input class="cap" style="width:120px" placeholder="none" value="${{capVal}}">
-                <button class="btn-ghost setcap" style="margin-left:6px">Save</button>
+                <input class="cap" type="number" inputmode="numeric" placeholder="(none)" />
+                <button class="btn small setcap">Save</button>
               </td>
-              <td>${{active ? '<span class="pill ok">Active</span>' : '<span class="pill off">Disabled</span>'}}</td>
-              <td>
-                <button class="btn-ghost toggle" data-next="${{active ? 0 : 1}}">${{active ? 'Disable' : 'Enable'}}</button>
+              <td>${{pill}}</td>
+              <td style="display:flex; gap:8px; flex-wrap:wrap">
+                <button class="btn small toggle" data-next="${{toggleNext}}">${{active ? 'Disable' : 'Enable'}}</button>
+                <button class="btn small danger delete">Delete</button>
               </td>
             </tr>`;
         }}
         $('#usersBody').innerHTML = html;
       }}
 
-      const rec = js.recent || [];
-      if (!rec.length) {{
-        $('#recentBody').innerHTML = '<tr><td colspan="4" class="hint">No recent activity.</td></tr>';
+      // Recent table
+      const recent = d.recent || [];
+      if (!recent.length) {{
+        $('#recentBox').textContent = 'No recent events.';
       }} else {{
-        $('#recentBody').innerHTML = rec.map(r => `
-          <tr><td>${{r.ts}}</td><td>${{esc(r.username||'')}}</td><td>${{esc(r.candidate||'')}}</td><td class="hint">${{esc(r.filename||'')}}</td></tr>
-        `).join('');
+        let html = '<table><thead><tr><th>When</th><th>User</th><th>User ID</th><th>Candidate</th><th>Filename</th></tr></thead><tbody>';
+        for (const r of recent) {{
+          const when = r.ts ? new Date(r.ts) : null;
+          const whenTxt = (when && !isNaN(when.getTime())) ? when.toLocaleString() : (r.ts || '');
+          html += `<tr><td>${{esc(whenTxt)}}</td><td>${{esc(r.username || '')}}</td><td>${{esc(r.user_id)}}</td><td>${{esc(r.candidate || '')}}</td><td>${{esc(r.filename || '')}}</td></tr>`;
+        }}
+        html += '</tbody></table>';
+        $('#recentBox').innerHTML = html;
       }}
 
-      // actions
+      // Wire actions (set cap / toggle / delete)
       document.querySelectorAll('.setcap').forEach(btn => btn.onclick = async (e) => {{
         const tr = e.target.closest('tr'); const uid = Number(tr.dataset.uid);
         const capRaw = tr.querySelector('input.cap').value.trim();
-        const url = new URL('/director/api/user/set-monthly-cap', location.origin);
-        url.searchParams.set('user_id', uid);
-        if (capRaw === '') url.searchParams.set('cap','null'); else url.searchParams.set('cap', String(Number(capRaw)));
+        const url = new URL('/director/api/setcap', location.origin);
+        url.searchParams.set('user_id', String(uid));
+        if (capRaw === '') url.searchParams.set('cap', 'null'); else url.searchParams.set('cap', String(Number(capRaw)));
         await fetch(url.toString());
-        await loadDash();
+        await loadDashboard();
       }});
       document.querySelectorAll('.toggle').forEach(btn => btn.onclick = async (e) => {{
         const tr = e.target.closest('tr'); const uid = Number(tr.dataset.uid);
         const next = Number(e.target.getAttribute('data-next'));
         const url = new URL('/director/api/user/set-active', location.origin);
-        url.searchParams.set('user_id', uid);
+        url.searchParams.set('user_id', String(uid));
         url.searchParams.set('active', String(next));
         await fetch(url.toString());
-        await loadDash();
+        await loadDashboard();
+      }});
+      document.querySelectorAll('.delete').forEach(btn => btn.onclick = async (e) => {{
+        const tr = e.target.closest('tr'); const uid = Number(tr.dataset.uid);
+        if (!confirm('Delete this user permanently?')) return;
+        const url = new URL('/director/api/user/delete', location.origin);
+        url.searchParams.set('user_id', String(uid));
+        await fetch(url.toString());
+        await loadDashboard();
       }});
     }}
 
-    // quick actions
+    // Quick actions: create user / reset password
     document.addEventListener('click', async (e) => {{
       if (e.target && e.target.id === 'cu_btn') {{
         e.preventDefault();
         const u = document.getElementById('cu_u').value.trim();
         const p = document.getElementById('cu_p').value;
         const s = document.getElementById('cu_seed').value.trim();
-
         const url = new URL('/director/api/create-user', location.origin);
         if (u) url.searchParams.set('u', u);
         if (p) url.searchParams.set('p', p);
-        if (s !== '') url.searchParams.set('seed', String(Number(s||0)));
-
-        const r = await fetch(url.toString());
-        const js = await r.json().catch(() => ({{}}));
+        if (s !== '') url.searchParams.set('seed', String(Number(s || 0)));
+        const r = await fetch(url.toString()); const js = await r.json().catch(()=>({{}}));
         document.getElementById('cu_msg').textContent = js.ok ? 'Created.' : (js.error || 'Failed.');
-
-        if (js.ok) {{
-          document.getElementById('cu_u').value = '';
-          document.getElementById('cu_p').value = '';
-          document.getElementById('cu_seed').value = '';
-          const refresh = window.loadDashboard || window.loadDash;
-          if (typeof refresh === 'function') {{ await refresh(); }}
-        }}
+        if (js.ok) {{ document.getElementById('cu_u').value=''; document.getElementById('cu_p').value=''; document.getElementById('cu_seed').value=''; await loadDashboard(); }}
       }}
-
       if (e.target && e.target.id === 'rp_btn') {{
         e.preventDefault();
         const id = Number(document.getElementById('rp_uid').value);
         const pw = document.getElementById('rp_pw').value;
-        if (!id || !pw) {{
-          document.getElementById('rp_msg').textContent = 'User ID and new password required.';
-          return;
-        }}
-        // Uses your existing GET endpoint & param name (?password=...)
+        if (!id || !pw) {{ document.getElementById('rp_msg').textContent='User ID and new password required.'; return; }}
         const url = '/director/api/user/reset-password?user_id=' + id + '&password=' + encodeURIComponent(pw);
-        const r = await fetch(url);
-        const js = await r.json().catch(() => ({{}}));
+        const r = await fetch(url); const js = await r.json().catch(()=>({{}}));
         document.getElementById('rp_msg').textContent = js.ok ? 'Password reset.' : (js.error || 'Failed.');
       }}
     }});
 
-    // --- Recent Activity show/hide toggle (visibility only) ---
+    // Recent Activity show/hide toggle (visibility only)
     document.addEventListener('DOMContentLoaded', () => {{
       const btn = document.getElementById('ra_toggle');
       const panel = document.getElementById('ra_panel');
@@ -6646,7 +6703,7 @@ def director_ui():
         btn.setAttribute('aria-expanded', 'true');
       }}
 
-      // toggle on click - only changes CSS display, nothing else
+      // toggle on click - only changes CSS display
       btn.addEventListener('click', (e) => {{
         e.preventDefault();
         const nowHidden = panel.classList.toggle('hidden');
@@ -6654,18 +6711,17 @@ def director_ui():
         btn.setAttribute('aria-expanded', (!nowHidden).toString());
         localStorage.setItem('director_ra_hidden', nowHidden ? '1' : '');
       }});
-    }});
 
-    // initial load (works with either loadDashboard() or loadDash())
-    (async () => {{
-      const refresh = window.loadDashboard || window.loadDash;
-      if (typeof refresh === 'function') {{ await refresh(); }}
-    }})();
+      // initial load
+      loadDashboard();
+    }});
   </script>
 </body>
 </html>
 """
-    return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+    resp = make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 # --- Friendly 402 page (Out of credits) ---
 def _render_out_of_credits(reason_text=None):
@@ -7939,6 +7995,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

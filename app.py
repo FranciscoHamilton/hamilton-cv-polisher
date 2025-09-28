@@ -5465,6 +5465,40 @@ def director_set_monthly_cap():
     spent = org_user_spent_this_month(my_org, target_id)
     return jsonify({"ok": True, "user_id": target_id, "monthly_cap": cap_val, "spent_this_month": spent})
 
+# --- Director: enable/disable a user in my org (protect 'admin') ---
+@app.get("/director/api/user/set-active")
+def director_set_active():
+    # must be logged in and be director/admin
+    if not (session.get("user_id") and (session.get("director") or is_admin())):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # parse inputs
+    try:
+        uid = int(request.args.get("user_id") or "0")
+        active_raw = request.args.get("active")
+        if active_raw is None:
+            return jsonify({"ok": False, "error": "missing active (0|1)"}), 400
+        active_val = 1 if str(active_raw).lower() in ("1", "true", "yes") else 0
+    except Exception:
+        return jsonify({"ok": False, "error": "bad user_id/active"}), 400
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
+
+    # verify same org + protect 'admin'
+    row = db_query_one("SELECT username, org_id FROM users WHERE id=%s", (uid,))
+    if not row:
+        return jsonify({"ok": False, "error": "user not found"}), 404
+    if (row[0] or "").strip().lower() == "admin":
+        return jsonify({"ok": False, "error": "cannot_modify_admin"}), 403
+    my_org = _current_user_org_id()
+    if my_org and int(row[1] or 0) != my_org and not is_admin():
+        return jsonify({"ok": False, "error": "not_in_my_org"}), 403
+
+    ok = db_execute("UPDATE users SET active=%s WHERE id=%s", (active_val, uid))
+    if not ok:
+        return jsonify({"ok": False, "error": "update_failed"}), 500
+    return jsonify({"ok": True, "user_id": uid, "active": bool(active_val)})
+
 # --- Director: reset a user's password (same org) ---
 @app.post("/director/api/user/reset-password")
 def director_reset_password():
@@ -7879,9 +7913,31 @@ def me_diag_v2():
 
 # ---------- Director routes (refreshed) ----------
 
+# ---------- Director routes (refreshed) ----------
+
 @app.get("/director")
 def director_home():
-    ...
+    # If already a director or admin, go straight to the console
+    if session.get("director") or is_admin():
+        return redirect(url_for("director_ui"))
+    # Otherwise show the director login page
+    return render_template_string(DIRECTOR_LOGIN_HTML)
+
+@app.post("/director/login")
+def director_login():
+    pw = (request.form.get("password") or "").strip()
+    if pw == STATS.get("director_pass_override", "director"):
+        session["director"] = True
+        return redirect(url_for("director_ui"))
+    html = DIRECTOR_LOGIN_HTML.replace(
+        "<!--DERR-->", "<div class='err'>Incorrect director password</div>"
+    )
+    return make_response(render_template_string(html), 401)
+
+@app.get("/director/logout")
+def director_logout():
+    session.pop("director", None)
+    return redirect(url_for("app_page"))
 
 # ---------- App polishing + API (org-aware credits) ----------
 @app.post("/polish")
@@ -8000,6 +8056,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

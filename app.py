@@ -606,89 +606,6 @@ def _log_trial(entry: dict):
     TRIALS.append(entry)
     TRIALS_FILE.write_text(json.dumps(TRIALS, indent=2), encoding="utf-8")
 
-# ============================
-# Director — Users API (add-on)
-# ============================
-# Drop-in routes to power the new Users card:
-# - List users (with active monthly cap)
-# - Set monthly cap
-# - Enable/Disable user
-# - Delete user (ON DELETE CASCADE handles history)
-#
-# These use your existing db_* helpers defined earlier in the file.
-
-from flask import request, jsonify
-
-def _dir_get_user_cap(user_id: int):
-    row = db_query_one("""
-        SELECT monthly_cap
-          FROM org_user_limits
-         WHERE user_id = %s AND active = TRUE
-         ORDER BY created_at DESC
-         LIMIT 1
-    """, (user_id,))
-    return int(row[0]) if row and row[0] is not None else None
-
-@app.get("/director/api/users")
-def director_api_list_users():
-    rows = db_query_all("""
-        SELECT id, username, COALESCE(active, TRUE) AS active
-          FROM users
-         ORDER BY LOWER(username)
-    """)
-    out = []
-    for uid, uname, active in rows:
-        out.append({
-            "id": int(uid),
-            "username": uname,
-            "active": bool(active),
-            "monthly_cap": _dir_get_user_cap(uid),
-        })
-    return jsonify({"ok": True, "users": out})
-
-@app.post("/director/api/users/<int:user_id>/cap")
-def director_api_set_cap(user_id: int):
-    payload = request.get_json(silent=True) or {}
-    cap_raw = payload.get("monthly_cap", None)
-
-    # Interpret "", 0, null as "no cap"
-    monthly_cap = None
-    try:
-        if cap_raw is not None and str(cap_raw).strip() != "":
-            monthly_cap = int(cap_raw)
-            if monthly_cap < 0:
-                monthly_cap = None
-    except Exception:
-        monthly_cap = None
-
-    # Deactivate previous active rows
-    db_execute("UPDATE org_user_limits SET active = FALSE WHERE user_id=%s AND active=TRUE", (user_id,))
-
-    # Get org_id for consistency
-    row = db_query_one("SELECT org_id FROM users WHERE id=%s", (user_id,))
-    org_id = int(row[0]) if row and row[0] is not None else None
-
-    # Insert new rule if a cap is set
-    if monthly_cap is not None:
-        db_execute("""
-            INSERT INTO org_user_limits (org_id, user_id, monthly_cap, active)
-            VALUES (%s, %s, %s, TRUE)
-        """, (org_id, user_id, monthly_cap))
-
-    return jsonify({"ok": True, "user_id": user_id, "monthly_cap": monthly_cap})
-
-@app.post("/director/api/users/<int:user_id>/toggle")
-def director_api_toggle_user(user_id: int):
-    payload = request.get_json(silent=True) or {}
-    target_active = bool(payload.get("active", False))
-    ok = db_execute("UPDATE users SET active=%s WHERE id=%s", (target_active, user_id))
-    return jsonify({"ok": bool(ok), "user_id": user_id, "active": target_active})
-
-@app.delete("/director/api/users/<int:user_id>")
-def director_api_delete_user(user_id: int):
-    # Safe: related rows (usage_events, credits_ledger) use ON DELETE CASCADE in your schema.
-    ok = db_execute("DELETE FROM users WHERE id=%s", (user_id,))
-    return jsonify({"ok": bool(ok), "user_id": user_id})
 
 # ------------------------ Public Home ------------------------
 HOMEPAGE_HTML = r"""
@@ -5371,83 +5288,6 @@ def director_api_dashboard():
         "month": {"total": month_total, "rows": month_rows},
         "recent": recent
     })
-            # --- Director (org-scoped): list users in my org with balances ---
-@app.get("/director/api/users")
-def director_api_users():
-    """
-    Returns users in the same org as the current session user.
-    Shape:
-      {
-        ok: true,
-        org_id: <int|null>,
-        users: [
-          { id, username, active, balance }
-        ]
-      }
-    """
-    # must be logged in
-    try:
-        uid = int(session.get("user_id") or 0)
-    except Exception:
-        uid = 0
-    if uid <= 0:
-        return jsonify({"ok": False, "error": "not_logged_in"}), 401
-
-    if not DB_POOL:
-        return jsonify({"ok": True, "org_id": None, "users": []})
-
-    # find my org
-    org_id = _current_user_org_id()
-    if not org_id:
-        return jsonify({"ok": True, "org_id": None, "users": []})
-
-    conn = None
-    try:
-        conn = DB_POOL.getconn()
-        users, bal_map = [], {}
-
-        with conn:
-            with conn.cursor() as cur:
-                # balances for this org
-                cur.execute("""
-                    SELECT user_id, COALESCE(SUM(delta),0) AS balance
-                    FROM credits_ledger
-                    WHERE org_id = %s
-                    GROUP BY user_id
-                """, (org_id,))
-                bal_map = {int(r[0]): int(r[1]) for r in cur.fetchall()}
-
-                # users in this org
-                cur.execute("""
-                    SELECT id, username, COALESCE(active, TRUE) AS active
-                    FROM users
-                    WHERE org_id = %s
-                    ORDER BY username ASC
-                """, (org_id,))
-                for uid2, uname, act in cur.fetchall():
-                    users.append({
-                        "id": int(uid2),
-                        "username": uname or "",
-                        "active": bool(act),
-                        "balance": bal_map.get(int(uid2))
-                    })
-
-        return jsonify({"ok": True, "org_id": org_id, "users": users})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-    finally:
-        try:
-            if conn:
-                DB_POOL.putconn(conn)
-        except Exception:
-            pass
-
-def _require_logged_in():
-    try:
-        uid = int(session.get("user_id") or 0)
-        return uid if uid > 0 else None
-    except Exception:
-        return None
 
 # --- Director: set per-user monthly cap within my org ---
 @app.get("/director/api/user/set-monthly-cap")
@@ -6555,7 +6395,7 @@ def director_ui():
       <div class="stack" style="display:grid; gap:18px">
         <!-- New Users card (drop-in replacement) -->
 <style>
-  .users-card{border:1px solid #e5e7eb;background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(2,6,23,.04)}
+  .users-card{border:1px solid #e5e7eb;background:#fff;border-radius:16px;box-shadow:0 2px 10px rgba(2,6,23,0.04)}
   .users-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #f1f5f9}
   .users-head h2{margin:0;font-size:18px}
   .users-wrap{padding:10px 12px 4px}
@@ -8283,6 +8123,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

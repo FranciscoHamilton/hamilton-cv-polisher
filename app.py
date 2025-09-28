@@ -2330,200 +2330,244 @@ DIRECTOR_HTML = r"""
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>Director — Lustra Console</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
       --brand:#2563eb; --brand-2:#22d3ee;
       --ink:#0f172a; --muted:#64748b; --line:#e5e7eb;
-      --bg:#f6f9ff; --card:#ffffff; --ok:#047857; --warn:#a16207; --bad:#b91c1c;
-      --shadow:0 10px 24px rgba(13,59,102,.08);
-      --shadow-sm:0 2px 8px rgba(13,59,102,.06);
+      --bg:#f6f9ff; --card:#ffffff; --shadow:0 10px 24px rgba(13,59,102,.08);
+      --ok:#16a34a; --warn:#a16207; --bad:#b91c1c;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--ink);
-         font: 14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;}
-    a{color:var(--brand);text-decoration:none}
-    .topbar{
-      position:sticky;top:0;z-index:50;background:linear-gradient(90deg,var(--card),#fdfdff);
-      border-bottom:1px solid var(--line);
-      display:flex;align-items:center;justify-content:space-between;
-      padding:12px 18px;
+    body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+    header .sitebar{
+      max-width:1200px;margin:0 auto;padding:16px 24px;
+      display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid var(--line);background:#fff
     }
-    .brand{display:flex;align-items:center;gap:10px}
-    .dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
-    .brand .name{font-weight:900;letter-spacing:.06em;text-transform:uppercase;font-size:12px}
-    .nav{display:flex;gap:12px}
-    .nav a{font-weight:700;font-size:13px;color:#0b1220}
-    .wrap{max-width:1200px;margin:28px auto;padding:0 18px;display:grid;gap:18px}
-    h1{margin:0 0 4px;font-size:22px;letter-spacing:-.01em}
-    .sub{color:var(--muted);font-size:13px;margin:0 0 10px}
-    .grid{display:grid;grid-template-columns:1fr;gap:18px}
-    @media(min-width:1000px){.grid{grid-template-columns:1.2fr .8fr}}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow)}
-    .card h2{margin:0 0 10px;font-size:16px}
-    .pill{display:inline-block;padding:3px 8px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted);background:#fafcff}
-    .section{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px}
-    .tables{display:grid;grid-template-columns:1fr;gap:18px}
-    table{width:100%;border-collapse:collapse}
-    th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left;font-size:13px}
-    th{background:#f8fafc;position:sticky;top:0}
+    .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font-weight:900}
+    .brand .dot{width:10px;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--brand),var(--brand-2))}
+    .brand .name{letter-spacing:.06em;text-transform:uppercase;font-size:12px}
+    header nav a{font-weight:800;text-decoration:none;color:#0b1220;margin-left:18px}
+    .wrap{max-width:1100px;margin:20px auto;padding:0 24px}
+    .grid{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+    @media (max-width:980px){ .grid{grid-template-columns:1fr} }
+    .card{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px}
+    .card h2{margin:0 0 10px;font-size:18px}
     .muted{color:var(--muted)}
-    .badge-ok{color:#065f46;background:#ecfdf5;border:1px solid #d1fae5}
-    .badge-no{color:#7c2d12;background:#fff7ed;border:1px solid #ffedd5}
-    .metrics{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:8px}
-    @media(min-width:700px){.metrics{grid-template-columns:repeat(3,1fr)}}
-    .metric{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:var(--shadow-sm)}
-    .metric .k{font-size:12px;color:var(--muted);margin:0}
-    .metric .v{font-size:22px;font-weight:800;margin:2px 0 0}
+    .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:#eef2ff;font-weight:800;font-size:12px}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid #f1f5f9;text-align:left}
+    th{background:#f8fafc;position:sticky;top:0;z-index:1}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    input,select{padding:10px;border:1px solid var(--line);border-radius:12px}
+    button,.btn{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:800;cursor:pointer;text-decoration:none;color:#0b1220}
+    .btn.primary,button.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));border:none;color:#fff}
+    .btn.danger{border-color:#fecaca;background:#fee2e2;color:#7f1d1d}
+    .badge{font-weight:800}
+    .b-ok{color:var(--ok)} .b-warn{color:var(--warn)} .b-bad{color:var(--bad)}
+    .inline-form{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+    .right{margin-left:auto}
   </style>
 </head>
 <body>
-  <div class="topbar">
-    <div class="brand">
-      <div class="dot"></div>
-      <div class="name">Lustra • Director</div>
+  <header>
+    <div class="sitebar">
+      <a class="brand" href="/"><div class="dot"></div><div class="name">Lustra • Director</div></a>
+      <nav>
+        <a href="/app">App</a>
+        <a href="/pricing">Pricing</a>
+        <a href="/director/logout">Log out</a>
+      </nav>
     </div>
-    <div class="nav">
-      <a href="/app">Back to app</a>
-      <a href="/director/logout">Logout</a>
-    </div>
-  </div>
+  </header>
 
   <div class="wrap">
-    <div>
-      <h1>Director dashboard</h1>
-      <p class="sub">Usage overview and audit trail. Visual refresh only — functionality unchanged.</p>
-
-      <!-- Quick metrics (purely visual, no logic change; values drawn from existing context if desired later) -->
-      <div class="metrics">
-        <div class="metric">
-          <p class="k">Total users</p>
-          <p class="v">{{ users|length }}</p>
-        </div>
-        <div class="metric">
-          <p class="k">Recent events</p>
-          <p class="v">{{ events|length }}</p>
-        </div>
-        <div class="metric">
-          <p class="k">Legacy entries</p>
-          <p class="v">{{ legacy|length }}</p>
-        </div>
-      </div>
-    </div>
-
     <div class="grid">
-      <!-- LEFT COLUMN: Tables -->
-      <div class="tables">
-        <div class="card">
-          <div class="section">
-            <h2>Per-user totals <span class="pill">{{ users|length }} users</span></h2>
+      <div class="col">
+        <div class="card" id="orgCard">
+          <h2>Organization</h2>
+          <div class="row">
+            <div><strong>Pool balance:</strong> <span id="orgBalance" class="badge"></span></div>
+            <div class="muted">(<span id="orgName"></span>)</div>
           </div>
-
-          {% if users and users|length > 0 %}
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Active</th>
-                  <th>This month</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for u in users %}
-                <tr>
-                  <td>{{ u.username }}</td>
-                  <td class="muted">{{ 'Yes' if u.active else 'No' }}</td>
-                  <td>{{ u.month_usage }}</td>
-                  <td>{{ u.total_usage }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          {% else %}
-            <div class="muted">No users found.</div>
-          {% endif %}
         </div>
 
         <div class="card">
-          <div class="section">
-            <h2>Recent usage events <span class="pill">{{ events|length }}</span></h2>
-          </div>
-
-          {% if events and events|length > 0 %}
-          <div class="table-wrap">
-            <table>
+          <h2>Users</h2>
+          <div class="muted" style="margin:-6px 0 10px">Enable/disable, reset passwords, set monthly caps, or delete users.</div>
+          <div style="overflow:auto">
+            <table id="usersTable">
               <thead>
                 <tr>
-                  <th>Time</th>
                   <th>User</th>
-                  <th>Candidate</th>
-                  <th class="muted">File</th>
+                  <th>ID</th>
+                  <th>Status</th>
+                  <th>Balance</th>
+                  <th>Monthly cap</th>
+                  <th class="right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {% for e in events %}
-                <tr>
-                  <td>{{ e.ts }}</td>
-                  <td>{{ e.username }}</td>
-                  <td>{{ e.candidate }}</td>
-                  <td class="muted">{{ e.filename }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
+              <tbody id="usersBody"></tbody>
             </table>
           </div>
-          {% else %}
-            <div class="muted">No recent events.</div>
-          {% endif %}
+
+          <hr style="border:none;border-top:1px solid #eef2ff;margin:14px 0">
+          <h3 style="margin:0 0 8px">Create user</h3>
+          <form id="createUserForm" class="inline-form">
+            <input name="username" placeholder="username" required>
+            <input name="password" type="password" placeholder="password" required>
+            <button class="primary" type="submit">Create</button>
+            <span id="createUserMsg" class="muted"></span>
+          </form>
         </div>
 
         <div class="card">
-          <div class="section">
-            <h2>Legacy JSON history <span class="pill">{{ legacy|length }}</span></h2>
-          </div>
-
-          {% if legacy and legacy|length > 0 %}
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Candidate</th>
-                  <th class="muted">File</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for h in legacy|reverse %}
-                <tr>
-                  <td>{{ h.ts }}</td>
-                  <td>{{ h.candidate }}</td>
-                  <td class="muted">{{ h.filename }}</td>
-                </tr>
-                {% endfor %}
-              </tbody>
+          <h2>Recent activity</h2>
+          <div class="muted" style="margin:-6px 0 10px">Polishes & credit events (last 50)</div>
+          <div style="overflow:auto">
+            <table id="eventsTable">
+              <thead><tr><th>When</th><th>User</th><th>Event</th><th>Details</th></tr></thead>
+              <tbody id="eventsBody"></tbody>
             </table>
           </div>
-          {% else %}
-            <div class="muted">No legacy entries.</div>
-          {% endif %}
         </div>
       </div>
 
-      <!-- RIGHT COLUMN: Side card (optional notes / help text) -->
-      <div class="card">
-        <h2>About this console</h2>
-        <p class="muted" style="margin:0">
-          Visual refresh aligned to Lustra (colors, rounded cards, typography). All actions, data, and routes are unchanged.
-        </p>
+      <div class="col">
+        <div class="card">
+          <h2>Plans & top-ups</h2>
+          <p class="muted">Buy packs or subscribe monthly without leaving this console.</p>
+          <div class="row">
+            <a href="/pricing" class="btn">See plans</a>
+            <a href="/start" class="btn primary">Start / talk to sales</a>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Change director password</h2>
+          <form id="dirPassForm" class="inline-form">
+            <input type="password" name="newpass" placeholder="new director password" required>
+            <button class="primary" type="submit">Update</button>
+            <span id="dirPassMsg" class="muted"></span>
+          </form>
+        </div>
       </div>
     </div>
   </div>
+
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const esc = (s) => (s==null?"":String(s).replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])));
+
+    async function fetchJSON(url, opts){
+      const r = await fetch(url, opts||{});
+      if(!r.ok) throw new Error(await r.text().catch(()=>r.statusText));
+      return r.json();
+    }
+
+    async function loadOrg(){
+      const dash = await fetchJSON('/__admin/dashboard');
+      $('#orgName').textContent = dash.orgName || '';
+      $('#orgBalance').textContent = (dash.pool && dash.pool.balance!=null) ? dash.pool.balance : '-';
+      renderEvents(dash.recent||[]);
+    }
+
+    async function loadUsers(){
+      const data = await fetchJSON('/director/api/users');
+      const tb = $('#usersBody'); tb.innerHTML = '';
+      for(const u of (data.users||[])){
+        const tr = document.createElement('tr');
+        const status = u.active ? '<span class="pill">active</span>' : '<span class="pill" style="background:#fee2e2;color:#7f1d1d">disabled</span>';
+        const bal = (u.balance==null?'—':u.balance);
+        const capCtl = `
+          <form class="inline-form" onsubmit="return setCap(${u.id}, this)">
+            <input name="cap" type="number" min="0" step="1" placeholder="none" style="width:90px">
+            <button type="submit">Set</button>
+          </form>
+        `;
+        const actions = `
+          <div class="inline-form right">
+            <button onclick="toggleActive(${u.id}, ${u.active?0:1})">${u.active?'Disable':'Enable'}</button>
+            <button onclick="resetUserPass(${u.id})">Reset pwd</button>
+            <button class="danger" onclick="deleteUser(${u.id}, '${esc(u.username)}')">Delete</button>
+          </div>
+        `;
+        tr.innerHTML = `
+          <td>${esc(u.username)}</td>
+          <td>${u.id}</td>
+          <td>${status}</td>
+          <td>${bal}</td>
+          <td>${capCtl}</td>
+          <td>${actions}</td>
+        `;
+        tb.appendChild(tr);
+      }
+    }
+
+    function renderEvents(list){
+      const tb = $('#eventsBody'); tb.innerHTML = '';
+      for(const e of list){
+        const when = e.ts || e.created_at || '';
+        const who = e.username || '';
+        const what = e.reason || (e.delta!=null?'credits':'polish');
+        const details = (e.delta!=null) ? ('Δ ' + e.delta + (e.reason?(' · '+e.reason):'')) : (e.candidate||e.filename||'');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${esc(when)}</td><td>${esc(who)}</td><td>${esc(what)}</td><td>${esc(details)}</td>`;
+        tb.appendChild(tr);
+      }
+    }
+
+    async function toggleActive(userId, active){
+      await fetchJSON(`/director/api/user/set-active?user_id=${userId}&active=${active}`);
+      loadUsers();
+    }
+    async function resetUserPass(userId){
+      const p = prompt('New password for this user:');
+      if(!p) return;
+      await fetchJSON(`/director/api/user/reset-password?user_id=${userId}&password=${encodeURIComponent(p)}`);
+      alert('Password updated.');
+    }
+    async function deleteUser(userId, uname){
+      if(!confirm(`Delete user "${uname}"? This cannot be undone.`)) return;
+      await fetchJSON(`/director/api/user/delete?user_id=${userId}`);
+      loadUsers();
+    }
+    function setCap(userId, form){
+      const raw = new FormData(form).get('cap');
+      const v = (raw===''||raw==null) ? 'null' : String(parseInt(raw,10));
+      fetchJSON(`/director/api/user/set-monthly-cap?user_id=${userId}&cap=${encodeURIComponent(v)}`)
+        .then(()=>{ form.reset(); })
+        .catch(err=>alert(err));
+      return false;
+    }
+
+    document.querySelector('#createUserForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const fd = new FormData(e.currentTarget);
+      const r = await fetch('/director/users/create', { method:'POST', body: fd });
+      if(r.ok){ document.querySelector('#createUserMsg').textContent = 'Created.'; e.currentTarget.reset(); loadUsers(); }
+      else { document.querySelector('#createUserMsg').textContent = 'Error creating user.'; }
+      setTimeout(()=>document.querySelector('#createUserMsg').textContent='', 2000);
+    });
+
+    document.querySelector('#dirPassForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const fd = new FormData(e.currentTarget);
+      const newpass = fd.get('newpass');
+      if(!newpass) return;
+      await fetchJSON(`/director/api/self/reset-password?newpass=${encodeURIComponent(newpass)}`);
+      document.querySelector('#dirPassMsg').textContent = 'Updated.';
+      e.currentTarget.reset();
+      setTimeout(()=>document.querySelector('#dirPassMsg').textContent='', 2000);
+    });
+
+    (async function(){
+      try{ await loadOrg(); await loadUsers(); }
+      catch(e){ alert('Failed to load director console: ' + e.message); }
+    })();
+  </script>
 </body>
 </html>
 """
@@ -7832,123 +7876,215 @@ def me_diag_v2():
         "month_usage": month_cnt,
         "last_event": {"candidate": c or "", "ts": t or ""},
     })
-# ---------- Director routes ----------
 
-# ---------- Director routes ----------
+# ---------- Director routes (refreshed) ----------
+
 @app.get("/director")
 def director_home():
-    if session.get("director") or is_admin():
-        return redirect(url_for("director_ui"))
-    return render_template_string(DIRECTOR_LOGIN_HTML)
-
+    if session.get("director") or session.get("is_admin"):
+        return redirect("/director/ui")
+    return DIRECTOR_LOGIN_HTML
 
 @app.post("/director/login")
 def director_login():
     pw = (request.form.get("password") or "").strip()
-    if pw == STATS.get("director_pass_override", DIRECTOR_PASS):
+    # Uses your STATS override if set, else default "director"
+    if pw == STATS.get("director_pass_override", "director"):
         session["director"] = True
-        return redirect(url_for("director_home"))
-    html = DIRECTOR_LOGIN_HTML.replace("<!--DERR-->", "<div class='err'>Incorrect director password</div>")
-    return render_template_string(html), 401
+        return redirect("/director/ui")
+    return make_response(DIRECTOR_LOGIN_HTML.replace("<!--DERR-->", "<div class='err'>Incorrect director password</div>"), 401)
 
 @app.get("/director/logout")
 def director_logout():
     session.pop("director", None)
-    return redirect(url_for("app_page"))
+    return redirect("/app")
 
-@app.post("/director/credits/add")
-def director_add_credits():
-    if not session.get("director"):
-        abort(403)
+@app.get("/director/ui")
+def director_ui():
+    # require normal user login + director flag
+    if not session.get("user_id"):
+        return redirect("/login")
+    if not (session.get("director") or session.get("is_admin")):
+        return make_response("forbidden", 403)
+    return DIRECTOR_HTML
+
+# --- Data used by the page
+
+@app.get("/director/api/users")
+def director_api_users():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+    org_id = _current_user_org_id()
+    if not org_id or not DB_POOL:
+        return jsonify({"ok": True, "org_id": org_id, "users": []})
+    rows = db_query_all("""
+        SELECT u.id, u.username, COALESCE(u.active, TRUE) AS active
+        FROM users u
+        WHERE u.org_id = %s
+        ORDER BY u.username ASC
+    """, (org_id,)) or []
+    bals = db_query_all("""
+        SELECT user_id, COALESCE(SUM(delta),0) AS balance
+        FROM credits_ledger
+        WHERE org_id = %s
+        GROUP BY user_id
+    """, (org_id,)) or []
+    bal_map = {int(r[0]): int(r[1]) for r in bals}
+    return jsonify({
+        "ok": True,
+        "org_id": org_id,
+        "users": [{"id": int(r[0]), "username": r[1] or "", "active": bool(r[2]), "balance": bal_map.get(int(r[0]))} for r in rows]
+    })
+
+# --- Monthly cap (canonical + alias)
+
+@app.get("/director/api/user/set-monthly-cap")
+def director_set_monthly_cap():
+    if not session.get("user_id"):
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+    org_id = _current_user_org_id()
+    if not org_id:
+        return jsonify({"ok": False, "error": "no_org"}), 400
     try:
-        amt = int(request.form.get("amount") or "0")
-        if amt <= 0: raise ValueError()
+        target_id = int(request.args.get("user_id") or "0")
+        cap_raw = request.args.get("cap")
     except Exception:
-        abort(400, "Invalid amount")
-    STATS.setdefault("credits", {"balance": 0, "purchased": 0})
-    STATS["credits"]["balance"] = int(STATS["credits"]["balance"]) + amt
-    STATS["credits"]["purchased"] = int(STATS["credits"]["purchased"]) + amt
+        return jsonify({"ok": False, "error": "bad_params"}), 400
+    if target_id <= 0:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
+    row = db_query_one("SELECT username, org_id FROM users WHERE id=%s", (target_id,))
+    if not row:
+        return jsonify({"ok": False, "error": "user_not_found"}), 404
+    if int(row[1] or 0) != org_id:
+        return jsonify({"ok": False, "error": "not_in_my_org"}), 403
+    if (row[0] or "").strip().lower() == "admin":
+        return jsonify({"ok": False, "error": "cannot_modify_admin"}), 403
+    cap_val = None
+    if cap_raw is not None and str(cap_raw).lower() != "null":
+        try:
+            cap_val = max(0, int(cap_raw))
+        except Exception:
+            return jsonify({"ok": False, "error": "bad_cap"}), 400
+    db_execute("UPDATE org_user_limits SET active=FALSE WHERE org_id=%s AND user_id=%s", (org_id, target_id))
+    if cap_val is not None:
+        db_execute("INSERT INTO org_user_limits (org_id, user_id, monthly_cap, active) VALUES (%s,%s,%s,TRUE)", (org_id, target_id, cap_val))
+    return jsonify({"ok": True, "user_id": target_id, "cap": cap_val})
+
+@app.get("/director/api/setcap")
+def alias_setcap():
+    return director_set_monthly_cap()
+
+# --- Enable/Disable
+
+@app.get("/director/api/user/set-active")
+def director_set_active():
+    if not (session.get("director") or session.get("is_admin")):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    user_id = request.args.get("user_id")
+    active = request.args.get("active")
+    if not user_id or active is None:
+        return jsonify({"ok": False, "error": "missing user_id/active"}), 400
+    row = db_query_one("SELECT username, org_id FROM users WHERE id=%s", (user_id,))
+    if not row:
+        return jsonify({"ok": False, "error": "user not found"}), 404
+    if (row[0] or "").strip().lower() == "admin":
+        return jsonify({"ok": False, "error": "cannot_modify_admin"}), 403
+    if _current_user_org_id() and int(row[1] or 0) != _current_user_org_id():
+        return jsonify({"ok": False, "error": "not_in_my_org"}), 403
+    active_val = 1 if str(active).lower() in ("1","true","yes") else 0
+    ok = db_execute("UPDATE users SET active=%s WHERE id=%s", (active_val, user_id))
+    if not ok:
+        return jsonify({"ok": False, "error":"update_failed"}), 500
+    return jsonify({"ok": True, "user_id": int(user_id), "active": bool(active_val)})
+
+@app.get("/director/api/activate")
+def alias_activate():
+    return director_set_active()
+
+# --- Reset a user's password (canonical + alias)
+
+@app.get("/director/api/user/reset-password")
+def director_reset_user_password():
+    if not (session.get("director") or session.get("is_admin")):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    try:
+        target_id = int(request.args.get("user_id") or "0")
+        newpass = (request.args.get("password") or "").strip()
+    except Exception:
+        return jsonify({"ok": False, "error": "bad_params"}), 400
+    if target_id <= 0 or not newpass:
+        return jsonify({"ok": False, "error": "user_id and password required"}), 400
+    row = db_query_one("SELECT username, org_id FROM users WHERE id=%s", (target_id,))
+    if not row:
+        return jsonify({"ok": False, "error": "user_not_found"}), 404
+    if int(row[1] or 0) != _current_user_org_id():
+        return jsonify({"ok": False, "error":"not_in_my_org"}), 403
+    if (row[0] or "").strip().lower() == "admin":
+        return jsonify({"ok": False, "error":"cannot_modify_admin"}), 403
+    ok = db_execute("UPDATE users SET password=%s WHERE id=%s", (newpass, target_id))
+    if not ok:
+        return jsonify({"ok": False, "error":"update_failed"}), 500
+    return jsonify({"ok": True})
+
+@app.get("/director/api/resetpass")
+def alias_resetpass():
+    return director_reset_user_password()
+
+# --- NEW: Delete user
+
+@app.get("/director/api/user/delete")
+def director_delete_user():
+    if not (session.get("director") or session.get("is_admin")):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    try:
+        target_id = int(request.args.get("user_id") or "0")
+    except Exception:
+        return jsonify({"ok": False, "error": "bad_user_id"}), 400
+    if target_id <= 0:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
+    row = db_query_one("SELECT username, org_id FROM users WHERE id=%s", (target_id,))
+    if not row:
+        return jsonify({"ok": False, "error": "user_not_found"}), 404
+    uname = (row[0] or "").strip().lower()
+    if uname == "admin":
+        return jsonify({"ok": False, "error":"cannot_delete_admin"}), 403
+    if int(row[1] or 0) != _current_user_org_id():
+        return jsonify({"ok": False, "error":"not_in_my_org"}), 403
+    db_execute("DELETE FROM org_user_limits WHERE org_id=%s AND user_id=%s", (_current_user_org_id(), target_id))
+    ok = db_execute("DELETE FROM users WHERE id=%s", (target_id,))
+    if not ok:
+        return jsonify({"ok": False, "error":"delete_failed"}), 500
+    return jsonify({"ok": True})
+
+# --- NEW: Change Director password from UI
+
+@app.get("/director/api/self/reset-password")
+def director_reset_director_password():
+    if not (session.get("director") or session.get("is_admin")):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+    newpass = (request.args.get("newpass") or "").strip()
+    if not newpass:
+        return jsonify({"ok": False, "error": "newpass required"}), 400
+    STATS["director_pass_override"] = newpass
     _save_stats()
-    return redirect(url_for("director_home"))
+    return jsonify({"ok": True})
 
-@app.get("/director/export.csv")
-def director_export():
-    if not session.get("director"):
-        abort(403)
-
-    rows = ["ts,candidate,filename"]
-    for it in STATS.get("history", []):
-        ts = it.get("ts", "")
-        cand = (it.get("candidate", "") or "").replace(",", " ")
-        fn = (it.get("filename", "") or "").replace(",", " ")
-        rows.append(f"{ts},{cand},{fn}")
-
-    csv_data = "\n".join(rows)
-    resp = make_response(csv_data)
-    resp.headers["Content-Type"] = "text/csv"
-    resp.headers["Content-Disposition"] = 'attachment; filename="usage-history.csv"'
-    return resp
-
+# --- Legacy create user (file-based users) so your existing form keeps working
 
 @app.post("/director/users/create")
-def director_user_create():
-    if not session.get("director"):
-        abort(403)
+def director_user_create_legacy():
+    if not (session.get("director") or session.get("is_admin")):
+        return make_response("forbidden", 403)
     u = (request.form.get("username") or "").strip()
     p = (request.form.get("password") or "")
     if not u or not p:
-        abort(400, "Missing fields")
+        return make_response("missing fields", 400)
     if _get_user(u):
-        abort(400, "User already exists")
+        return make_response("user exists", 400)
     USERS_DB.setdefault("users", []).append({"username": u, "password": p, "active": True})
     _save_users()
-    return redirect(url_for("director_home"))
-
-@app.post("/director/users/toggle")
-def director_user_toggle():
-    if not session.get("director"):
-        abort(403)
-    u = (request.form.get("username") or "").strip()
-    action = (request.form.get("action") or "").strip()
-    rec = _get_user(u)
-    if not rec:
-        abort(404, "User not found")
-    if action == "disable":
-        rec["active"] = False
-    elif action == "enable":
-        rec["active"] = True
-    else:
-        abort(400, "Bad action")
-    _save_users()
-    return redirect(url_for("director_home"))
-
-@app.get("/director/forgot")
-def director_forgot_get():
-    if not session.get("authed"):
-        return redirect(url_for("login"))
-    return render_template_string(DIRECTOR_FORGOT_HTML)
-
-@app.post("/director/forgot")
-def director_forgot_post():
-    if not session.get("authed"):
-        return redirect(url_for("login"))
-    code = (request.form.get("code") or "").strip()
-    newpass = (request.form.get("newpass") or "").strip()
-    if code != RESET_CODE:
-        html = DIRECTOR_FORGOT_HTML.replace("<!--RERR-->", "<div class='err'>Invalid reset code</div>")
-        return render_template_string(html), 400
-    if not newpass:
-        html = DIRECTOR_FORGOT_HTML.replace("<!--RERR-->", "<div class='err'>New password required</div>")
-        return render_template_string(html), 400
-    STATS["director_pass_override"] = newpass
-    _save_stats()
-    return redirect(url_for("director_home"))
-    
-@app.get("/director/usage")
-def director_usage():
-    if not (session.get("director") or is_admin()):
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-    return redirect(url_for("director_ui"))
+    return redirect("/director/ui")
 
 
 # ---------- App polishing + API (org-aware credits) ----------
@@ -8068,6 +8204,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

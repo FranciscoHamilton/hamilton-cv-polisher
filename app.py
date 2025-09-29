@@ -5189,8 +5189,10 @@ def org_user_spent_this_month(org_id: int, user_id: int) -> int:
 
 def get_user_monthly_cap(org_id: int, user_id: int):
     row = db_query_one("""
-        SELECT monthly_cap FROM org_user_limits
+        SELECT COALESCE(monthly_cap, month_cap)
+        FROM org_user_limits
         WHERE org_id=%s AND user_id=%s AND active
+        LIMIT 1
     """, (org_id, user_id))
     if not row:
         return None
@@ -6440,6 +6442,9 @@ def director_ui():
         r = db_query_one("SELECT name FROM orgs WHERE id=%s", (org_id,))
         org_name = (r[0] if r and r[0] else None)
 
+    #  always define this, regardless of DB_POOL
+    org_label = org_name or f"Org #{org_id}"
+
     # Inline HTML (ASCII only). JS braces are doubled to survive the Python f-string.
     html = f"""
 <!doctype html>
@@ -6500,7 +6505,7 @@ def director_ui():
     <header>
       <div>
         <h1>Director Console</h1>
-        <div class="kicker">Org tools and audit. Org: {esc := (org_name or f"Org #{org_id}")}</div>
+        <div class="kicker">Org tools and audit. Org: {org_label}</div>
       </div>
       <div><a href="/app">Back to app</a></div>
     </header>
@@ -7995,6 +8000,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

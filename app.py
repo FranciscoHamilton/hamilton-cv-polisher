@@ -653,8 +653,8 @@ HOMEPAGE_HTML = r"""
 
     /* top nav */
     .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .brand{font-weight:900;color:var(--black);text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--black);text-decoration:none;font-weight:800;margin-left:22px}
+    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
 
     /* hero */
     .hero{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:var(--shadow)}
@@ -890,8 +890,8 @@ ABOUT_HTML = r"""
 
     /* nav like homepage */
     .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .brand{font-weight:900;color:var(--black);text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--Black);text-decoration:none;font-weight:800;margin-left:22px}
+    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
 
     .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:0;box-shadow:var(--shadow)}
     .inner{max-width:780px;padding:24px}
@@ -1005,7 +1005,7 @@ PRICING_HTML = r"""
     .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
     .nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
     .brand{font-weight:900;color:var(--ink);text-decoration:none;font-size:26px;letter-spacing:.2px}
-    .nav-links a{color:var(--Black);text-decoration:none;font-weight:800;margin-left:22px}
+    .nav-links a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
 
     /* PAGE BOX (like the white box on other pages) */
     .pagebox{
@@ -6578,155 +6578,198 @@ def director_ui():
   </div>
 
   <script>
-    const $ = (q) => document.querySelector(q);
-    function esc(s) {{ return String(s || '').replace(/[&<>"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}})[c]); }}
+  // helpers
+  const $  = (q) => document.querySelector(q);
+  const $$ = (q) => Array.from(document.querySelectorAll(q));
+  function esc(s) {{ return String(s ?? '').replace(/[&<>"]/g, c => ({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}})[c]); }}
+  async function json(url) {{ try {{ const r = await fetch(url); return await r.json(); }} catch {{ return {{}}; }} }}
 
-    async function loadDashboard() {{
-      // Fetch dashboard (for metrics) and users list (for table)
-      const [dRes, uRes] = await Promise.all([fetch('/director/api/dashboard'), fetch('/director/api/users')]);
-      const d = await dRes.json().catch(() => ({{}}));
-      const u = await uRes.json().catch(() => ({{}}));
+  // main loader
+  async function loadDashboard() {{
+    // optimistic UI
+    if ($('#poolBox'))     $('#poolBox').textContent = '—';
+    if ($('#usersCount'))  $('#usersCount').textContent = '—';
+    if ($('#recentCount')) $('#recentCount').textContent = '—';
+    if ($('#usersBody'))   $('#usersBody').innerHTML = '<tr><td colspan="5" class="kicker">Loading…</td></tr>';
+    if ($('#recentBox'))   $('#recentBox').textContent = 'Loading…';
 
-      // Metrics
-      $('#poolBox').textContent  = (d.pool && typeof d.pool.balance === 'number') ? (d.pool.balance + ' credits') : '—';
-      $('#usersCount').textContent  = (u.users && Array.isArray(u.users)) ? u.users.length : '—';
+    const [d, u] = await Promise.all([
+      json('/director/api/dashboard'),
+      json('/director/api/users')
+    ]);
+
+    // cards
+    if ($('#poolBox'))
+      $('#poolBox').textContent = (d.pool && typeof d.pool.balance === 'number') ? (d.pool.balance + ' credits') : '—';
+    if ($('#usersCount'))
+      $('#usersCount').textContent = (u.users && Array.isArray(u.users)) ? u.users.length : '—';
+    if ($('#recentCount'))
       $('#recentCount').textContent = (d.recent && Array.isArray(d.recent)) ? d.recent.length : '—';
 
-      // Users table
-      const rows = (u.users || []);
-      if (!rows.length) {{
-        $('#usersBody').innerHTML = '<tr><td colspan="5" class="kicker">No users yet.</td></tr>';
-      }} else {{
-        let html = '';
-        for (const usr of rows) {{
-          const id = usr.id ?? usr.user_id;
-          const uname = usr.username || '';
-          const active = !!(usr.active ?? true);
-          const pill = `<span class="pill ${{active ? 'ok' : 'off'}}">${{active ? 'Active' : 'Disabled'}}</span>`;
-          const toggleNext = active ? 0 : 1;
-          html += `
-            <tr data-uid="${{id}}">
-              <td>${{id}}</td>
-              <td>${{esc(uname)}}</td>
-              <td>
-                <input class="cap" type="number" inputmode="numeric" placeholder="(none)" />
-                <button class="btn small setcap">Save</button>
-              </td>
-              <td>${{pill}}</td>
-              <td style="display:flex; gap:8px; flex-wrap:wrap">
-                <button class="btn small toggle" data-next="${{toggleNext}}">${{active ? 'Disable' : 'Enable'}}</button>
-                <button class="btn small danger delete">Delete</button>
-              </td>
-            </tr>`;
-        }}
-        $('#usersBody').innerHTML = html;
+    // users table
+    const rows = Array.isArray(u.users) ? u.users : [];
+    if (!rows.length) {{
+      if ($('#usersBody')) $('#usersBody').innerHTML = '<tr><td colspan="5" class="kicker">No users yet.</td></tr>';
+    }} else {{
+      let html = '';
+      for (const usr of rows) {{
+        const id     = usr.id ?? usr.user_id;
+        const uname  = usr.username ?? '';
+        const active = Boolean(usr.active ?? true);
+        const pill   = `<span class="pill ${{active ? 'ok' : 'off'}}">${{active ? 'Active' : 'Disabled'}}</span>`;
+        const next   = active ? 0 : 1;
+        html += `
+          <tr data-uid="${{id}}">
+            <td>${{id}}</td>
+            <td>${{esc(uname)}}</td>
+            <td>
+              <input class="cap" type="number" inputmode="numeric" placeholder="(none)" />
+              <button class="btn small setcap">Save</button>
+            </td>
+            <td>${{pill}}</td>
+            <td style="display:flex; gap:8px; flex-wrap:wrap">
+              <button class="btn small toggle" data-next="${{next}}">${{active ? 'Disable' : 'Enable'}}</button>
+              <button class="btn small danger delete">Delete</button>
+            </td>
+          </tr>`;
       }}
-
-      // Recent table
-      const recent = d.recent || [];
-      if (!recent.length) {{
-        $('#recentBox').textContent = 'No recent events.';
-      }} else {{
-        let html = '<table><thead><tr><th>When</th><th>User</th><th>User ID</th><th>Candidate</th><th>Filename</th></tr></thead><tbody>';
-        for (const r of recent) {{
-          const when = r.ts ? new Date(r.ts) : null;
-          const whenTxt = (when && !isNaN(when.getTime())) ? when.toLocaleString() : (r.ts || '');
-          html += `<tr><td>${{esc(whenTxt)}}</td><td>${{esc(r.username || '')}}</td><td>${{esc(r.user_id)}}</td><td>${{esc(r.candidate || '')}}</td><td>${{esc(r.filename || '')}}</td></tr>`;
-        }}
-        html += '</tbody></table>';
-        $('#recentBox').innerHTML = html;
-      }}
-
-      // Wire actions (set cap / toggle / delete)
-      document.querySelectorAll('.setcap').forEach(btn => btn.onclick = async (e) => {{
-        const tr = e.target.closest('tr'); const uid = Number(tr.dataset.uid);
-        const capRaw = tr.querySelector('input.cap').value.trim();
-        const url = new URL('/director/api/setcap', location.origin);
-        url.searchParams.set('user_id', String(uid));
-        if (capRaw === '') url.searchParams.set('cap', 'null'); else url.searchParams.set('cap', String(Number(capRaw)));
-        await fetch(url.toString());
-        await loadDashboard();
-      }});
-      document.querySelectorAll('.toggle').forEach(btn => btn.onclick = async (e) => {{
-        const tr = e.target.closest('tr'); const uid = Number(tr.dataset.uid);
-        const next = Number(e.target.getAttribute('data-next'));
-        const url = new URL('/director/api/user/set-active', location.origin);
-        url.searchParams.set('user_id', String(uid));
-        url.searchParams.set('active', String(next));
-        await fetch(url.toString());
-        await loadDashboard();
-      }});
-      document.querySelectorAll('.delete').forEach(btn => btn.onclick = async (e) => {{
-        const tr = e.target.closest('tr'); const uid = Number(tr.dataset.uid);
-        if (!confirm('Delete this user permanently?')) return;
-        const url = new URL('/director/api/user/delete', location.origin);
-        url.searchParams.set('user_id', String(uid));
-        await fetch(url.toString());
-        await loadDashboard();
-      }});
+      if ($('#usersBody')) $('#usersBody').innerHTML = html;
     }}
 
-    // Quick actions: create user / reset password
-    document.addEventListener('click', async (e) => {{
-      if (e.target && e.target.id === 'cu_btn') {{
-        e.preventDefault();
-        const u = document.getElementById('cu_u').value.trim();
-        const p = document.getElementById('cu_p').value;
-        const s = document.getElementById('cu_seed').value.trim();
-        const url = new URL('/director/api/create-user', location.origin);
-        if (u) url.searchParams.set('u', u);
-        if (p) url.searchParams.set('p', p);
-        if (s !== '') url.searchParams.set('seed', String(Number(s || 0)));
-        const r = await fetch(url.toString()); const js = await r.json().catch(()=>({{}}));
-        document.getElementById('cu_msg').textContent = js.ok ? 'Created.' : (js.error || 'Failed.');
-        if (js.ok) {{ document.getElementById('cu_u').value=''; document.getElementById('cu_p').value=''; document.getElementById('cu_seed').value=''; await loadDash(); }}
+    // recent table
+    const recent = Array.isArray(d.recent) ? d.recent : [];
+    if (!recent.length) {{
+      if ($('#recentBox')) $('#recentBox').textContent = 'No recent events.';
+    }} else {{
+      let html = '<table><thead><tr><th>When</th><th>User</th><th>User ID</th><th>Candidate</th><th>Filename</th></tr></thead><tbody>';
+      for (const r of recent) {{
+        const when    = r.ts ? new Date(r.ts) : null;
+        const whenTxt = (when && !isNaN(when.getTime())) ? when.toLocaleString() : (r.ts || '');
+        html += `<tr>
+          <td>${{esc(whenTxt)}}</td>
+          <td>${{esc(r.username || '')}}</td>
+          <td>${{esc(r.user_id)}}</td>
+          <td>${{esc(r.candidate || '')}}</td>
+          <td>${{esc(r.filename  || '')}}</td>
+        </tr>`;
       }}
-      if (e.target && e.target.id === 'rp_btn') {{
-        e.preventDefault();
-        const id = Number(document.getElementById('rp_uid').value);
-        const pw = document.getElementById('rp_pw').value;
-        if (!id || !pw) {{ document.getElementById('rp_msg').textContent='User ID and new password required.'; return; }}
-        const url = '/director/api/user/reset-password?user_id=' + id + '&password=' + encodeURIComponent(pw);
-        const r = await fetch(url); const js = await r.json().catch(()=>({{}}));
-        document.getElementById('rp_msg').textContent = js.ok ? 'Password reset.' : (js.error || 'Failed.');
+      html += '</tbody></table>';
+      if ($('#recentBox')) $('#recentBox').innerHTML = html;
+    }}
+  }}
+
+  // keep old calls working
+  window.loadDash = loadDashboard;
+
+  // event delegation: users table actions + quick actions
+  document.addEventListener('click', async (e) => {{
+    const tr = e.target.closest('tr[data-uid]');
+
+    // table: set cap
+    if (tr && e.target.classList.contains('setcap')) {{
+      e.preventDefault();
+      const uid    = Number(tr.dataset.uid);
+      const capStr = (tr.querySelector('input.cap')?.value || '').trim();
+      const url    = new URL('/director/api/setcap', location.origin);
+      url.searchParams.set('user_id', String(uid));
+      url.searchParams.set('cap', capStr === '' ? 'null' : String(Number(capStr)));
+      await fetch(url.toString());
+      await loadDashboard();
+      return;
+    }}
+
+    // table: toggle active
+    if (tr && e.target.classList.contains('toggle')) {{
+      e.preventDefault();
+      const uid  = Number(tr.dataset.uid);
+      const next = Number(e.target.getAttribute('data-next'));
+      const url  = new URL('/director/api/user/set-active', location.origin);
+      url.searchParams.set('user_id', String(uid));
+      url.searchParams.set('active', String(next));
+      await fetch(url.toString());
+      await loadDashboard();
+      return;
+    }}
+
+    // table: delete user
+    if (tr && e.target.classList.contains('delete')) {{
+      e.preventDefault();
+      if (!confirm('Delete this user permanently?')) return;
+      const uid = Number(tr.dataset.uid);
+      const url = new URL('/director/api/user/delete', location.origin);
+      url.searchParams.set('user_id', String(uid));
+      await fetch(url.toString());
+      await loadDashboard();
+      return;
+    }}
+
+    // quick actions: create user
+    if (e.target && e.target.id === 'cu_btn') {{
+      e.preventDefault();
+      const u = $('#cu_u')?.value.trim() || '';
+      const p = $('#cu_p')?.value || '';
+      const s = $('#cu_seed')?.value.trim() || '';
+      const url = new URL('/director/api/create-user', location.origin);
+      if (u) url.searchParams.set('u', u);
+      if (p) url.searchParams.set('p', p);
+      if (s !== '') url.searchParams.set('seed', String(Number(s || 0)));
+      const r  = await fetch(url.toString());
+      const js = await r.json().catch(() => ({{}}));
+      if ($('#cu_msg')) $('#cu_msg').textContent = js.ok ? 'Created.' : (js.error || 'Failed.');
+      if (js.ok) {{
+        if ($('#cu_u'))    $('#cu_u').value = '';
+        if ($('#cu_p'))    $('#cu_p').value = '';
+        if ($('#cu_seed')) $('#cu_seed').value = '';
+        await loadDashboard();
       }}
-    }});
+      return;
+    }}
 
-    /* Director UI bootstrap: works whether DOMContentLoaded has fired or not */
-    (function () {{
-      function initDirectorUI() {{
-        // Recent Activity show/hide (CSS only)
-        const btn   = document.getElementById('ra_toggle');
-        const panel = document.getElementById('ra_panel');
-
-        if (btn && panel) {{
-          // restore last choice from localStorage
-          const hidden = localStorage.getItem('director_ra_hidden') === '1';
-          panel.classList.toggle('hidden', hidden);
-          btn.textContent = hidden ? 'Show' : 'Hide';
-          btn.setAttribute('aria-expanded', (!hidden).toString());
-
-          // toggle on click
-          btn.addEventListener('click', (e) => {{
-            e.preventDefault();
-            const nowHidden = panel.classList.toggle('hidden');
-            btn.textContent = nowHidden ? 'Show' : 'Hide';
-            btn.setAttribute('aria-expanded', (!nowHidden).toString());
-            localStorage.setItem('director_ra_hidden', nowHidden ? '1' : '');
-          }});
-        }}
-
-        // first data load
-        try {{ loadDash(); }} catch (_e) {{}}
+    // quick actions: reset password
+    if (e.target && e.target.id === 'rp_btn') {{
+      e.preventDefault();
+      const id = Number($('#rp_uid')?.value || '');
+      const pw = $('#rp_pw')?.value || '';
+      if (!id || !pw) {{
+        if ($('#rp_msg')) $('#rp_msg').textContent = 'User ID and new password required.';
+        return;
       }}
+      const url = '/director/api/user/reset-password?user_id=' + id + '&password=' + encodeURIComponent(pw);
+      const r   = await fetch(url);
+      const js  = await r.json().catch(() => ({{}}));
+      if ($('#rp_msg')) $('#rp_msg').textContent = js.ok ? 'Password reset.' : (js.error || 'Failed.');
+      return;
+    }}
+  }});
 
-      if (document.readyState === 'loading') {{
-        document.addEventListener('DOMContentLoaded', initDirectorUI, {{ once: true }});
-      }} else {{
-        initDirectorUI();
+  // Recent Activity show/hide + first load (works pre/post DOMContentLoaded)
+  (function () {{
+    function initDirectorUI() {{
+      const btn   = document.getElementById('ra_toggle');
+      const panel = document.getElementById('ra_panel');
+      if (btn && panel) {{
+        const hidden = localStorage.getItem('director_ra_hidden') === '1';
+        panel.classList.toggle('hidden', hidden);
+        btn.textContent = hidden ? 'Show' : 'Hide';
+        btn.setAttribute('aria-expanded', (!hidden).toString());
+        btn.addEventListener('click', (e) => {{
+          e.preventDefault();
+          const nowHidden = panel.classList.toggle('hidden');
+          btn.textContent = nowHidden ? 'Show' : 'Hide';
+          btn.setAttribute('aria-expanded', (!nowHidden).toString());
+          localStorage.setItem('director_ra_hidden', nowHidden ? '1' : '');
+        }});
       }}
-    }})();
-  </script>
+      loadDashboard().catch(() => {{}});
+    }}
+
+    if (document.readyState === 'loading') {{
+      document.addEventListener('DOMContentLoaded', initDirectorUI, {{ once: true }});
+    }} else {{
+      initDirectorUI();
+    }}
+  }})();
+</script>
 </body>
 </html>
 """
@@ -8006,4 +8049,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
+
 

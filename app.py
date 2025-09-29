@@ -6714,11 +6714,11 @@ def director_ui():
     }});
 
     // initial load of dashboard data
-    loadDash();
+    if (typeof loadDash === 'function') {{ loadDash(); }}  // if your function is named loadDashboard, change it here
   </script>
 </body>
 </html>
-""")
+"""
 resp = make_response(html, 200, { "Content-Type": "text/html; charset=utf-8" })
 resp.headers["Cache-Control"] = "no-store"
 return resp
@@ -7995,6 +7995,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

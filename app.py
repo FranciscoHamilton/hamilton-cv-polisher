@@ -6679,7 +6679,7 @@ def director_ui():
         if (s !== '') url.searchParams.set('seed', String(Number(s || 0)));
         const r = await fetch(url.toString()); const js = await r.json().catch(()=>({{}}));
         document.getElementById('cu_msg').textContent = js.ok ? 'Created.' : (js.error || 'Failed.');
-        if (js.ok) {{ document.getElementById('cu_u').value=''; document.getElementById('cu_p').value=''; document.getElementById('cu_seed').value=''; await loadDashboard(); }}
+        if (js.ok) {{ document.getElementById('cu_u').value=''; document.getElementById('cu_p').value=''; document.getElementById('cu_seed').value=''; await loadDash(); }}
       }}
       if (e.target && e.target.id === 'rp_btn') {{
         e.preventDefault();
@@ -6692,34 +6692,40 @@ def director_ui():
       }}
     }});
 
-    // --- Recent Activity show/hide toggle (visibility only) ---
-    document.addEventListener('DOMContentLoaded', () => {{
-      const btn   = document.getElementById('ra_toggle');
-      const panel = document.getElementById('ra_panel');
-      if (!btn || !panel) return;
+    /* Director UI bootstrap: works whether DOMContentLoaded has fired or not */
+    (function () {{
+      function initDirectorUI() {{
+        // Recent Activity show/hide (CSS only)
+        const btn   = document.getElementById('ra_toggle');
+        const panel = document.getElementById('ra_panel');
 
-      // restore last choice from localStorage
-      const hidden = localStorage.getItem('director_ra_hidden') === '1';
-      if (hidden) {{
-        panel.classList.add('hidden');
-        btn.textContent = 'Show';
-        btn.setAttribute('aria-expanded', 'false');
-      }} else {{
-        btn.setAttribute('aria-expanded', 'true');
+        if (btn && panel) {{
+          // restore last choice from localStorage
+          const hidden = localStorage.getItem('director_ra_hidden') === '1';
+          panel.classList.toggle('hidden', hidden);
+          btn.textContent = hidden ? 'Show' : 'Hide';
+          btn.setAttribute('aria-expanded', (!hidden).toString());
+
+          // toggle on click
+          btn.addEventListener('click', (e) => {{
+            e.preventDefault();
+            const nowHidden = panel.classList.toggle('hidden');
+            btn.textContent = nowHidden ? 'Show' : 'Hide';
+            btn.setAttribute('aria-expanded', (!nowHidden).toString());
+            localStorage.setItem('director_ra_hidden', nowHidden ? '1' : '');
+          }});
+        }}
+
+        // first data load
+        try {{ loadDash(); }} catch (_e) {{}}
       }}
 
-      // toggle on click - only changes CSS display
-      btn.addEventListener('click', (e) => {{
-        e.preventDefault();
-        const nowHidden = panel.classList.toggle('hidden');
-        btn.textContent = nowHidden ? 'Show' : 'Hide';
-        btn.setAttribute('aria-expanded', (!nowHidden).toString());
-        localStorage.setItem('director_ra_hidden', nowHidden ? '1' : '');
-      }});
-    }});
-
-    // initial load of dashboard data
-    if (typeof loadDash === 'function') {{ loadDash(); }}
+      if (document.readyState === 'loading') {{
+        document.addEventListener('DOMContentLoaded', initDirectorUI, {{ once: true }});
+      }} else {{
+        initDirectorUI();
+      }}
+    }})();
   </script>
 </body>
 </html>
@@ -8000,6 +8006,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

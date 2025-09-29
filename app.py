@@ -5553,6 +5553,121 @@ def director_reset_password():
         return jsonify({"ok": True, "user_id": target_id, "username": target_username})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
+        
+# --- Director (org-scoped): set user active flag (enable/disable) ---
+@app.route("/director/api/user/set-active", methods=["GET", "POST"])
+def director_api_user_set_active():
+    # must be logged in
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    # must be director or admin
+    try:
+        am_admin = bool(session.get("is_admin")) or (
+            (session.get("user") or "").strip().lower()
+            == (os.getenv("APP_ADMIN_USER") or "admin").lower()
+        )
+    except Exception:
+        am_admin = False
+    if not (session.get("director") or am_admin):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # org scope
+    org_id = _current_user_org_id()
+    if not org_id:
+        return jsonify({"ok": False, "error": "no_org"}), 400
+
+    # inputs
+    src = request.args
+    if request.method == "POST":
+        body = request.get_json(silent=True) or {}
+        if not src:
+            src = body
+
+    try:
+        target_uid = int(src.get("user_id"))
+    except Exception:
+        return jsonify({"ok": False, "error": "bad_user_id"}), 400
+
+    active_raw = str(src.get("active", "1")).strip().lower()
+    active = 1 if active_raw in ("1", "true", "yes", "on") else 0
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "db_unavailable"}), 503
+
+    n = db_exec(
+        "UPDATE users SET active=%s WHERE id=%s AND org_id=%s",
+        (active, target_uid, org_id),
+    )
+    if not n:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    return jsonify({"ok": True, "user_id": target_uid, "active": bool(active)})
+
+
+# --- Director (org-scoped): delete user (soft-delete) ---
+@app.route("/director/api/user/delete", methods=["GET", "POST"])
+def director_api_user_delete():
+    # must be logged in
+    try:
+        uid = int(session.get("user_id") or 0)
+    except Exception:
+        uid = 0
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "not_logged_in"}), 401
+
+    # must be director or admin
+    try:
+        am_admin = bool(session.get("is_admin")) or (
+            (session.get("user") or "").strip().lower()
+            == (os.getenv("APP_ADMIN_USER") or "admin").lower()
+        )
+    except Exception:
+        am_admin = False
+    if not (session.get("director") or am_admin):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # org scope
+    org_id = _current_user_org_id()
+    if not org_id:
+        return jsonify({"ok": False, "error": "no_org"}), 400
+
+    # input
+    src = request.args
+    if request.method == "POST":
+        body = request.get_json(silent=True) or {}
+        if not src:
+            src = body
+
+    try:
+        target_uid = int(src.get("user_id"))
+    except Exception:
+        return jsonify({"ok": False, "error": "bad_user_id"}), 400
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "db_unavailable"}), 503
+
+    # Soft-delete: disable and make username unique
+    n = db_exec(
+        """
+        UPDATE users
+           SET active = FALSE,
+               username = CASE
+                   WHEN position(':del:' in username) > 0 THEN username
+                   ELSE username || ':del:' || %s
+               END
+         WHERE id = %s AND org_id = %s
+        """,
+        (str(target_uid), target_uid, org_id),
+    )
+    if not n:
+        return jsonify({"ok": False, "error": "not_found"}), 404
+
+    return jsonify({"ok": True, "user_id": target_uid, "deleted": True})
 # --- Director: org credits summary (my org) ---
 @app.get("/director/api/org/credits-summary")
 def director_org_credits_summary():
@@ -8049,6 +8164,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -6687,34 +6687,36 @@ def director_ui():
       }}
     }});
 
-    // Recent Activity show/hide toggle (visibility only)
-    document.addEventListener('DOMContentLoaded', () => {{
-      const btn = document.getElementById('ra_toggle');
-      const panel = document.getElementById('ra_panel');
+       // Recent Activity show/hide toggle (visibility only)
+    {% raw %}
+    document.addEventListener('DOMContentLoaded', function () {
+      var btn   = document.getElementById('ra_toggle');
+      var panel = document.getElementById('ra_panel');
       if (!btn || !panel) return;
 
       // restore last choice from localStorage
-      const hidden = localStorage.getItem('director_ra_hidden') === '1';
-      if (hidden) {{
+      var hidden = localStorage.getItem('director_ra_hidden') === '1';
+      if (hidden) {
         panel.classList.add('hidden');
         btn.textContent = 'Show';
         btn.setAttribute('aria-expanded', 'false');
-      }} else {{
+      } else {
         btn.setAttribute('aria-expanded', 'true');
-      }}
+      }
 
-      // toggle on click - only changes CSS display
-      btn.addEventListener('click', (e) => {{
+      // toggle on click – only changes CSS display
+      btn.addEventListener('click', function (e) {
         e.preventDefault();
-        const nowHidden = panel.classList.toggle('hidden');
+        var nowHidden = panel.classList.toggle('hidden');
         btn.textContent = nowHidden ? 'Show' : 'Hide';
-        btn.setAttribute('aria-expanded', (!nowHidden).toString());
+        btn.setAttribute('aria-expanded', String(!nowHidden));
         localStorage.setItem('director_ra_hidden', nowHidden ? '1' : '');
-      }});
+      });
 
       // initial load
-      loadDashboard();
-    }});
+      if (typeof loadDashboard === 'function') { loadDashboard(); }
+    });
+    {% endraw %}
   </script>
 </body>
 </html>
@@ -7995,6 +7997,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

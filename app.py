@@ -6687,43 +6687,41 @@ def director_ui():
       }}
     }});
 
-       // Recent Activity show/hide toggle (visibility only)
-    {% raw %}
-    document.addEventListener('DOMContentLoaded', function () {
-      var btn   = document.getElementById('ra_toggle');
-      var panel = document.getElementById('ra_panel');
+    // --- Recent Activity show/hide toggle (visibility only) ---
+    document.addEventListener('DOMContentLoaded', () => {{
+      const btn   = document.getElementById('ra_toggle');
+      const panel = document.getElementById('ra_panel');
       if (!btn || !panel) return;
 
       // restore last choice from localStorage
-      var hidden = localStorage.getItem('director_ra_hidden') === '1';
-      if (hidden) {
+      const hidden = localStorage.getItem('director_ra_hidden') === '1';
+      if (hidden) {{
         panel.classList.add('hidden');
         btn.textContent = 'Show';
         btn.setAttribute('aria-expanded', 'false');
-      } else {
+      }} else {{
         btn.setAttribute('aria-expanded', 'true');
-      }
+      }}
 
-      // toggle on click – only changes CSS display
-      btn.addEventListener('click', function (e) {
+      // toggle on click - only changes CSS display
+      btn.addEventListener('click', (e) => {{
         e.preventDefault();
-        var nowHidden = panel.classList.toggle('hidden');
+        const nowHidden = panel.classList.toggle('hidden');
         btn.textContent = nowHidden ? 'Show' : 'Hide';
-        btn.setAttribute('aria-expanded', String(!nowHidden));
+        btn.setAttribute('aria-expanded', (!nowHidden).toString());
         localStorage.setItem('director_ra_hidden', nowHidden ? '1' : '');
-      });
+      }});
+    }});
 
-      // initial load
-      if (typeof loadDashboard === 'function') { loadDashboard(); }
-    });
-    {% endraw %}
+    // initial load of dashboard data
+    loadDash();
   </script>
 </body>
 </html>
-"""
-    resp = make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
-    resp.headers["Cache-Control"] = "no-store"
-    return resp
+""")
+resp = make_response(html, 200, { "Content-Type": "text/html; charset=utf-8" })
+resp.headers["Cache-Control"] = "no-store"
+return resp
 
 # --- Friendly 402 page (Out of credits) ---
 def _render_out_of_credits(reason_text=None):
@@ -7997,6 +7995,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

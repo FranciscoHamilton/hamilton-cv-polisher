@@ -653,8 +653,8 @@ HOMEPAGE_HTML = r"""
 
     /* top nav */
     .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+    .brand{font-weight:900;color:var(--black);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--black);text-decoration:none;font-weight:800;margin-left:22px}
 
     /* hero */
     .hero{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:var(--shadow)}
@@ -890,8 +890,8 @@ ABOUT_HTML = r"""
 
     /* nav like homepage */
     .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-    .brand{font-weight:900;color:var(--blue);text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+    .brand{font-weight:900;color:var(--black);text-decoration:none;font-size:22px;letter-spacing:.2px}
+    .nav a{color:var(--Black);text-decoration:none;font-weight:800;margin-left:22px}
 
     .card{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:0;box-shadow:var(--shadow)}
     .inner{max-width:780px;padding:24px}
@@ -1005,7 +1005,7 @@ PRICING_HTML = r"""
     .wrap{max-width:1120px;margin:0 auto;padding:0 24px}
     .nav{display:flex;align-items:center;justify-content:space-between;padding:18px 0}
     .brand{font-weight:900;color:var(--ink);text-decoration:none;font-size:26px;letter-spacing:.2px}
-    .nav-links a{color:var(--ink);text-decoration:none;font-weight:800;margin-left:22px}
+    .nav-links a{color:var(--Black);text-decoration:none;font-weight:800;margin-left:22px}
 
     /* PAGE BOX (like the white box on other pages) */
     .pagebox{
@@ -8006,3 +8006,4 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+

@@ -2520,7 +2520,7 @@ DIRECTOR_HTML = r"""
     }
 
     async function toggleActive(userId, active){
-      await fetchJSON(`/director/api/user/set-active?user_id=${userId}&active=${active}`);
+      await fetchJSON(`/director/api/user/set_active?user_id=${userId}&active=${active}`);
       loadUsers();
     }
     async function resetUserPass(userId){
@@ -8083,6 +8083,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

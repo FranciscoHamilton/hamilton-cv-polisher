@@ -5535,6 +5535,22 @@ def director_delete_user():
         return jsonify({"ok": False, "error": "delete_failed"}), 500
     return jsonify({"ok": True, "deleted_user_id": uid})
 
+@app.post("/director/api/change-password")
+def change_director_password():
+    if not session.get("user_id"):
+        return jsonify({"ok": False, "error": "not_logged_in"}), 403
+
+    new_pass = (request.json or {}).get("password")
+    if not new_pass:
+        return jsonify({"ok": False, "error": "missing_password"}), 400
+
+    hashed = generate_password_hash(new_pass)
+    ok = db_execute("UPDATE users SET password=%s WHERE id=%s", (hashed, session["user_id"]))
+    if not ok:
+        return jsonify({"ok": False, "error": "update_failed"}), 500
+
+    return jsonify({"ok": True})
+
 # Aliases to cover legacy front-ends
 @app.get("/director/api/activate")
 def _alias_activate():
@@ -6804,6 +6820,29 @@ def director_ui():
     }}
   }})();
 </script>
+
+<h2>Change My Password</h2>
+<form onsubmit="return changeMyPass(this)">
+  <input type="password" name="password" placeholder="New password" required>
+  <button type="submit">Update</button>
+</form>
+
+<script>
+async function changeMyPass(form){
+  const pw = form.password.value.trim();
+  if(!pw) return false;
+  const res = await fetch("/director/api/change-password", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({password: pw})
+  });
+  const data = await res.json();
+  if(data.ok){ alert("Password updated!"); }
+  else { alert("Error: " + data.error); }
+  return false;
+}
+</script>
+
 </body>
 </html>
 """
@@ -8083,6 +8122,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

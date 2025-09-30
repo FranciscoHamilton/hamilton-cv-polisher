@@ -2361,8 +2361,8 @@ DIRECTOR_HTML = r"""
     th,td{padding:10px;border-bottom:1px solid #f1f5f9;text-align:left}
     th{background:#f8fafc;position:sticky;top:0;z-index:1}
     .row{display:flex;gap:8px;flex-wrap:wrap}
-    input,select{padding:10px;border:1px solid var(--line);border-radius:12px}
-    button,.btn{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:800;cursor:pointer;text-decoration:none;color:#0b1220}
+    input,select{padding:6px;border:1px solid var(--line);border-radius:12px}
+    button,.btn{padding:6px 10px;border-radius:12px;border:1px solid var(--line);background:#fff;font-weight:800;cursor:pointer;text-decoration:none;color:#0b1220}
     .btn.primary,button.primary{background:linear-gradient(90deg,var(--brand),var(--brand-2));border:none;color:#fff}
     .btn.danger{border-color:#fecaca;background:#fee2e2;color:#7f1d1d}
     .badge{font-weight:800}
@@ -8049,6 +8049,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

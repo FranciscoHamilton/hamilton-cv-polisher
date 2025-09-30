@@ -2526,7 +2526,7 @@ DIRECTOR_HTML = r"""
     async function resetUserPass(userId){
       const p = prompt('New password for this user:');
       if(!p) return;
-      await fetchJSON(`/director/api/user/reset-password?user_id=${userId}&password=${encodeURIComponent(p)}`);
+      await fetchJSON(`/director/api/user/reset_password?user_id=${userId}&password=${encodeURIComponent(p)}`);
       alert('Password updated.');
     }
     async function deleteUser(userId, uname){
@@ -8083,6 +8083,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

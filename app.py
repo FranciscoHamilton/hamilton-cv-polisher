@@ -951,7 +951,7 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
           <li><strong>Template Builder (coming soon):</strong> Upload your own DOCX and switch branding instantly for a custom experience.</li>
         </ul>
 
-        <a class="btn" href="/start">Start free trial</a>
+        <a class="btn" href="/start">Contact Us</a>
       </div>
     </div>
   </div>
@@ -8137,6 +8137,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

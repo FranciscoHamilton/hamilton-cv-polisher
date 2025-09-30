@@ -6557,7 +6557,10 @@ def director_ui():
         <h1>Director Console</h1>
         <div class="kicker">Org tools and audit. Org: {org_label}</div>
       </div>
-      <div><a href="/app">Back to app</a></div>
+      <div style="display:flex; gap:12px;">
+        <a href="/pricing" class="btn small" style="border:1px solid var(--line); background:#fff;">Plans</a>
+        <a href="/app" class="btn small" style="border:1px solid var(--line); background:#fff;">Back to app</a>
+    </div>
     </header>
 
     <section class="grid-metrics">
@@ -6733,7 +6736,7 @@ def director_ui():
       e.preventDefault();
       const uid  = Number(tr.dataset.uid);
       const next = Number(e.target.getAttribute('data-next'));
-      const url  = new URL('/director/api/user/set-active', location.origin);
+      const url  = new URL('/director/api/user/set_active', location.origin);
       url.searchParams.set('user_id', String(uid));
       url.searchParams.set('active', String(next));
       await fetch(url.toString());
@@ -6784,7 +6787,7 @@ def director_ui():
         if ($('#rp_msg')) $('#rp_msg').textContent = 'User ID and new password required.';
         return;
       }}
-      const url = '/director/api/user/reset-password?user_id=' + id + '&password=' + encodeURIComponent(pw);
+      const url = '/director/api/user/reset_password?user_id=' + id + '&password=' + encodeURIComponent(pw);
       const r   = await fetch(url);
       const js  = await r.json().catch(() => ({{}}));
       if ($('#rp_msg')) $('#rp_msg').textContent = js.ok ? 'Password reset.' : (js.error || 'Failed.');
@@ -8123,3 +8126,4 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+

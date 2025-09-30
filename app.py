@@ -654,7 +654,8 @@ HOMEPAGE_HTML = r"""
     /* top nav */
     .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
     .brand{font-weight:900;color:var(--black);text-decoration:none;font-size:22px;letter-spacing:.2px}
-    .nav a{color:var(--black);text-decoration:none;font-weight:800;margin-left:22px}
+    .nav a{color:#0b1220;text-decoration:none;font-weight:800;margin-left:22px}
+    .nav a:hover{color:#0b1220}
 
     /* hero */
     .hero{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:var(--shadow)}
@@ -689,7 +690,7 @@ HOMEPAGE_HTML = r"""
   <header>
   <div class="sitebar">
     <a class="brand" href="/">Lustra</a>
-    <nav>
+    <nav class="nav">
       <a href="/about">About</a>
       <a href="/pricing">Pricing</a>
       <a href="/login">Sign in</a>
@@ -8123,6 +8124,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

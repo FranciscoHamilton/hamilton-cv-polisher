@@ -5545,7 +5545,7 @@ def change_director_password():
         return jsonify({"ok": False, "error": "missing_password"}), 400
 
     hashed = generate_password_hash(new_pass)
-    ok = db_execute("UPDATE users SET password=%s WHERE id=%s", (hashed, session["user_id"]))
+    ok = db_execute("UPDATE users SET password_hash=%s WHERE id=%s", (hashed, session["user_id"]))
     if not ok:
         return jsonify({"ok": False, "error": "update_failed"}), 500
 
@@ -6820,7 +6820,6 @@ def director_ui():
     }}
   }})();
 </script>
-
 <h2>Change My Password</h2>
 <form onsubmit="return changeMyPass(this)">
   <input type="password" name="password" placeholder="New password" required>
@@ -6828,21 +6827,23 @@ def director_ui():
 </form>
 
 <script>
-async function changeMyPass(form){
+async function changeMyPass(form) {{
   const pw = form.password.value.trim();
   if(!pw) return false;
-  const res = await fetch("/director/api/change-password", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({password: pw})
-  });
+  const res = await fetch("/director/api/change-password", {{
+    method: "POST",
+    headers: {{"Content-Type":"application/json"}},
+    body: JSON.stringify({{ password: pw }})
+  }});
   const data = await res.json();
-  if(data.ok){ alert("Password updated!"); }
-  else { alert("Error: " + data.error); }
+  if (data.ok) {{
+    alert("Password updated!");
+  }} else {{
+    alert("Error: " + data.error);
+  }}
   return false;
-}
+}}
 </script>
-
 </body>
 </html>
 """
@@ -8122,6 +8123,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -1231,7 +1231,7 @@ PRICING_HTML = r"""
         <div class="calc-grid" style="margin-top:10px">
           <div><label>CVs polished per month</label><input id="cvs" type="number" min="0" value="100"></div>
           <div><label>Avg time per CV (manual polish)</label><input id="minManual" type="number" min="0" value="15"></div>
-          <div><label>Recruiter hourly rate</label><input id="hourRate" type="number" min="0" value="30"></div>
+          <div><label>Avg Recruiter hourly rate</label><input id="hourRate" type="number" min="0" value="30"></div>
         </div>
         <div class="calc-out">
           <div><span class="n" id="outHours">25.0</span> hours saved / month</div>
@@ -8136,6 +8136,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

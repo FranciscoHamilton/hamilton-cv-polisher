@@ -5501,6 +5501,40 @@ def director_set_active():
         return jsonify({"ok": False, "error": "update_failed"}), 500
     return jsonify({"ok": True, "user_id": uid, "active": bool(active_val)})
 
+# --- Director: delete a user in my org (protect 'admin') ---
+@app.get("/director/api/user/delete")
+def director_delete_user():
+    # must be logged in and be director/admin
+    if not (session.get("user_id") and (session.get("director") or is_admin())):
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # read user_id
+    try:
+        uid = int(request.args.get("user_id") or "0")
+    except Exception:
+        uid = 0
+    if uid <= 0:
+        return jsonify({"ok": False, "error": "user_id required"}), 400
+
+    # verify same org + protect 'admin'
+    row = db_query_one("SELECT username, org_id FROM users WHERE id=%s", (uid,))
+    if not row:
+        return jsonify({"ok": False, "error": "user not found"}), 404
+
+    target_username = (row[0] or "").strip().lower()
+    if target_username == "admin":
+        return jsonify({"ok": False, "error": "cannot_modify_admin"}), 403
+
+    my_org = _current_user_org_id()
+    if my_org and int(row[1] or 0) != my_org and not is_admin():
+        return jsonify({"ok": False, "error": "not_in_my_org"}), 403
+
+    # delete (related rows removed via ON DELETE CASCADE if set)
+    ok = db_execute("DELETE FROM users WHERE id=%s", (uid,))
+    if not ok:
+        return jsonify({"ok": False, "error": "delete_failed"}), 500
+    return jsonify({"ok": True, "deleted_user_id": uid})
+
 # Aliases to cover legacy front-ends
 @app.get("/director/api/activate")
 def _alias_activate():
@@ -8049,6 +8083,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

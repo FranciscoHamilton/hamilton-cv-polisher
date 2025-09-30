@@ -944,10 +944,11 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
 
         <h2>What’s on the site</h2>
         <ul>
-          <li>Multi-company login (soon): per-company routes and templates.</li>
-          <li>Director dashboards (soon): usage counts, CSV export, trends.</li>
-          <li>Credit plans: pay-as-you-go or monthly bundles.</li>
-          <li>Self-serve template builder (soon): upload a DOCX to switch branding instantly.</li>
+          <li><strong>Multi-company login (coming soon):</strong> Separate logins and dashboards for each company.</li>
+          <li><strong>Director Console:</strong> Manage users, track usage, reset passwords, and monitor credits in real time. Export data and review activity trends.</li>
+          <li><strong>Credit Plans:</strong> Flexible options — choose between monthly bundles (Starter, Growth, Scale) or pay-as-you-go Packs.</li>
+          <li><strong>Savings Calculator:</strong> Instantly see the ROI by comparing manual effort vs. automated polish, with plan recommendations tailored to your usage.</li>
+          <li><strong>Template Builder (coming soon):</strong> Upload your own DOCX and switch branding instantly for a custom experience.</li>
         </ul>
 
         <a class="btn" href="/start">Start free trial</a>
@@ -8136,6 +8137,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

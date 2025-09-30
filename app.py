@@ -6626,6 +6626,16 @@ def director_ui():
             <div id="rp_msg" class="kicker"></div>
           </div>
         </div>
+        <div class="card">
+  <h3 style="margin:0 0 8px">Plans &amp; Billing</h3>
+  <div class="kicker" style="margin:-4px 0 8px">
+    Buy packs or change your monthly plan.
+  </div>
+  <div class="row row2">
+    <a href="/pricing" class="btn" style="background:#fff;border:1px solid var(--line);color:var(--ink);">View Plans</a>
+    <a href="/start" class="btn" style="background:#fff;border:1px solid var(--line);color:var(--ink);">Buy packs</a>
+  </div>
+</div>
       </div>
     </section>
   </div>
@@ -8126,4 +8136,5 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 

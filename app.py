@@ -5594,9 +5594,9 @@ def pdf2word_convert():
     if not filename.lower().endswith(".pdf"):
         return "Please upload a PDF", 400
 
-    api_key = (os.environ.get("PDFCO_API_KEY") or "").strip()
+    api_key = os.environ.get("PDFCO_API_KEY", "").strip()
     if not api_key:
-        return "Server missing PDFCO_API_KEY (set in Render env and redeploy).", 500
+        return "PDFCO_API_KEY is not configured on the server.", 500
 
     headers = {"x-api-key": api_key}
 
@@ -5627,12 +5627,19 @@ def pdf2word_convert():
     try:
         conv = requests.post(
             "https://api.pdf.co/v1/pdf/convert/to/docx",
-            headers=headers,  # <— API key here too
+            headers=headers,  # API key header
             data={"url": file_url, "name": filename.rsplit(".", 1)[0] + ".docx"},
             timeout=120,
         )
     except Exception as e:
-        return f"Converter error: {e}", 502
+        return f"Converter request error: {e}", 502
+
+    # Debug guard: show exact host/status/body if PDF.co rejects the call
+    if conv.status_code >= 400:
+        return (
+            f"Converter failed (HTTP {conv.status_code}) "
+            f"hitting {conv.request.url}: {conv.text}"
+        ), 502
 
     try:
         conv_js = conv.json()
@@ -8246,6 +8253,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

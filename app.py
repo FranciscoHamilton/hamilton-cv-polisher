@@ -5581,9 +5581,10 @@ from docx import Document
 
 @app.post("/tools/pdf2word/convert")
 def pdf2word_convert():
-        # --- PDF.co two-step: upload -> convert by URL ---
+        # --- PDF.co two-step: upload -> convert (Basic Auth only) ---
         import os, requests
         from io import BytesIO
+        from werkzeug.utils import secure_filename
         from requests.auth import HTTPBasicAuth
 
         f = request.files.get("file")
@@ -5594,56 +5595,63 @@ def pdf2word_convert():
         if not filename.lower().endswith(".pdf"):
             return "Please upload a PDF", 400
 
-        api_key = os.environ.get("PDFCO_API_KEY", "").strip()
+        api_key = (os.environ.get("PDFCO_API_KEY") or "").strip()
         if not api_key:
             return "PDFCO_API_KEY is not configured on the server.", 500
-    
-        headers = {"x-api-key": api_key}
 
-        # 1) Upload the file to PDF.co temporary storage
-        upload_resp = requests.post(
-            "https://api.pdf.co/v1/file/upload",
-            headers={"x-api-key": api_key},
-            files={"file": (filename, f.stream, "application/pdf")},
-            timeout=120
-        )
+        auth = HTTPBasicAuth(api_key, "")
 
+        # 1) Upload PDF to PDF.co temporary storage
         try:
-            upload_json = upload_resp.json()
+            up = requests.post(
+                "https://api.pdf.co/v1/file/upload",
+                auth=auth,                             # ← API key via Basic Auth
+                files={"file": (filename, f.stream, "application/pdf")},
+                timeout=120,
+            )
+        except Exception as e:
+            return f"Upload error: {e}", 502
+
+        # PDF.co may return JSON or HTML on errors; try JSON first
+        try:
+            up_js = up.json()
         except Exception:
-            return "Upload error (invalid response).", 502
+            return f"Upload failed (non-JSON response): {up.text[:500]}", 502
 
-        if upload_json.get("error"):
-            return f"Upload failed: {upload_json.get('message') or upload_json}", 502
+        if up_js.get("error"):
+            return f"Upload failed: {up_js.get('message') or up_js}", 502
 
-        file_url = upload_json.get("url")
+        file_url = up_js.get("url")
         if not file_url:
-            return "Upload failed: missing file URL.", 502
+            return f"Upload failed: missing file URL. Raw: {up_js}", 502
 
-        # 2) Convert that URL to DOCX
-            convert_resp = requests.post(
-            "https://api.pdf.co/v1/pdf/convert/to/docx",
-            headers={"x-api-key": api_key},
-            data={"url": file_url, "name": filename.rsplit(".", 1)[0] + ".docx"},
-            timeout=120
-        )
+        # 2) Convert uploaded URL to DOCX
+        try:
+            conv = requests.post(
+                "https://api.pdf.co/v1/pdf/convert/to/docx",
+                auth=auth,                             # ← API key via Basic Auth
+                data={"url": file_url, "name": filename.rsplit(".", 1)[0] + ".docx"},
+                timeout=120,
+            )
+        except Exception as e:
+            return f"Converter error: {e}", 502
 
         try:
-            convert_json = convert_resp.json()
+            conv_js = conv.json()
         except Exception:
-            return "Converter error (invalid response).", 502
+            return f"Converter failed (non-JSON response): {conv.text[:500]}", 502
 
-        if convert_json.get("error"):
-            return f"Converter failed: {convert_json.get('message') or convert_json}", 502
+        if conv_js.get("error"):
+            return f"Converter failed: {conv_js.get('message') or conv_js}", 502
 
-        docx_url = convert_json.get("url")
+        docx_url = conv_js.get("url")
         if not docx_url:
-            return "Converter failed: missing result URL.", 502
+            return f"Converter failed: missing result URL. Raw: {conv_js}", 502
 
-        # 3) Download the produced DOCX and stream it back
+        # 3) Download the produced DOCX and stream back to browser
         dl = requests.get(docx_url, timeout=120)
         if dl.status_code != 200:
-            return "Failed to download converted file.", 502
+            return f"Failed to download converted file (status {dl.status_code}).", 502
 
         outname = filename.rsplit(".", 1)[0] + ".docx"
         buf = BytesIO(dl.content)
@@ -8240,6 +8248,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

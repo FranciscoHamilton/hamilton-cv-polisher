@@ -5623,18 +5623,28 @@ def pdf2word_convert():
     if not file_url:
         return f"Upload failed: missing file URL. Raw: {up_js}", 502
 
-    # 2) Convert uploaded URL to DOCX
-    try:
-        conv = requests.post(
-            "https://api.pdf.co/v1/pdf/convert/to/docx",
-            headers=headers,  # API key header
-            data={"url": file_url, "name": filename.rsplit(".", 1)[0] + ".docx"},
-            timeout=120,
-        )
-    except Exception as e:
-        return f"Converter request error: {e}", 502
+    # 2) Convert uploaded URL to DOCX (ConvertAPI)
+    secret = os.environ.get("CONVERTAPI_SECRET", "").strip()
+    if not secret:
+        return "CONVERTAPI_SECRET is not configured on the server.", 500
 
-    # Debug guard: show exact host/status/body if PDF.co rejects the call
+    # ConvertAPI: PDF (by URL) -> DOCX
+    from urllib.parse import urlencode
+
+    convert_url = f"https://v2.convertapi.com/convert/pdf/to/docx?{urlencode({'Secret': secret})}"
+
+    conv = requests.post(
+        convert_url,
+        json={
+            "Parameters": [
+                {"Name": "File", "FileValue": {"Url": file_url}},
+                {"Name": "StoreFile", "Value": True},
+                {"Name": "FileName", "Value": filename.rsplit(".", 1)[0]},
+            ]
+        },
+        timeout=180,
+    )
+
     if conv.status_code >= 400:
         return (
             f"Converter failed (HTTP {conv.status_code}) "
@@ -5646,10 +5656,8 @@ def pdf2word_convert():
     except Exception:
         return f"Converter failed (non-JSON response): {conv.text[:500]}", 502
 
-    if conv_js.get("error"):
-        return f"Converter failed: {conv_js.get('message') or conv_js}", 502
-
-    docx_url = conv_js.get("url")
+    files = conv_js.get("Files") or []
+    docx_url = files[0]["Url"] if files else None
     if not docx_url:
         return f"Converter failed: missing result URL. Raw: {conv_js}", 502
 
@@ -8253,6 +8261,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

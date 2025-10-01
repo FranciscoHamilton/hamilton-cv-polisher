@@ -5603,12 +5603,11 @@ def pdf2word_convert():
         # 1) Upload the file to PDF.co temporary storage
         upload_resp = requests.post(
             "https://api.pdf.co/v1/file/upload",
-            headers=headers,    
-            auth=HTTPBasicAuth(api_key, ''),
-            params={"x-api-key": api_key}                
+            headers={"x-api-key": api_key},
             files={"file": (filename, f.stream, "application/pdf")},
-            timeout=120,
-       )
+            timeout=120
+        )
+
         try:
             upload_json = upload_resp.json()
         except Exception:
@@ -5622,14 +5621,13 @@ def pdf2word_convert():
             return "Upload failed: missing file URL.", 502
 
         # 2) Convert that URL to DOCX
-        convert_resp = requests.post(
+            convert_resp = requests.post(
             "https://api.pdf.co/v1/pdf/convert/to/docx",
-            headers=headers,                           
-            auth=HTTPBasicAuth(api_key, ''), 
-            params={"x-api-key": api_key}                
-            data={"url": file_url, "name": filename.rsplit('.', 1)[0] + ".docx"},
-        timeout=120,
+            headers={"x-api-key": api_key},
+            data={"url": file_url, "name": filename.rsplit(".", 1)[0] + ".docx"},
+            timeout=120
         )
+
         try:
             convert_json = convert_resp.json()
         except Exception:
@@ -8242,6 +8240,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

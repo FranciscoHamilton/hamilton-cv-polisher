@@ -5581,26 +5581,50 @@ from docx import Document
 
 @app.post("/tools/pdf2word/convert")
 def pdf2word_convert():
+        # --- High-fidelity conversion via PDF.co ---
+    import os, requests
+    from io import BytesIO
+
     f = request.files.get("file")
     if not f:
         return "No file", 400
+
     filename = secure_filename(f.filename or "document.pdf")
     if not filename.lower().endswith(".pdf"):
         return "Please upload a PDF", 400
 
-    # Build a simple DOCX with all text, page by page
-    doc = Document()
-    with pdfplumber.open(f.stream) as pdf:
-        for i, page in enumerate(pdf.pages):
-            text = page.extract_text() or ""
-            doc.add_paragraph(text if text.strip() else "[blank page]")
-            if i < len(pdf.pages) - 1:
-                doc.add_page_break()
+    api_key = os.environ.get("PDFCO_API_KEY", "").strip()
+    if not api_key:
+        return "PDFCO_API_KEY is not configured on the server.", 500
 
-    buf = BytesIO()
-    doc.save(buf)
-    buf.seek(0)
+    # Send the PDF bytes to PDF.co; they return a temporary URL to the DOCX
+    files = {"file": (filename, f.stream, "application/pdf")}
+    data = {"name": filename.rsplit(".", 1)[0] + ".docx"}
+    headers = {"x-api-key": api_key}
+    r = requests.post(
+        "https://api.pdf.co/v1/pdf/convert/to/docx",
+        headers=headers,
+        files=files,
+        data=data,
+        timeout=120,
+    )
+    try:
+        js = r.json()
+    except Exception:
+        return "Converter error (invalid response).", 502
+
+    if not js.get("url") or js.get("error") not in (False, None):
+        return f"Converter failed: {js.get('message') or js}", 502
+
+    # Download the produced DOCX and stream it back
+    docx_url = js["url"]
+    dl = requests.get(docx_url, timeout=120)
+    if dl.status_code != 200:
+        return "Failed to download converted file.", 502
+
     outname = filename.rsplit(".", 1)[0] + ".docx"
+    buf = BytesIO(dl.content)
+    buf.seek(0)
     return send_file(
         buf,
         as_attachment=True,
@@ -8193,6 +8217,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

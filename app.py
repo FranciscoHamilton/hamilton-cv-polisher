@@ -5605,7 +5605,7 @@ def pdf2word_convert():
             "https://api.pdf.co/v1/file/upload",
             headers=headers,    
             auth=HTTPBasicAuth(api_key, ''),
-            params={"apiKey": api_key},                
+            params={"x-api-key": api_key}                
             files={"file": (filename, f.stream, "application/pdf")},
             timeout=120,
        )
@@ -5626,7 +5626,7 @@ def pdf2word_convert():
             "https://api.pdf.co/v1/pdf/convert/to/docx",
             headers=headers,                           
             auth=HTTPBasicAuth(api_key, ''), 
-            params={"apiKey": api_key},                
+            params={"x-api-key": api_key}                
             data={"url": file_url, "name": filename.rsplit('.', 1)[0] + ".docx"},
         timeout=120,
         )
@@ -8242,6 +8242,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

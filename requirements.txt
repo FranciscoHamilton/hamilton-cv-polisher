@@ -6,6 +6,6 @@ openai>=1.40.0,<2
 psycopg2-binary==2.9.9
 pdfplumber==0.11.0
 python-docx==0.8.11
-
+requests==2.31.0
 
 

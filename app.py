@@ -5602,10 +5602,11 @@ def pdf2word_convert():
         # 1) Upload the file to PDF.co temporary storage
         upload_resp = requests.post(
             "https://api.pdf.co/v1/file/upload",
-             headers=headers,
+            headers=headers,                           # x-api-key in header
+            params={"apiKey": api_key},                # ...and also as query param
             files={"file": (filename, f.stream, "application/pdf")},
             timeout=120,
-        )
+       )
         try:
             upload_json = upload_resp.json()
         except Exception:
@@ -5621,9 +5622,10 @@ def pdf2word_convert():
         # 2) Convert that URL to DOCX
         convert_resp = requests.post(
             "https://api.pdf.co/v1/pdf/convert/to/docx",
-            headers=headers,
+            headers=headers,                           # x-api-key in header
+            params={"apiKey": api_key},                # ...and also as query param
             data={"url": file_url, "name": filename.rsplit('.', 1)[0] + ".docx"},
-            timeout=120,
+        timeout=120,
         )
         try:
             convert_json = convert_resp.json()

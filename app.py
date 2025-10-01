@@ -2028,7 +2028,7 @@ if (skillForm){
 
     <div class="grid">
       <div class="card">
-        <h3>Upload CV</h3>
+        <h3>Polish CV</h3>
         <form id="upload-form" method="post" action="/polish" enctype="multipart/form-data">
           <label for="cv">Raw CV (PDF / DOCX / TXT)</label><br/>
           <input id="cv" type="file" name="cv" accept=".pdf,.docx,.txt" required />
@@ -2049,7 +2049,29 @@ if (skillForm){
           <div style="margin-top:12px"><button id="btn" type="submit">Polish & Download</button></div>
         </form>
       </div>
+      <!-- Convert CV (PDF → Word) -->
+      <div class="card" style="margin-top:16px">
+        <h3>Convert CV</h3>
+        <div class="kicker" style="display:inline-block;background:#eef6ff;border:1px solid var(--line);
+          padding:2px 8px;border-radius:999px;margin:0 0 10px;font-weight:800;color:#2563eb">
+          Free — doesn’t use credits
+        </div>
+        <div class="kicker" style="margin:-4px 0 12px">PDF → Word (quick edit before polishing)</div>
 
+        <form action="/tools/pdf2word/convert" method="post" enctype="multipart/form-data">
+          <label class="kicker" for="pdf2word_file" style="display:block;margin-bottom:6px">Raw PDF</label>
+          <input id="pdf2word_file" type="file" name="file" accept="application/pdf" required
+                 style="width:100%;padding:10px;border:1px solid var(--line);border-radius:12px" />
+
+          <div style="margin-top:12px">
+            <button type="submit" class="btn">Convert &amp; Download</button>
+          </div>
+
+          <div class="kicker" style="margin-top:8px">
+            Tip: This keeps all text so you can make quick edits; layout won’t be exact.
+          </div>
+      </form>
+    </div>
       <div class="card">
         <h3>Session Stats</h3>
 
@@ -5552,6 +5574,40 @@ def change_director_password():
 
     return jsonify({"ok": True})
 
+from io import BytesIO
+from werkzeug.utils import secure_filename
+import pdfplumber
+from docx import Document
+
+@app.post("/tools/pdf2word/convert")
+def pdf2word_convert():
+    f = request.files.get("file")
+    if not f:
+        return "No file", 400
+    filename = secure_filename(f.filename or "document.pdf")
+    if not filename.lower().endswith(".pdf"):
+        return "Please upload a PDF", 400
+
+    # Build a simple DOCX with all text, page by page
+    doc = Document()
+    with pdfplumber.open(f.stream) as pdf:
+        for i, page in enumerate(pdf.pages):
+            text = page.extract_text() or ""
+            doc.add_paragraph(text if text.strip() else "[blank page]")
+            if i < len(pdf.pages) - 1:
+                doc.add_page_break()
+
+    buf = BytesIO()
+    doc.save(buf)
+    buf.seek(0)
+    outname = filename.rsplit(".", 1)[0] + ".docx"
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=outname,
+        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
 # Aliases to cover legacy front-ends
 @app.get("/director/api/activate")
 def _alias_activate():
@@ -8137,6 +8193,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

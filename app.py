@@ -5581,56 +5581,76 @@ from docx import Document
 
 @app.post("/tools/pdf2word/convert")
 def pdf2word_convert():
-        # --- High-fidelity conversion via PDF.co ---
-    import os, requests
-    from io import BytesIO
+        # --- PDF.co two-step: upload -> convert by URL ---
+        import os, requests
+        from io import BytesIO
 
-    f = request.files.get("file")
-    if not f:
-        return "No file", 400
+        f = request.files.get("file")
+        if not f:
+            return "No file", 400
 
-    filename = secure_filename(f.filename or "document.pdf")
-    if not filename.lower().endswith(".pdf"):
-        return "Please upload a PDF", 400
+        filename = secure_filename(f.filename or "document.pdf")
+        if not filename.lower().endswith(".pdf"):
+            return "Please upload a PDF", 400
 
-    api_key = os.environ.get("PDFCO_API_KEY", "").strip()
-    if not api_key:
-        return "PDFCO_API_KEY is not configured on the server.", 500
+        api_key = os.environ.get("PDFCO_API_KEY", "").strip()
+        if not api_key:
+            return "PDFCO_API_KEY is not configured on the server.", 500
+    
+        headers = {"x-api-key": api_key}
 
-    # Send the PDF bytes to PDF.co; they return a temporary URL to the DOCX
-    files = {"file": (filename, f.stream, "application/pdf")}
-    data = {"name": filename.rsplit(".", 1)[0] + ".docx"}
-    headers = {"x-api-key": api_key}
-    r = requests.post(
-        "https://api.pdf.co/v1/pdf/convert/to/docx",
-        headers=headers,
-        files=files,
-        data=data,
-        timeout=120,
-    )
-    try:
-        js = r.json()
-    except Exception:
-        return "Converter error (invalid response).", 502
+        # 1) Upload the file to PDF.co temporary storage
+        upload_resp = requests.post(
+            "https://api.pdf.co/v1/file/upload",
+             headers=headers,
+            files={"file": (filename, f.stream, "application/pdf")},
+            timeout=120,
+        )
+        try:
+            upload_json = upload_resp.json()
+        except Exception:
+            return "Upload error (invalid response).", 502
 
-    if not js.get("url") or js.get("error") not in (False, None):
-        return f"Converter failed: {js.get('message') or js}", 502
+        if upload_json.get("error"):
+            return f"Upload failed: {upload_json.get('message') or upload_json}", 502
 
-    # Download the produced DOCX and stream it back
-    docx_url = js["url"]
-    dl = requests.get(docx_url, timeout=120)
-    if dl.status_code != 200:
-        return "Failed to download converted file.", 502
+        file_url = upload_json.get("url")
+        if not file_url:
+            return "Upload failed: missing file URL.", 502
 
-    outname = filename.rsplit(".", 1)[0] + ".docx"
-    buf = BytesIO(dl.content)
-    buf.seek(0)
-    return send_file(
-        buf,
-        as_attachment=True,
-        download_name=outname,
-        mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    )
+        # 2) Convert that URL to DOCX
+        convert_resp = requests.post(
+            "https://api.pdf.co/v1/pdf/convert/to/docx",
+            headers=headers,
+            data={"url": file_url, "name": filename.rsplit('.', 1)[0] + ".docx"},
+            timeout=120,
+        )
+        try:
+            convert_json = convert_resp.json()
+        except Exception:
+            return "Converter error (invalid response).", 502
+
+        if convert_json.get("error"):
+            return f"Converter failed: {convert_json.get('message') or convert_json}", 502
+
+        docx_url = convert_json.get("url")
+        if not docx_url:
+            return "Converter failed: missing result URL.", 502
+
+        # 3) Download the produced DOCX and stream it back
+        dl = requests.get(docx_url, timeout=120)
+        if dl.status_code != 200:
+            return "Failed to download converted file.", 502
+
+        outname = filename.rsplit(".", 1)[0] + ".docx"
+        buf = BytesIO(dl.content)
+        buf.seek(0)
+        return send_file(
+            buf,
+            as_attachment=True,
+            download_name=outname,
+            mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
 
 # Aliases to cover legacy front-ends
 @app.get("/director/api/activate")
@@ -8217,6 +8237,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

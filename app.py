@@ -3562,6 +3562,45 @@ def app_page():
                 '</body>'
             )
         )
+        # Inject per-org brand swap (name, logo, tagline) for /app header
+    html = html.replace(
+        "</body>",
+        (
+            '<script>(function(){'
+            'fetch("/__me/org-brand",{credentials:"include"})'
+            '.then(function(r){return r.json()})'
+            '.then(function(j){'
+            '  if(!j||!j.ok||!j.org) return;'
+            '  var org=j.org;'
+            '  // Title'
+            '  var titleEl=document.querySelector(".brand-title")'
+            '    ||document.querySelector("header h1")'
+            '    ||document.querySelector("h1");'
+            '  if(titleEl&&org.name){ titleEl.textContent=org.name; }'
+            '  // Tagline'
+            '  var subEl=document.querySelector(".brand-subtitle")'
+            '    ||document.querySelector("header .subtitle")'
+            '    ||document.querySelector(".header-subtitle");'
+            '  if(subEl&&org.tagline){ subEl.textContent=org.tagline; }'
+            '  // Logo'
+            '  var logoEl=document.querySelector("img.brand-logo")'
+            '    ||document.querySelector("header img")'
+            '    ||document.querySelector(\'img[alt*="Hamilton"]\');'
+            '  if(logoEl&&org.logo){'
+            '    logoEl.src=org.logo;'
+            '    logoEl.alt=(org.name||"Logo")+" logo";'
+            '    if(!logoEl.style.maxHeight){ logoEl.style.maxHeight="44px"; }'
+            '    logoEl.style.display="";'
+            '  }'
+            '  // Browser tab title (nice touch; keep fallback safe)'
+            '  if(org.name&&document.title&&/^Hamilton|^Lustra/i.test(document.title)){'
+            '    document.title=org.name+" — "+document.title.replace(/^Hamilton\\s*-\\s*|^Lustra\\s*-?\\s*/i,"");'
+            '  }'
+            '}).catch(function(e){console.log("brand swap failed",e)});'
+            '})();</script></body>'
+        )
+    )
+    
     # Inject Skills toggle + lazy loader
     html = html.replace(
         "</body>",
@@ -8348,6 +8387,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -4877,31 +4877,44 @@ def __admin_upload_org_logo():
     if not is_admin_flag:
         return jsonify({"ok": False, "error": "forbidden"}), 403
 
-    org_id_raw = request.form.get("org_id") or "0"
     try:
-        org_id = int(org_id_raw)
-    except Exception:
-        org_id = 0
-    tagline = (request.form.get("tagline") or "").strip()
-    f = request.files.get("logo")
+        org_id_raw = request.form.get("org_id") or request.args.get("org_id") or "0"
+        try:
+            org_id = int(org_id_raw)
+        except Exception:
+            org_id = 0
+        tagline = (request.form.get("tagline") or "").strip()
+        f = request.files.get("logo")
+        if org_id <= 0:
+            return jsonify({"ok": False, "error": "missing_or_bad_org_id"}), 400
+        if not f:
+            return jsonify({"ok": False, "error": "missing_logo_file"}), 400
 
-    if org_id <= 0 or not f:
-        return jsonify({"ok": False, "error": "missing org_id or logo"}), 400
+        import os
+        from pathlib import Path
+        filename = f.filename or ""
+        ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "png"
+        allowed = {"png","jpg","jpeg","gif","svg","webp","jfif"}
+        if ext == "jfif": ext = "jpg"
+        if ext not in allowed:
+            return jsonify({"ok": False, "error": "unsupported_extension", "got": ext}), 400
 
-    from pathlib import Path
-    org_dir = Path(f"/mnt/data/org_assets/{org_id}")
-    org_dir.mkdir(parents=True, exist_ok=True)
+        org_dir = Path(f"/mnt/data/org_assets/{org_id}")
+        org_dir.mkdir(parents=True, exist_ok=True)
+        save_path = org_dir / f"logo.{ext}"
+        f.save(str(save_path))
 
-    ext = (f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "png")
-    save_path = org_dir / f"logo.{ext}"
-    f.save(str(save_path))
+        db_execute(
+            "UPDATE orgs SET logo_path=%s, tagline=COALESCE(%s, tagline) WHERE id=%s",
+            (str(save_path), (tagline or None), org_id)
+        )
 
-    db_execute(
-        "UPDATE orgs SET logo_path=%s, tagline=COALESCE(%s, tagline) WHERE id=%s",
-        (str(save_path), (tagline or None), org_id)
-    )
+        return jsonify({"ok": True, "org_id": org_id, "logo_path": str(save_path)})
 
-    return jsonify({"ok": True, "org_id": org_id, "logo_path": str(save_path)})
+    except Exception as e:
+        import traceback
+        print("logo upload failed:", e, traceback.format_exc())
+        return jsonify({"ok": False, "error": "upload_failed", "detail": str(e)[:300]}), 400
 
     # --- Owner: credits audit (admin-only, read-only) ---
 @app.get("/owner/api/credits-ledger")
@@ -8389,6 +8402,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

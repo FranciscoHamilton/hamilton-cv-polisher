@@ -8235,6 +8235,210 @@ def storage_root() -> str:
     _STORAGE_ROOT = "/tmp"
     return _STORAGE_ROOT
 
+# ---- Lossless re-sectionizer (no wording changes) ----
+# Buckets raw text into canonical sections using heading synonyms and simple regex cues.
+# Produces a stable, extractor-friendly text that reduces misses on messy PDFs.
+
+import re
+
+_CANON_SECTIONS = [
+    "name",
+    "contact_details",
+    "summary",
+    "education",
+    "skills",
+    "experience",
+    "certifications",
+    "achievements",
+    "projects",
+    "languages",
+    "references",
+]
+
+# Map many possible headings to our canonical buckets
+_SECTION_SYNONYMS = {
+    "summary":           [r"summary", r"personal profile", r"profile", r"executive summary"],
+    "education":         [r"education", r"academic history", r"qualifications", r"academic qualifications"],
+    "skills":            [r"skills", r"technical skills", r"professional skills", r"capabilities", r"capability summary"],
+    "experience":        [r"experience", r"employment", r"work history", r"professional experience", r"career history"],
+    "certifications":    [r"certifications?", r"licenses?", r"credentials?", r"certificates?"],
+    "achievements":      [r"achievements?", r"key achievements?", r"key results?"],
+    "projects":          [r"projects?"],
+    "languages":         [r"languages?"],
+    "references":        [r"references?", r"referees?"],
+    "contact_details":   [r"contact details?", r"contacts?"],
+}
+
+# Pre-compile heading matchers
+_SECTION_HEADINGS = [(canon, re.compile(rf"^(?:<<H>>\s*)?({ '|'.join(pats) })\b[:\s]*$", re.I))
+                     for canon, pats in ((k, [p for p in v]) for k, v in _SECTION_SYNONYMS.items())]
+
+_EMAIL_RE = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.I)
+_PHONE_RE = re.compile(r"(\+?\d[\d \-\(\)]{6,}\d)")
+_LINK_RE  = re.compile(r"\b(?:https?://|www\.)\S+", re.I)
+_LINKEDIN_RE = re.compile(r"linkedin\.com/[^ \t\r\n]+", re.I)
+_NAME_LINE_RE = re.compile(r"^[A-Z][A-Za-z'`\-]+(?:\s+[A-Z][A-Za-z'`\-]+){0,3}$")
+
+def lossless_sectionize(text: str) -> dict:
+    """
+    Returns a dict: {
+      'sections': {canon: [lines...]},
+      'contacts': {'emails':[], 'phones':[], 'links':[], 'linkedin':[]},
+      'name': '...'(optional)
+    }
+    No rewriting; preserves original lines (trimmed).
+    """
+    out = {"sections": {k: [] for k in _CANON_SECTIONS}, "contacts": {"emails": [], "phones": [], "links": [], "linkedin": []}}
+    if not text:
+        return out
+
+    lines = [ln.rstrip() for ln in text.split("\n")]
+    # Collect contacts everywhere
+    emails = set(); phones = set(); links = set(); linkedins = set()
+    for ln in lines:
+        for m in _EMAIL_RE.findall(ln): emails.add(m.strip())
+        for m in _PHONE_RE.findall(ln): 
+            ph = re.sub(r"\s+", " ", m.strip())
+            if len(re.sub(r"\D","",ph)) >= 7: phones.add(ph)
+        for m in _LINK_RE.findall(ln): links.add(m.strip())
+        for m in _LINKEDIN_RE.findall(ln): linkedins.add(m.strip())
+    out["contacts"]["emails"]   = sorted(emails)
+    out["contacts"]["phones"]   = sorted(phones)
+    out["contacts"]["links"]    = sorted(links)
+    out["contacts"]["linkedin"] = sorted(linkedins)
+
+    # Heuristic name: first non-empty line near top that looks like a person name (before a contact block)
+    for i, ln in enumerate(lines[:8]):  # only scan top 8 lines
+        s = ln.strip()
+        if not s: 
+            continue
+        if _EMAIL_RE.search(s) or _PHONE_RE.search(s) or _LINKEDIN_RE.search(s): 
+            break
+        if _NAME_LINE_RE.match(s) and len(s) <= 60:
+            out["name"] = s
+            break
+
+    # Walk lines and bucket by headings
+    current = None
+    for ln in lines:
+        raw = ln.strip()
+        if not raw:
+            continue
+        # Is this a heading?
+        matched = False
+        for canon, rx in _SECTION_HEADINGS:
+            if rx.match(raw):
+                current = canon
+                matched = True
+                break
+        if matched:
+            continue
+
+        # Tag bullets more explicitly helps the extractor later
+        line_clean = re.sub(r"^\s*[-•‣]\s*", "• ", raw)
+
+        # If we have a current heading, add there
+        if current:
+            out["sections"].setdefault(current, []).append(line_clean)
+            continue
+
+        # Otherwise, smart fallbacks:
+        # If it looks like contact information but we don't have a Contact section, keep it there too.
+        if _EMAIL_RE.search(raw) or _PHONE_RE.search(raw) or _LINKEDIN_RE.search(raw):
+            out["sections"].setdefault("contact_details", []).append(line_clean)
+        else:
+            # Unplaced lines: gently bias toward 'summary' at the very top; otherwise leave for extractor
+            pass
+
+    return out
+
+def render_lossless_for_extractor(sec: dict) -> str:
+    """
+    Turn sectionized buckets into a clean, canonical text for your extractor.
+    This *does not add or rewrite text*, it only groups under canonical headings.
+    """
+    if not isinstance(sec, dict): 
+        return ""
+    sections = sec.get("sections") or {}
+    parts = []
+
+    # Name
+    nm = (sec.get("name") or "").strip()
+    if nm:
+        parts.append("NAME:\n" + nm)
+
+    # Contact block
+    c = sec.get("contacts") or {}
+    contact_lines = []
+    for k in ("emails","phones","linkedin","links"):
+        for v in c.get(k, []):
+            if v: contact_lines.append(v)
+    if sections.get("contact_details"):
+        contact_lines.extend([s for s in sections["contact_details"] if s.strip()])
+    if contact_lines:
+        parts.append("CONTACT DETAILS:\n" + "\n".join(dict.fromkeys(contact_lines)))
+
+    # Then the rest in a fixed, safe order
+    order = ["summary","experience","achievements","education","skills","certifications","projects","languages","references"]
+    for key in order:
+        vals = sections.get(key) or []
+        if not vals: 
+            continue
+        title = key.replace("_"," ").upper()
+        parts.append(f"{title}:\n" + "\n".join(vals))
+
+    return "\n\n".join(parts)
+
+def deep_merge_lossless(extracted: dict, lossless: dict) -> dict:
+    """
+    Union-only merge: if the extractor missed a section, we add the plain lines.
+    We never delete or rewrite fields the extractor already provided.
+    Safe targets: summary (string), skills (list-of-strings), education (list-of-strings),
+                  experience (list-of-strings when missing), certifications (list-of-strings),
+                  languages (list-of-strings), references (list-of-strings).
+    """
+    if not isinstance(extracted, dict): 
+        extracted = {}
+    out = dict(extracted)
+
+    if not isinstance(lossless, dict):
+        return out
+    secs = lossless.get("sections") or {}
+
+    # name/contact only if completely missing
+    if not out.get("name") and lossless.get("name"):
+        out["name"] = lossless.get("name")
+
+    # contacts: add if extractor has none
+    if not out.get("contact_details"):
+        contact_lines = []
+        c = lossless.get("contacts") or {}
+        for k in ("emails","phones","linkedin","links"):
+            for v in c.get(k, []):
+                if v: contact_lines.append(v)
+        if secs.get("contact_details"):
+            contact_lines.extend([s for s in secs["contact_details"] if s.strip()])
+        if contact_lines:
+            out["contact_details"] = list(dict.fromkeys(contact_lines))
+
+    # simple list sections we can add safely if missing
+    SIMPLE_LISTS = ["skills","education","experience","certifications","languages","references","projects","achievements"]
+    for key in SIMPLE_LISTS:
+        if key in out and out.get(key):
+            continue
+        vals = [s for s in (secs.get(key) or []) if s and str(s).strip()]
+        if vals:
+            out[key] = vals
+
+    # summary: join lines (no rewrite) if missing
+    if not out.get("summary"):
+        vals = secs.get("summary") or []
+        if vals:
+            out["summary"] = "\n".join(vals)
+
+    return out
+# ---- /Lossless re-sectionizer ----
+
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
@@ -8378,9 +8582,54 @@ def polish():
                 # If balance check fails, don't block polishing; just log
                 print("credits precheck failed:", e)
 
-        # ---- Polishing logic (unchanged) ----
-        data = ai_or_heuristic_structuring(text)
-        data["skills"] = extract_top_skills(text)  # keywords-only list as before
+        
+        # ---- Polishing logic (enhanced, non-destructive) ----
+        # 1) Normalize messy PDF text
+        try:
+            text_norm = normalize_cv_text(text)
+        except Exception:
+            text_norm = text
+
+        # 2) Lossless re-sectionization (no new wording)
+        try:
+            sec = lossless_sectionize(text_norm)
+        except Exception:
+            sec = None
+
+        # 3) Main extraction prefers normalized text
+        try:
+            data = ai_or_heuristic_structuring(text_norm)
+        except Exception:
+            data = ai_or_heuristic_structuring(text)
+
+        # 4) Union-merge: add anything the sectionizer found that the extractor missed
+        try:
+            if sec:
+                data = deep_merge_lossless(data, sec)
+        except Exception:
+            pass
+
+        # 5) Keep legacy skills extraction, then merge (don’t overwrite)
+        try:
+            legacy_sk = extract_top_skills(text_norm)
+            if legacy_sk:
+                if isinstance(data.get("skills"), dict):
+                    data["skills"]["professional"] = list(dict.fromkeys(
+                        [*data["skills"].get("professional", []), *legacy_sk]
+                    ))
+                else:
+                    data.setdefault("skills", [])
+                    if isinstance(data["skills"], list):
+                        data["skills"].extend([s for s in legacy_sk if s not in data["skills"]])
+        except Exception:
+            pass
+
+        # 6) Map to Hamilton fields & fix-ups (never drop info)
+        try:
+            data = postprocess_to_hamilton(data, raw_text=text_norm)
+        except Exception:
+            pass
+        # ---- /Polishing logic (enhanced) ----
 
         # Optional per-org DOCX template (falls back to default if none)
         template_override = None
@@ -8441,6 +8690,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

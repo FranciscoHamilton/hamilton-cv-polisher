@@ -4794,7 +4794,6 @@ input,select,button{{padding:8px;border:1px solid #e5e7eb;border-radius:8px}}
 </body></html>"""
         return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
-return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
 # --- Admin: upload per-org logo (+ optional tagline) ---
 
@@ -4909,39 +4908,6 @@ def owner_api_credits_ledger():
     ]
 
     return jsonify({"ok": True, "items": out})
-
-    # POST: handle upload
-    file = request.files.get("file")
-    org_id_raw = request.form.get("org_id") or request.args.get("org_id")
-    try:
-        org_id = int(org_id_raw or "0")
-    except Exception:
-        org_id = 0
-    if not (file and org_id):
-        return jsonify({"ok": False, "error": "missing file or org_id"}), 400
-    if not db_query_one("SELECT 1 FROM orgs WHERE id=%s", (org_id,)):
-        return jsonify({"ok": False, "error": "org not found"}), 404
-
-    filename = getattr(file, "filename", "") or ""
-    if not filename.lower().endswith(".docx"):
-        return jsonify({"ok": False, "error": "must be a .docx file"}), 400
-
-    from werkzeug.utils import secure_filename
-    import os, time
-    base_dir = "/mnt/data/org_templates"
-    os.makedirs(base_dir, exist_ok=True)
-    org_dir = os.path.join(base_dir, str(org_id))
-    os.makedirs(org_dir, exist_ok=True)
-    ts = int(time.time())
-    safe = secure_filename(filename) or f"template_{ts}.docx"
-    canonical_path = os.path.join(org_dir, "template.docx")
-    file.save(canonical_path)
-    db_execute(
-        "UPDATE orgs SET template_path=%s, template_updated_at=NOW() WHERE id=%s",
-        (canonical_path, org_id),
-    )
-    size_bytes = os.path.getsize(canonical_path) if os.path.exists(canonical_path) else None
-    return jsonify({"ok": True, "org_id": org_id, "template_path": canonical_path, "size": size_bytes})
 
 # --- Admin: simple form to create a user and assign to an org (GET -> calls /__admin/create-user) ---
 @app.get("/__admin/new-user")

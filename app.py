@@ -4899,7 +4899,9 @@ def __admin_upload_org_logo():
         if ext not in allowed:
             return jsonify({"ok": False, "error": "unsupported_extension", "got": ext}), 400
 
-        org_dir = Path(f"/mnt/data/org_assets/{org_id}")
+        from pathlib import Path
+        root = storage_root()
+        org_dir = Path(root) / "org_assets" / str(org_id)
         org_dir.mkdir(parents=True, exist_ok=True)
         save_path = org_dir / f"logo.{ext}"
         f.save(str(save_path))
@@ -8195,6 +8197,43 @@ def _protect_root_admin_from_mutation():
     except Exception:
         # Never take the site down because of the guard
         pass
+# --- Writable storage root resolver ---
+import os
+from pathlib import Path
+
+_STORAGE_ROOT = None
+def storage_root() -> str:
+    """
+    Return a writable directory. Tries /mnt/data, then /var/tmp/lustracv, then /tmp/lustracv,
+    then ./runtime_data. Creates the folder if missing.
+    """
+    global _STORAGE_ROOT
+    if _STORAGE_ROOT:
+        return _STORAGE_ROOT
+
+    candidates = [
+        "/mnt/data",
+        "/var/tmp/lustracv",
+        "/tmp/lustracv",
+        str(Path(os.getcwd()) / "runtime_data"),
+    ]
+    for p in candidates:
+        try:
+            Path(p).mkdir(parents=True, exist_ok=True)
+            # quick write test
+            test = Path(p) / ".writetest"
+            with open(test, "wb") as fh:
+                fh.write(b"ok")
+            try:
+                test.unlink()
+            except Exception:
+                pass
+            _STORAGE_ROOT = p
+            return _STORAGE_ROOT
+        except Exception:
+            continue
+    _STORAGE_ROOT = "/tmp"
+    return _STORAGE_ROOT
 
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
@@ -8402,6 +8441,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

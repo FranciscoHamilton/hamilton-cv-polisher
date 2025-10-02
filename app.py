@@ -1464,7 +1464,7 @@ CONTACT_HTML = r"""
           <div class="hint" style="margin-top:8px">Buy Packs available · non-expiring.</div>
           <hr style="border:none;border-top:1px solid var(--line);margin:14px 0">
           <div style="font-weight:900;margin-bottom:6px">Prefer email?</div>
-          <div><a href="mailto:hello@lustra.uk">hello@lustra.uk</a></div>
+          <div><a href="mailto:hello@lustracv.com">hello@lustracv.com</a></div>
           <div class="hint">We reply within 1 business day.</div>
         </aside>
       </form>
@@ -2776,7 +2776,7 @@ def contact_post():
     thanks = """
     <div class="pagebox">
       <h1>Thanks — we’ve got it!</h1>
-      <p class="sub">We’ll reach out within 1 business day. You can also email <a href="mailto:hello@lustra.uk">hello@lustra.uk</a>.</p>
+      <p class="sub">We’ll reach out within 1 business day. You can also email <a href="mailto:hello@lustracv.com">hello@lustracv.com</a>.</p>
       <p><a class="btn" href="/login" style="width:auto;padding-left:20px;padding-right:20px">Sign in to start your 5-CV trial</a></p>
     </div>
     """
@@ -8261,5 +8261,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 

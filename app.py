@@ -4823,42 +4823,72 @@ def __admin_upload_org_logo_form():
     </form>
     """
 
-@app.post("/__admin/upload-org-logo")
-def __admin_upload_org_logo():
-    # admin guard
-    try:
-        uname = (session.get("user") or "").strip().lower()
-        is_admin_flag = bool(session.get("is_admin")) or (uname == "admin")
-    except Exception:
-        is_admin_flag = False
-    if not is_admin_flag:
-        return jsonify({"ok": False, "error": "forbidden"}), 403
+    # --- Admin: upload per-org logo (+ optional tagline) ---
 
-    org_id_raw = request.form.get("org_id") or "0"
-    try:
-        org_id = int(org_id_raw)
-    except Exception:
-        org_id = 0
-    tagline = (request.form.get("tagline") or "").strip()
-    f = request.files.get("logo")
+    @app.get("/__admin/upload-org-logo")
+    def __admin_upload_org_logo_form():
+        # admin guard
+        try:
+            uname = (session.get("user") or "").strip().lower()
+            is_admin_flag = bool(session.get("is_admin")) or (uname == "admin")
+        except Exception:
+            is_admin_flag = False
+        if not is_admin_flag:
+            return "forbidden", 403
 
-    if org_id <= 0 or not f:
-        return jsonify({"ok": False, "error": "missing org_id or logo"}), 400
+        rows = db_query("SELECT id, name FROM orgs ORDER BY id")
+        options = "".join([f'<option value="{r[0]}">{r[0]} — {r[1]}</option>' for r in (rows or [])])
 
-    from pathlib import Path
-    org_dir = Path(f"/mnt/data/org_assets/{org_id}")
-    org_dir.mkdir(parents=True, exist_ok=True)
+        html = f"""
+        <h2>Upload Org Logo</h2>
+        <form method="post" action="/__admin/upload-org-logo" enctype="multipart/form-data">
+          <label>Org:</label>
+          <select name="org_id">{options}</select><br><br>
+          <label>Tagline (optional):</label>
+          <input name="tagline" style="width:360px" placeholder="e.g., Search · Selection · Advisory"><br><br>
+          <input type="file" name="logo" accept="image/*" required>
+          <button type="submit">Upload</button>
+        </form>
+        """
+        return make_response(html, 200, {"Content-Type": "text/html; charset=utf-8"})
 
-    ext = (f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "png")
-    save_path = org_dir / f"logo.{ext}"
-    f.save(str(save_path))
 
-    db_execute(
-        "UPDATE orgs SET logo_path=%s, tagline=COALESCE(%s, tagline) WHERE id=%s",
-        (str(save_path), (tagline or None), org_id)
-    )
+    @app.post("/__admin/upload-org-logo")
+    def __admin_upload_org_logo():
+        # admin guard
+        try:
+            uname = (session.get("user") or "").strip().lower()
+            is_admin_flag = bool(session.get("is_admin")) or (uname == "admin")
+        except Exception:
+            is_admin_flag = False
+        if not is_admin_flag:
+            return jsonify({"ok": False, "error": "forbidden"}), 403
 
-    return jsonify({"ok": True, "org_id": org_id, "logo_path": str(save_path)})
+        org_id_raw = request.form.get("org_id") or "0"
+        try:
+            org_id = int(org_id_raw)
+        except Exception:
+            org_id = 0
+        tagline = (request.form.get("tagline") or "").strip()
+        f = request.files.get("logo")
+
+        if org_id <= 0 or not f:
+            return jsonify({"ok": False, "error": "missing org_id or logo"}), 400
+
+        from pathlib import Path
+        org_dir = Path(f"/mnt/data/org_assets/{org_id}")
+        org_dir.mkdir(parents=True, exist_ok=True)
+
+        ext = (f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else "png")
+        save_path = org_dir / f"logo.{ext}"
+        f.save(str(save_path))
+
+        db_execute(
+            "UPDATE orgs SET logo_path=%s, tagline=COALESCE(%s, tagline) WHERE id=%s",
+            (str(save_path), (tagline or None), org_id)
+        )
+
+        return jsonify({"ok": True, "org_id": org_id, "logo_path": str(save_path)})
 
     # --- Owner: credits audit (admin-only, read-only) ---
 @app.get("/owner/api/credits-ledger")
@@ -8311,6 +8341,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -7149,6 +7149,172 @@ def __admin_ensure_core_columns():
         results["plans_table_present"] = False
 
     return jsonify({"ok": True, "applied": results})
+
+# === LUSTRA SAFE ENHANCEMENTS (helpers) ===
+import re
+from datetime import datetime
+
+def normalize_cv_text(raw: str) -> str:
+    """
+    Cheap, deterministic cleanup so structuring misses less:
+    - unify bullets & dashes
+    - fix hyphenated line breaks
+    - collapse whitespace
+    - mark likely headings/bullets/dates to give the model clearer cues
+    """
+    if not raw:
+        return raw
+
+    s = raw
+
+    # unify bullets/dashes
+    s = s.replace('•','-').replace('‣','-').replace('–','-').replace('—','-')
+
+    # de-hyphenate line wraps (e.g., "repor-\n ting" -> "reporting")
+    s = re.sub(r'(\w)-\s*\n\s*(\w)', r'\1\2', s)
+
+    # collapse extra spaces & weird Unicode spaces
+    s = re.sub(r'[ \t\u00A0]+', ' ', s)
+    s = re.sub(r'[ \t]+$', '', s, flags=re.MULTILINE)
+
+    # normalize newlines
+    s = s.replace('\r\n','\n').replace('\r','\n')
+
+    # light heading tagging (ALL CAPS short lines or lines ending with colon)
+    def tag_heading(line: str) -> str:
+        stripped = line.strip()
+        if not stripped:
+            return line
+        is_caps = stripped == stripped.upper() and len(stripped) <= 60 and re.search(r'[A-Z]', stripped)
+        ends_colon = stripped.endswith(':') and len(stripped) <= 80
+        if is_caps or ends_colon:
+            return '<<H>> ' + line
+        return line
+
+    s = '\n'.join(tag_heading(ln) for ln in s.split('\n'))
+
+    # bullet tagging
+    s = re.sub(r'^\s*-\s+', '<<BULLET>> ', s, flags=re.MULTILINE)
+
+    # date cue tagging (helps experience parsing)
+    s = re.sub(
+        r'(\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\b|\b\d{4}\b)\s*(?:–|-|to|—)\s*(Present|\d{4}|\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}\b)',
+        r'<<DATE>> \1 - \2',
+        s,
+        flags=re.IGNORECASE
+    )
+    return s
+
+
+def postprocess_to_hamilton(data: dict, raw_text: str) -> dict:
+    """
+    Map extractor output into Hamilton’s canonical shape without removing anything.
+    Conservative (adds info if found; never drops).
+    """
+    if not isinstance(data, dict):
+        return data or {}
+
+    out = dict(data)  # shallow copy
+
+    # ---- SKILLS: merge capabilities/technical/professional into one 'skills' block
+    skills_block = {"professional": [], "tools": []}
+
+    # keep existing extracted skills
+    existing = []
+    try:
+        if isinstance(out.get("skills"), (list, tuple)):
+            existing = [str(x).strip() for x in out.get("skills") if str(x).strip()]
+        elif isinstance(out.get("skills"), dict):
+            existing = [str(x).strip() for x in out["skills"].get("professional", []) if str(x).strip()]
+            skills_block["tools"].extend([str(x).strip() for x in out["skills"].get("tools", []) if str(x).strip()])
+    except Exception:
+        pass
+
+    # pull from common fields other extractors may use
+    candidates = []
+    for k in ("capabilities", "capabilities_summary", "professional_skills", "technical_skills"):
+        v = out.get(k)
+        if isinstance(v, (list, tuple)):
+            candidates.extend([str(x).strip() for x in v if str(x).strip()])
+        elif isinstance(v, str) and v.strip():
+            parts = re.split(r'[|,;\n]', v)
+            candidates.extend([p.strip() for p in parts if p.strip()])
+
+    merged = list(dict.fromkeys([*existing, *candidates]))  # dedupe, keep order
+    tool_like = {"r","python","vba","excel","sql","sas","tableau","power bi","ggplot2","shiny"}
+    for item in merged:
+        if item.lower() in tool_like:
+            skills_block["tools"].append(item)
+        else:
+            skills_block["professional"].append(item)
+
+    if isinstance(out.get("skills"), dict):
+        out["skills"]["professional"] = list(dict.fromkeys([*out["skills"].get("professional", []), *skills_block["professional"]]))
+        out["skills"]["tools"] = list(dict.fromkeys([*out["skills"].get("tools", []), *skills_block["tools"]]))
+    else:
+        out["skills"] = {
+            "professional": list(dict.fromkeys(skills_block["professional"])),
+            "tools": list(dict.fromkeys(skills_block["tools"]))
+        }
+
+    # ---- EXPERIENCE: keep achievements nested; add Career Break if mentioned but missing
+    exp = out.get("experience")
+    if isinstance(exp, list):
+        for role in exp:
+            if not isinstance(role, dict):
+                continue
+            bullets = role.get("bullets") or []
+            if bullets and not role.get("achievements"):
+                ach = [b for b in bullets if re.search(r'\bachievements?\b|\bkey results?\b', str(b), re.I)]
+                if ach:
+                    role.setdefault("achievements", [])
+                    role["achievements"].extend([
+                        re.sub(r'^\s*(Achievements?:|Key Results?:)\s*','',str(b), flags=re.I).strip()
+                        for b in ach
+                    ])
+            if bullets and not role.get("responsibilities"):
+                role["responsibilities"] = [str(b).strip() for b in bullets if str(b).strip()]
+
+        if "career break" in raw_text.lower() and not any(
+            (str(r.get("employer","")).lower().startswith("career break")) for r in exp if isinstance(r, dict)
+        ):
+            out["experience"] = [
+                *exp,
+                {
+                    "employer": "Career Break",
+                    "role": "Career Break",
+                    "description": "Career break noted in source CV",
+                }
+            ]
+
+    # ---- EDUCATION vs CERTIFICATIONS: lift nested credentials up into certifications (also keep in edu)
+    certs = out.get("certifications") or []
+    edu = out.get("education") or []
+    if isinstance(edu, list):
+        for e in edu:
+            if not isinstance(e, dict):
+                continue
+            nested = e.get("credentials") or e.get("certs") or []
+            for c in nested:
+                txt = str(c) if not isinstance(c, dict) else str(c.get("name") or c.get("title") or c)
+                if txt and txt.strip():
+                    certs.append({"name": txt.strip(), "issuer": e.get("institution",""), "date": (c.get("date") if isinstance(c, dict) else "")})
+    if certs:
+        seen = set(); clean = []
+        for c in certs:
+            key = (str(c.get("name","")).lower(), str(c.get("issuer","")).lower(), str(c.get("date","")).lower())
+            if key in seen: 
+                continue
+            seen.add(key); clean.append(c)
+        out["certifications"] = clean
+
+    # ---- sanitize template placeholders that sometimes leak
+    pq = out.get("professional_qualifications")
+    if isinstance(pq, list):
+        out["professional_qualifications"] = [x for x in pq if str(x).strip().lower() != 'titleinstitutionyear']
+
+    return out
+# === /LUSTRA SAFE ENHANCEMENTS (helpers) ===
 # ---- Quick diagnostic (no secrets) ----
 # ---------- Owner (admin) console ----------
 @app.get("/owner/console")
@@ -8198,23 +8364,39 @@ def polish():
                 # If balance check fails, don't block polishing; just log
                 print("credits precheck failed:", e)
 
-        # ---- Polishing logic (unchanged) ----
-        data = ai_or_heuristic_structuring(text)
-        data["skills"] = extract_top_skills(text)  # keywords-only list as before
-
-        # Optional per-org DOCX template (falls back to default if none)
-        template_override = None
+        # ---- Polishing logic (enhanced, with safe fallback) ----
         try:
-            oid = _current_user_org_id()
-            if oid:
-                row = db_query_one("SELECT template_path FROM orgs WHERE id=%s", (oid,))
-                if row and row[0]:
-                    pth = Path(row[0])
-                    if pth.exists():
-                        template_override = str(pth)
-        except Exception as e:
-            print("template resolve failed:", e)
+            # normalize cheaply to help structuring
+            text_norm = normalize_cv_text(text)
 
+            # try your current extractor on normalized text
+            data = ai_or_heuristic_structuring(text_norm)
+
+            # keep legacy skills extraction (your keywords dictionary), then merge
+            try:
+                legacy_sk = extract_top_skills(text_norm)
+                if legacy_sk:
+                    if isinstance(data.get("skills"), dict):
+                        data["skills"]["professional"] = list(dict.fromkeys([*data["skills"].get("professional", []), *legacy_sk]))
+                    else:
+                        data.setdefault("skills", [])
+                        if isinstance(data["skills"], list):
+                            data["skills"].extend([s for s in legacy_sk if s not in data["skills"]])
+            except Exception:
+                pass
+
+            # Hamilton mapping & fix-ups (non-destructive)
+            data = postprocess_to_hamilton(data, raw_text=text_norm)
+
+        except Exception as _e:
+            # Anything goes wrong → exact original behavior (no customer impact)
+            data = ai_or_heuristic_structuring(text)
+            try:
+                data["skills"] = extract_top_skills(text)
+            except Exception:
+                pass
+
+        # ---- Compose document (unchanged) ----
         out = build_cv_document(data, template_override=template_override)
 
         # ---- Update legacy JSON stats (for continuity) ----
@@ -8261,6 +8443,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -4731,6 +4731,23 @@ def __admin_ensure_org_profile():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
+# --- Admin: ensure brand columns (logo + tagline) ---
+@app.get("/__admin/ensure-brand-schema")
+def __admin_ensure_brand_schema():
+    # admin guard
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_admin_flag = bool(session.get("is_admin")) or (uname == "admin")
+    except Exception:
+        is_admin_flag = False
+    if not is_admin_flag:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # add per-org branding columns (idempotent — safe to run anytime)
+    ok1 = db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS logo_path TEXT")
+    ok2 = db_execute("ALTER TABLE orgs ADD COLUMN IF NOT EXISTS tagline TEXT")
+    return jsonify({"ok": True, "logo_path": bool(ok1), "tagline": bool(ok2)})
+
 # --- Admin: upload a DOCX template for an org (GET=form, POST=upload) ---
 @app.route("/__admin/upload-org-template", methods=["GET", "POST"])
 def __admin_upload_org_template():
@@ -8261,6 +8278,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

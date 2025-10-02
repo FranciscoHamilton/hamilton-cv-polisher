@@ -1368,7 +1368,7 @@ CONTACT_HTML = r"""
 
     <div class="pagebox">
       <h1>Talk to Sales</h1>
-      <p class="sub">Tell us about your desk; we’ll get you live in a day. Or start a 5-CV trial — no card required.</p>
+      <p class="sub">Tell us about your desk; we’ll get you live in a day.</p>
 
       <form method="POST" enctype="multipart/form-data" class="grid">
         <div>
@@ -8261,6 +8261,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

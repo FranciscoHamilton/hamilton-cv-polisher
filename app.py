@@ -919,7 +919,7 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
       <div class="inner">
         <h1>Built by recruiters, for recruiters</h1>
         <p>Formatting CVs is necessary—but it’s not why you got into recruitment. After 10+ years running desks and a recruitment business, I’ve felt the pain first-hand: breaking flow to rework a CV, juggling fonts and spacing, fixing headers, and trying to keep branding consistent across the team.</p>
-        <p><strong>This tool turns that 10–20 minute task into seconds.</strong> Upload a raw CV (PDF, DOCX, or TXT). We extract the content, structure it, and lay it out in your company’s template. You download a polished, on-brand DOCX—ready to send.</p>
+        <p><strong>This tool turns that 10–20 minute task into seconds.</strong> Upload a raw CV (PDF, DOCX, or TXT). Lustra extracts the content, structures it, and lay it out in your company’s template. You download a polished, on-brand DOCX—ready to send.</p>
 
         <h2>Why it matters</h2>
         <ul>
@@ -8261,6 +8261,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

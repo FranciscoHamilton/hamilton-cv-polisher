@@ -8397,6 +8397,18 @@ def polish():
                 pass
 
         # ---- Compose document (unchanged) ----
+        # Optional per-org DOCX template (falls back to default if none)
+        template_override = None
+        try:
+            oid = _current_user_org_id()
+            if oid:
+                row = db_query_one("SELECT template_path FROM orgs WHERE id=%s", (oid,))
+                if row and row[0]:
+                    pth = Path(row[0])
+                    if pth.exists():
+                        template_override = str(pth)
+        except Exception as e:
+            print("template resolve failed:", e)
         out = build_cv_document(data, template_override=template_override)
 
         # ---- Update legacy JSON stats (for continuity) ----
@@ -8443,6 +8455,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

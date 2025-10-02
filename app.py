@@ -8170,7 +8170,40 @@ def me_diag_v2():
         "last_event": {"candidate": c or "", "ts": t or ""},
     })
 
-# ---------- Director routes (refreshed) ----------
+# --- Me: org brand (name, logo, tagline) for the logged-in user ---
+@app.get("/__me/org-brand")
+def __me_org_brand():
+    try:
+        oid = _current_user_org_id()  # this helper already exists in your app
+    except Exception:
+        oid = None
+
+    # Default for users without an org (or not logged in)
+    if not oid:
+        return jsonify({"ok": True, "org": {"id": None, "name": "Lustra", "logo": "", "tagline": ""}})
+
+    row = db_query_one("SELECT name, COALESCE(logo_path,''), COALESCE(tagline,'') FROM orgs WHERE id=%s", (oid,))
+    if not row:
+        return jsonify({"ok": True, "org": {"id": oid, "name": "Lustra", "logo": "", "tagline": ""}})
+
+    name, logo_path, tagline = row[0], row[1], row[2]
+    logo_url = f"/org-assets/{oid}/logo" if logo_path else ""
+    return jsonify({"ok": True, "org": {"id": oid, "name": name or "Lustra", "logo": logo_url, "tagline": tagline or ""}})
+
+
+# --- Static: serve the org’s logo file (if present) ---
+from flask import send_file  # if this is already imported at top, you can remove this line
+import os  # if already imported at top, you can remove this line
+
+@app.get("/org-assets/<int:org_id>/logo")
+def __org_logo(org_id: int):
+    row = db_query_one("SELECT logo_path FROM orgs WHERE id=%s", (org_id,))
+    if not row:
+        return ("", 404)
+    path = row[0] or ""
+    if not path or not os.path.exists(path):
+        return ("", 404)
+    return send_file(path)
 
 # ---------- Director routes (refreshed) ----------
 
@@ -8315,6 +8348,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -7485,6 +7485,7 @@ document.addEventListener('click', function(e){
               <th>Users</th>
               <th>Grant</th>
               <th>Director</th>
+              <th>Branding</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>
@@ -7540,6 +7541,7 @@ async function load(){
     <a class="btn" href="/owner/api/export?org_id=${o.id}">Export</a>
     <a class="btn" href="/__admin/org-profile?org_id=${o.id}">Profile</a>
     <a class="btn" href="/__admin/upload-org-template">Template</a>
+    <a class="btn" href="/__admin/upload-org-logo?org_id=${o.id}">Logo</a>
   </div>
 </td>
     `;
@@ -8387,6 +8389,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

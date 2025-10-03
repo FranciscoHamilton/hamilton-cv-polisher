@@ -931,7 +931,7 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
         <h2>How it works</h2>
         <ul>
           <li><strong>Upload</strong> a raw CV (PDF / DOCX / TXT).</li>
-          <li><strong>Extract & structure:</strong> we pull out the real content (experience, education, skills) without inventing facts.</li>
+          <li><strong>Extract & structure:</strong> Lustra pulls out the real content (experience, education, skills) without inventing facts.</li>
           <li><strong>Lay out in your template:</strong> headers/footers, fonts, sizes and spacing are applied automatically.</li>
           <li><strong>Download</strong> a polished DOCX.</li>
         </ul>
@@ -944,7 +944,7 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
 
         <h2>What’s on the site</h2>
         <ul>
-          <li><strong>Multi-company login (coming soon):</strong> Separate logins and dashboards for each company.</li>
+          <li><strong>Multi-company login:</strong> Separate logins and dashboards for each company.</li>
           <li><strong>Director Console:</strong> Manage users, track usage, reset passwords, and monitor credits in real time. Export data and review activity trends.</li>
           <li><strong>Credit Plans:</strong> Flexible options — choose between monthly bundles (Starter, Growth, Scale) or pay-as-you-go Packs.</li>
           <li><strong>Savings Calculator:</strong> Instantly see the ROI by comparing manual effort vs. automated polish, with plan recommendations tailored to your usage.</li>
@@ -8824,6 +8824,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -3697,7 +3697,11 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     _tone_runs(p, size=11, bold=False)
 
     _ensure_primary_header_spacer(doc)
+try:
     postprocess_cv_doc(doc)
+except Exception as e:
+    print("Postprocess error:", e)
+
     out = PROJECT_DIR / "polished_cv.docx"
     doc.save(str(out))
     _zip_scrub_header_labels(out)
@@ -9039,4 +9043,5 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 

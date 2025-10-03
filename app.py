@@ -1945,13 +1945,12 @@ async function toggleBase(skill, action){
       // fetch + Blob download
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  startProgress();              // show progress UI + begin staged animation
+  startProgress();
   try{
     const fd = new FormData(form);
-    const r = await fetch('/polish', { method:'POST', body: fd, cache:'no-store' });
+    const r = await fetch('/polish', { method:'POST', body: fd, cache:'no-store', credentials:'same-origin' });
     if(!r.ok) throw new Error('Server error ('+r.status+')');
 
-    // Download blob
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1962,11 +1961,10 @@ form.addEventListener('submit', async (e)=>{
     a.remove();
     URL.revokeObjectURL(url);
 
-    stopProgressSuccess();      // mark all stages done, briefly show “Done”
-    refreshStats();             // refresh stats after a successful polish
+    stopProgressSuccess();
+    refreshStats();
   }catch(err){
     alert('Polishing failed: ' + (err?.message||'Unknown error'));
-    // clean up UI on error
     const btn = document.getElementById('btn'); if(btn) btn.disabled=false;
     const prog = document.getElementById('progress'); if(prog) prog.style.display='none';
     setProgress(0);
@@ -8811,5 +8809,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 

@@ -8571,7 +8571,129 @@ def deep_merge_lossless(extracted: dict, lossless: dict) -> dict:
             out["summary"] = "\n".join(vals)
 
     return out
-# ---- /Lossless re-sectionizer ----
+# ---- Education vs Certifications separator (non-destructive) ----
+import re as _re2
+
+# Degree words & institution cues
+_DEGREE_WORDS = r"(?:Bachelor|Master|Masters|Bachelors|BA|BSc|BS|MA|MSc|MS|MBA|MEng|BEng|LLB|LLM|MPhil|PhD|DPhil|MD|DDS|MPhys|MComp|BCom|MCom|BTech|MTech)"
+_INSTITUTION  = r"(?:University|College|School|Institute|Polytechnic|Academy|Faculty|Campus|(?:of|at)\s+[A-Z][A-Za-z&\.\- ]+)"
+# Cert/qualification cues
+_CERT_WORDS   = r"(?:Certification|Certified|Certificate|Qualification|Qualified|License|Licen[cs]ed|Chartered|Fellow|Associate|Member|Accredited|Registered|Credential)"
+# Common awarding bodies / acronyms (expandable)
+_CERT_ACROS   = r"(?:ACCA|ACA|ICAEW|CPA|CIMA|CFA|FRM|PRINCE2|PMP|ITIL|CISSP|CISM|CEH|OSCP|AWS|Azure|GCP|IFoA|FIA|AIA|ASA|FSA|IMC|SCR|CGEIT|CRISC|SAFe|TOGAF)"
+# Years (for parsing)
+_YEAR         = r"(?:19|20)\d{2}"
+
+def _looks_degree_line(s: str) -> bool:
+    s = (s or "").strip()
+    return bool(_re2.search(_DEGREE_WORDS, s)) or bool(_re2.search(_INSTITUTION, s))
+
+def _looks_cert_line(s: str) -> bool:
+    s = (s or "").strip()
+    return bool(_re2.search(_CERT_WORDS, s, _re2.I)) or bool(_re2.search(r"\b"+_CERT_ACROS+r"\b", s))
+
+def _parse_edu_line(s: str) -> dict:
+    # heuristic: split around separators, pick degree / institution / year
+    parts = _re2.split(r"\s*[–\-|,•]\s*|\s+at\s+", (s or "").strip(), maxsplit=2)
+    deg, inst, yr = "", "", ""
+    for p in parts:
+        if not p: continue
+        if not deg and _re2.search(_DEGREE_WORDS, p): deg = p.strip()
+        elif not inst and (_re2.search(_INSTITUTION, p) or len(p.split())>=2): inst = p.strip()
+        if not yr:
+            m = _re2.search(r"\b"+_YEAR+r"\b", p)
+            if m: yr = m.group(0)
+    return {"degree": deg or s.strip(), "institution": inst, "date": yr}
+
+def _parse_cert_line(s: str) -> dict:
+    # heuristic: split name — issuer — date if present
+    m = _re2.search(r"\b"+_YEAR+r"\b", s or "")
+    date = m.group(0) if m else ""
+    # name first, issuer second if we see 'by' or 'from'
+    name = s
+    issuer = ""
+    m2 = _re2.search(r"\b(?:by|from)\b\s+(.+)", s or "", _re2.I)
+    if m2:
+        issuer = m2.group(1).strip()
+        name = (s[:m2.start()] or "").strip(" -—|,")
+    return {"name": (name or "").strip(), "issuer": issuer, "date": date}
+
+_EDU_KEYS = ("education","academic","academics","studies")
+_CERT_KEYS= ("professional_qualifications","qualifications","certifications","licenses","credentials")
+
+def separate_edu_certs(data: dict, lossless: dict, raw_text: str) -> dict:
+    """
+    Non-destructive: strengthens separation of degrees vs. certifications.
+    - Harvests likely lines from sectionizer headings (synonyms).
+    - Classifies each line to degree or cert.
+    - Adds parsed items into data.education / data.certifications (deduped).
+    - Does NOT delete existing items.
+    """
+    if not isinstance(data, dict):
+        return data or {}
+    out = dict(data)
+    secs = (lossless or {}).get("sections") or {}
+
+    edu_existing = list(out.get("education") or [])
+    cert_existing = list(out.get("certifications") or [])
+
+    # 1) From sectionized lines
+    edu_lines = []
+    cert_lines= []
+
+    for k, lines in secs.items():
+        k_norm = (k or "").strip().lower()
+        if any(key in k_norm for key in _EDU_KEYS):
+            edu_lines.extend([str(x) for x in lines or []])
+        if any(key in k_norm for key in _CERT_KEYS):
+            cert_lines.extend([str(x) for x in lines or []])
+
+    # 2) Re-classify ambiguous lines
+    for ln in list(edu_lines):
+        if _looks_cert_line(ln) and not _looks_degree_line(ln):
+            cert_lines.append(ln)
+
+    # 3) Parse into dicts
+    edu_new = []
+    for ln in edu_lines:
+        if _looks_degree_line(ln):
+            edu_new.append(_parse_edu_line(ln))
+
+    cert_new = []
+    for ln in cert_lines:
+        if _looks_cert_line(ln):
+            cert_new.append(_parse_cert_line(ln))
+
+    # 4) Also sweep raw text for stray credential acronyms (FIA, CFA, ACCA, etc.)
+    if raw_text:
+        for m in _re2.finditer(r"\b"+_CERT_ACROS+r"(?:\s+Level\s+[IVX]+|\s+L(?:evel)?\s*[123])?\b", raw_text):
+            cert_new.append({"name": m.group(0).strip(), "issuer":"", "date":""})
+
+    # 5) Deduplicate (case-insensitive keys)
+    def _dedupe_edu(items):
+        seen=set(); outl=[]
+        for e in items:
+            if not isinstance(e, dict): continue
+            key = (e.get("degree","").lower(), e.get("institution","").lower(), e.get("date","").lower())
+            if key in seen: continue
+            seen.add(key); outl.append(e)
+        return outl
+
+    def _dedupe_cert(items):
+        seen=set(); outl=[]
+        for c in items:
+            if not isinstance(c, dict): continue
+            key = (c.get("name","").lower(), c.get("issuer","").lower(), c.get("date","").lower())
+            if key in seen: continue
+            seen.add(key); outl.append(c)
+        return outl
+
+    # Merge (non-destructive)
+    out["education"] = _dedupe_edu([*(edu_existing if isinstance(edu_existing, list) else []), *edu_new])
+    out["certifications"] = _dedupe_cert([*(cert_existing if isinstance(cert_existing, list) else []), *cert_new])
+
+    return out
+# ---- /Education vs Certifications separator ----
 
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
@@ -8740,8 +8862,12 @@ def polish():
         try:
             if sec:
                 data = deep_merge_lossless(data, sec)
+                
+        # ⬇️ NEW: group Experience by date spans (safe, Experience-only)
+        try:
+            if sec:
+                data = attach_experience_by_date_spans(data, sec, text_norm)
         except Exception:
-            pass
 
         # 5) Keep legacy skills extraction, then merge (don’t overwrite)
         try:
@@ -8824,6 +8950,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

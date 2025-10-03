@@ -4645,6 +4645,107 @@ def admin_set_user_active():
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500    
 
+# --- Owner API: hard delete an organisation (dangerous, admin-only) ---
+@app.post("/owner/api/org/delete")
+def owner_api_org_delete():
+    # Guard: admin only
+    try:
+        uname = (session.get("user") or "").strip().lower()
+        is_admin_flag = bool(session.get("is_admin")) or (uname == "admin")
+    except Exception:
+        is_admin_flag = False
+    if not is_admin_flag:
+        return jsonify({"ok": False, "error": "forbidden"}), 403
+
+    # Params (JSON)
+    payload = request.get_json(silent=True) or {}
+    try:
+        org_id = int(payload.get("org_id") or 0)
+    except Exception:
+        org_id = 0
+    confirm = (payload.get("confirm") or "").strip()
+
+    if org_id <= 0:
+        return jsonify({"ok": False, "error": "org_id_required"}), 400
+    if confirm != "DELETE":
+        return jsonify({"ok": False, "error": "confirm_required", "hint": "send confirm='DELETE'"}), 400
+
+    # Optional safety: protect seed org(s) from deletion
+    PROTECTED_ORG_IDS = {1}  # change/remove as you wish
+    if org_id in PROTECTED_ORG_IDS:
+        return jsonify({"ok": False, "error": "protected_org"}), 400
+
+    if not DB_POOL:
+        return jsonify({"ok": False, "error": "db_unavailable"}), 500
+
+    conn = None
+    try:
+        conn = DB_POOL.getconn()
+        with conn:
+            with conn.cursor() as cur:
+                # Child rows that reference users from this org
+                try:
+                    cur.execute(
+                        "DELETE FROM usage_events WHERE user_id IN (SELECT id FROM users WHERE org_id=%s)",
+                        (org_id,)
+                    )
+                except Exception:
+                    pass
+                try:
+                    cur.execute(
+                        "DELETE FROM credits_ledger WHERE user_id IN (SELECT id FROM users WHERE org_id=%s)",
+                        (org_id,)
+                    )
+                except Exception:
+                    pass
+
+                # Org-level ledgers / limits
+                try:
+                    cur.execute("DELETE FROM org_credits_ledger WHERE org_id=%s", (org_id,))
+                except Exception:
+                    pass
+                try:
+                    cur.execute("DELETE FROM org_user_limits WHERE org_id=%s", (org_id,))
+                except Exception:
+                    pass
+
+                # Users in this org
+                try:
+                    cur.execute("DELETE FROM users WHERE org_id=%s", (org_id,))
+                except Exception:
+                    pass
+
+                # Finally delete the org row
+                cur.execute("DELETE FROM orgs WHERE id=%s", (org_id,))
+
+        # Remove org-specific files after DB commit (best effort)
+        try:
+            from pathlib import Path
+            import shutil
+            try:
+                root = storage_root()  # your helper
+            except Exception:
+                root = "/mnt/data"
+            paths = [
+                Path(root) / "org_assets" / str(org_id),     # logos etc
+                Path(root) / "org_templates" / str(org_id),  # DOCX templates
+            ]
+            for p in paths:
+                shutil.rmtree(p, ignore_errors=True)
+        except Exception as e:
+            print("org delete: rmtree failed", e)
+
+        return jsonify({"ok": True, "deleted_org_id": org_id})
+
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+    finally:
+        try:
+            if conn:
+                DB_POOL.putconn(conn)
+        except Exception:
+            pass
+
 # --- Admin: ONE-TIME migration to enable org-shared credits ---
 @app.get("/__admin/migrate_org_pool")
 def admin_migrate_org_pool():
@@ -8690,6 +8791,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

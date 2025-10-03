@@ -1945,13 +1945,12 @@ async function toggleBase(skill, action){
       // fetch + Blob download
 form.addEventListener('submit', async (e)=>{
   e.preventDefault();
-  startProgress();              // show progress UI + begin staged animation
+  startProgress();
   try{
     const fd = new FormData(form);
-    const r = await fetch('/polish', { method:'POST', body: fd, cache:'no-store' });
+    const r = await fetch('/polish', { method:'POST', body: fd, cache:'no-store', credentials:'same-origin' });
     if(!r.ok) throw new Error('Server error ('+r.status+')');
 
-    // Download blob
     const blob = await r.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1962,11 +1961,10 @@ form.addEventListener('submit', async (e)=>{
     a.remove();
     URL.revokeObjectURL(url);
 
-    stopProgressSuccess();      // mark all stages done, briefly show “Done”
-    refreshStats();             // refresh stats after a successful polish
+    stopProgressSuccess();
+    refreshStats();
   }catch(err){
     alert('Polishing failed: ' + (err?.message||'Unknown error'));
-    // clean up UI on error
     const btn = document.getElementById('btn'); if(btn) btn.disabled=false;
     const prog = document.getElementById('progress'); if(prog) prog.style.display='none';
     setProgress(0);
@@ -3345,10 +3343,10 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     # Profile-based labels (optional, per-org)
     labels = {
         "summary": "EXECUTIVE SUMMARY",
+        "personal": "PERSONAL INFORMATION",  # NEW
         "certifications": "PROFESSIONAL QUALIFICATIONS",
         "skills": "PROFESSIONAL SKILLS",
         "experience": "PROFESSIONAL EXPERIENCE",
-        "education": "EDUCATION",
         "references": "REFERENCES",
     }
     try:
@@ -3388,28 +3386,110 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     if cv.get("summary"):
         _add_section_heading(doc, labels["summary"])
         p = doc.add_paragraph(cv["summary"]); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
+    # --- PERSONAL INFORMATION ---
+    pi = cv.get("personal_info") or {}
+    nat = (pi.get("nationality") or "").strip()
+    mar = (pi.get("marital_status") or "").strip()
 
-    quals = []
-    if cv.get("certifications"): quals += [q for q in cv["certifications"] if q]
+    _add_section_heading(doc, labels.get("personal", "PERSONAL INFORMATION"))
+    
+    line = f"Nationality: {nat} |  Marital Status: {mar}"
+    p = doc.add_paragraph(line)
+    p.paragraph_format.space_after = Pt(8)
+    _tone_runs(p, size=11, bold=False)
+    # --- PERSONAL INFORMATION ---
+    pi = cv.get("personal_info") or {}
+    nat = (pi.get("nationality") or "").strip()
+    mar = (pi.get("marital_status") or "").strip()
+
+    _add_section_heading(doc, labels.get("personal", "PERSONAL INFORMATION"))
+
+    line = f"Nationality: {nat} |  Marital Status: {mar}"
+    p = doc.add_paragraph(line)
+    p.paragraph_format.space_after = Pt(8)
+    _tone_runs(p, size=11, bold=False)
+
+    # --- PROFESSIONAL QUALIFICATIONS (Certifications + Education, unified, spaced, sorted) ---
+    import re  # keep here (file has no 'import re' earlier)
+
+    quals = [q for q in (cv.get("certifications") or []) if q]
     edu = cv.get("education") or []
+
+    if quals or edu:
+        _add_section_heading(doc, labels["certifications"])
+
+    def _extract_year(text: str) -> int:
+        """Return the last 4-digit year in a string, or -1 if none."""
+        if not text:
+            return -1
+        yrs = re.findall(r'(19|20)\d{2}', text)
+        return int(yrs[-1]) if yrs else -1
+
+    def _year_from_edu(ed: dict) -> int:
+        """Prefer end_date year, then start_date year, else try degree/institution."""
+        for key in ("end_date", "start_date"):
+            y = _extract_year((ed.get(key) or "").strip())
+            if y != -1:
+                return y
+        return _extract_year(" ".join([(ed.get("degree") or ""), (ed.get("institution") or "")]))
+
+    items = []  # (year_int, line_str, is_bold)
+
+    # Certifications: normalise to text (dicts → "Title | Issuer (Date)"), then year-detect
+    def _cert_line(q):
+        if isinstance(q, str):
+            return q.strip()
+        if isinstance(q, dict):
+            # best-guess common keys; ignore empties; join with pipes
+            parts = []
+            for k in ("name", "title", "cert", "certificate"):
+                v = q.get(k)
+                if isinstance(v, str) and v.strip():
+                    parts.append(v.strip()); break
+            for k in ("issuer", "institution", "provider", "body"):
+                v = q.get(k)
+                if isinstance(v, str) and v.strip():
+                    parts.append(v.strip()); break
+            # date-ish field
+            for k in ("date", "awarded", "year", "end_date"):
+                v = q.get(k)
+                if isinstance(v, str) and v.strip():
+                    parts.append(v.strip()); break
+            line = " | ".join(parts).strip()
+            return line or str(q)
+        # anything else → string
+        return str(q).strip()
+
+    for q in quals:
+        line = _cert_line(q)
+        items.append((_extract_year(line), line, False))
+
+    # Education: single line "Degree | Institution (dates)"; no bullets, uniform spacing
     for ed in edu:
         deg = (ed.get("degree") or "").strip()
         inst = (ed.get("institution") or "").strip()
-        date_span = " – ".join([x for x in [(ed.get("start_date") or "").strip(), (ed.get("end_date") or "").strip()] if x]).strip(" –")
-        line = " | ".join([s for s in [deg, inst, date_span] if s])
-        if line: quals.append(line)
-    if quals:
-        _add_section_heading(doc, labels["certifications"])
-        for q in quals:
-            p = doc.add_paragraph(q)
-            p.paragraph_format.space_before = Pt(0); p.paragraph_format.space_after = Pt(0)
-            _tone_runs(p, size=11, bold=False)
+        sd = (ed.get("start_date") or "").strip()
+        ee = (ed.get("end_date") or "").strip()
+        dates = f"{sd} – {ee}".strip(" –")
+        date_part = f" ({dates})" if dates else ""
+        title = " | ".join([s for s in [deg, inst] if s]).strip()
+        line = (title + date_part) if title else (dates or "Education")
+        items.append((_year_from_edu(ed), line, True))  # bold education line
 
-    skills = cv.get("skills") or []
-    if skills:
-        _add_section_heading(doc, labels["skills"])
-        line = " | ".join(skills)
-        p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
+    # Sort newest first; unknown years (-1) go last
+    items.sort(key=lambda t: t[0], reverse=True)
+
+    # Render: one paragraph per item, same spacing, no bullets
+    for _, line, is_bold in items:
+        p = doc.add_paragraph()
+        r = p.add_run(line)
+        r.font.name = "Calibri"
+        r.font.size = Pt(11)
+        r.bold = is_bold
+        r.font.color.rgb = SOFT_BLACK
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(8)
+        _tone_runs(p, size=11, bold=is_bold)
 
     exp = cv.get("experience") or []
     if exp:
@@ -3449,32 +3529,12 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 rp.paragraph_format.space_after = Pt(0)
                 _tone_runs(rp, size=11, bold=False)
 
-    # --- Education ---
-    if edu:
-        _add_section_heading(doc, labels["education"])
-        for ed in edu:
-            line = " — ".join([x for x in [ed.get("degree",""), ed.get("institution","")] if x]).strip()
-            p = doc.add_paragraph(); rr = p.add_run(line or "Education")
-            rr.font.name="Calibri"; rr.font.size=Pt(11); rr.bold=True; rr.font.color.rgb=SOFT_BLACK
-            p.paragraph_format.space_after = Pt(0)
-
-            sd = (ed.get("start_date") or "").strip()
-            ee = (ed.get("end_date") or "").strip()
-            dates = f"{sd} – {ee}".strip(" –")
-            loc = (ed.get("location") or "").strip()
-            meta = " | ".join([x for x in [dates, loc] if x])
-            if meta:
-                meta_p = doc.add_paragraph(meta)
-                meta_p.paragraph_format.space_after = Pt(2)
-                _tone_runs(meta_p, size=11, bold=False)
-
-            if ed.get("bullets"):
-                for b in ed["bullets"]:
-                    bp = doc.add_paragraph(b, style="List Bullet")
-                    bp.paragraph_format.space_before = Pt(0)
-                    bp.paragraph_format.space_after = Pt(0)
-                    _tone_runs(bp, size=11, bold=False)
-
+    skills = cv.get("skills") or []
+    if skills:
+        _add_section_heading(doc, labels["skills"])
+        line = " | ".join(skills)
+        p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
+        
     # --- References (fixed text) ---
     _add_section_heading(doc, labels["references"])
     p = doc.add_paragraph("Full references are available on request")
@@ -3767,56 +3827,6 @@ def app_page():
         )
     )
 
-    # Inject Uploading/Processing/Downloading overlay + XHR downloader
-    html = html.replace(
-        "</body>",
-        (
-            '<style>'
-            '#busyOverlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:none;z-index:9999}'
-            '#busyBox{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:16px 18px;border-radius:12px;'
-            ' box-shadow:0 10px 30px rgba(0,0,0,.2);font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif}'
-            '#busyMsg{font-weight:600}.busyBar{height:3px;background:#e5e7eb;overflow:hidden;border-radius:2px;margin-top:8px}'
-            '.busyBar>div{width:30%;height:100%;animation:busy 1s linear infinite;background:#0ea5e9}'
-            '@keyframes busy{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}'
-            '</style>'
-            '<div id="busyOverlay"><div id="busyBox"><div id="busyMsg">Preparing…</div>'
-            '<div class="busyBar"><div></div></div></div></div>'
-            '<script>(function(){'
-            'var form=document.querySelector(\'form[action="/polish"]\')||document.querySelector(\'form[action^="/polish"]\');'
-            'if(!form)return;'
-            'var fileInput=form.querySelector(\'input[type="file"][name="cv"]\');'
-            'var overlay=document.getElementById("busyOverlay");var msg=document.getElementById("busyMsg");'
-            'function show(t){if(overlay)overlay.style.display="block";if(msg)msg.textContent=t;}'
-            'function hide(){if(overlay)overlay.style.display="none";}'
-            'form.addEventListener("submit",function(ev){'
-            ' try{'
-            '  if(!fileInput||!fileInput.files||!fileInput.files[0])return;'
-            '  ev.preventDefault();'
-            '  var fd=new FormData(form);'
-            '  var xhr=new XMLHttpRequest();'
-            '  xhr.open("POST",form.getAttribute("action")||"/polish",true);'
-            '  xhr.responseType="blob";'
-            '  var sawDownload=false;'
-            '  show("Uploading…");'
-            '  if(xhr.upload){xhr.upload.onprogress=function(e){if(e.lengthComputable&&e.loaded>=e.total){show("Processing…");}}}'
-            '  xhr.onprogress=function(){if(!sawDownload){show("Downloading…");sawDownload=true;}};'
-            '  xhr.onerror=function(){hide();form.submit();};'
-            '  xhr.onload=function(){try{'
-            '    if(xhr.status!==200){hide();form.submit();return;}'
-            '    var disp=xhr.getResponseHeader("Content-Disposition")||"";'
-            '    var m=/filename\\*=UTF-8\\\'\\\'([^;]+)|filename=\\"?([^\\"]+)\\"?/i.exec(disp);'
-            '    var name=(m&&decodeURIComponent(m[1]||m[2]||"polished_cv.docx"))||"polished_cv.docx";'
-            '    var blob=xhr.response;'
-            '    var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;'
-            '    document.body.appendChild(a);a.click();setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();hide();},100);'
-            '    if(window.refreshStats) setTimeout(window.refreshStats, 300);'
-            '  }catch(_){hide();form.submit();}};'
-            '  xhr.send(fd);'
-            ' }catch(_){hide();form.submit();}'
-            '});'
-            '})();</script></body>'
-        )
-    )
     # Inject Full History data loader (fires on first click)
     html = html.replace(
         "</body>",
@@ -8765,63 +8775,63 @@ def polish():
             pass
         # ---- /Polishing logic (enhanced) ----
 
-        # Optional per-org DOCX template (falls back to default if none)
-        template_override = None
         try:
-            oid = _current_user_org_id()
-            if oid:
-                row = db_query_one("SELECT template_path FROM orgs WHERE id=%s", (oid,))
-                if row and row[0]:
-                    pth = Path(row[0])
-                    if pth.exists():
-                        template_override = str(pth)
+            # Optional per-org DOCX template (falls back to default if none)
+            template_override = None
+            try:
+                oid = _current_user_org_id()
+                if oid:
+                    row = db_query_one("SELECT template_path FROM orgs WHERE id=%s", (oid,))
+                    if row and row[0]:
+                        pth = Path(row[0])
+                        if pth.exists():
+                            template_override = str(pth)
+            except Exception as e:
+                print("template resolve failed:", e)
+
+            out = build_cv_document(data, template_override=template_override)
+
+            # ---- Update legacy JSON stats (for continuity) ----
+            candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
+            now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            STATS["downloads"] = int(STATS.get("downloads", 0)) + 1
+            STATS["last_candidate"] = candidate_name
+            STATS["last_time"] = now
+            STATS.setdefault("history", [])
+            STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
+            _save_stats()
+
+            # --- Log usage + debit one org credit (best-effort; never blocks) ---
+            try:
+                uid = int(session.get("user_id") or 0)
+                if uid:
+                    log_usage_event(uid, f.filename, candidate_name)
+                    can_bypass = (session.get("user","").strip().lower() == "admin") or bool(session.get("is_admin"))
+                    if not can_bypass:
+                        oid = _current_user_org_id()
+                        if DB_POOL and oid:
+                            db_execute(
+                                "INSERT INTO org_credits_ledger (org_id, delta, reason, created_by) VALUES (%s, -1, %s, %s)",
+                                (oid, 'polish', uid)
+                            )
+            except Exception as e:
+                print("post-polish usage/credit write failed:", e)
+
+            # ---- Optional: decrement trial credits (legacy session) ----
+            try:
+                left = int(session.get("trial_credits", 0))
+                if left > 0:
+                    session["trial_credits"] = max(0, left - 1)
+            except Exception:
+                pass
+
+            # ---- Return the polished file ----
+            resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
+            resp.headers["Cache-Control"] = "no-store"
+            return resp
+
         except Exception as e:
-            print("template resolve failed:", e)
-
-        out = build_cv_document(data, template_override=template_override)
-
-        # ---- Update legacy JSON stats (for continuity) ----
-
-        # ---- Update legacy JSON stats (for continuity) ----
-        candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        STATS["downloads"] = int(STATS.get("downloads", 0)) + 1
-        STATS["last_candidate"] = candidate_name
-        STATS["last_time"] = now
-        STATS.setdefault("history", [])
-        STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
-        _save_stats()
-
-        # --- Log usage + debit one org credit (best-effort; never blocks) ---
-        try:
-            uid = int(session.get("user_id") or 0)
-            if uid:
-                # record usage
-                log_usage_event(uid, f.filename, candidate_name)
-
-                # debit org pool unless admin bypass
-                can_bypass = (session.get("user","").strip().lower() == "admin") or bool(session.get("is_admin"))
-                if not can_bypass:
-                    oid = _current_user_org_id()
-                    if DB_POOL and oid:
-                        db_execute(
-                            "INSERT INTO org_credits_ledger (org_id, delta, reason, created_by) VALUES (%s, -1, %s, %s)",
-                            (oid, 'polish', uid),
-                        )
-        except Exception as e:
-            # Never block the download if this fails
-            print("post-polish usage/credit write failed:", e)        
-
-        # ---- Optional: decrement trial credits (legacy session) ----
-        try:
-            left = int(session.get("trial_credits", 0))
-            if left > 0:
-                session["trial_credits"] = max(0, left - 1)
-        except Exception:
-            pass
-
-        # ---- Return the polished file ----
-        resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
-        resp.headers["Cache-Control"] = "no-store"
-        return resp
-
+            # If anything fails above, do NOT 500. Return a readable error for the front-end.
+            import traceback
+            print("polish failed:", e, traceback.format_exc())
+            return make_response(("Polish failed: " + str(e)), 400)

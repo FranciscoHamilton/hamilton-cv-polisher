@@ -719,13 +719,13 @@ HOMEPAGE_HTML = r"""
       </div>
       <div class="card">
         <h3>Built for recruiters</h3>
-        <p>No invented facts. We only structure what’s in the candidate’s CV.</p>
+        <p>No invented facts. Lustra only structures what’s in the candidate’s CV.</p>
       </div>
     </div>
 
     <div class="stepper">
       <div class="step"><span class="b">1</span>Upload a CV</div>
-      <div class="step"><span class="b">2</span>We extract &amp; structure</div>
+      <div class="step"><span class="b">2</span>Lustra extracts &amp; structure</div>
       <div class="step"><span class="b">3</span>Download polished DOCX</div>
     </div>
   </div>
@@ -8824,6 +8824,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

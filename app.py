@@ -3438,16 +3438,56 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 meta_p.paragraph_format.space_after = Pt(6)
                 _tone_runs(meta_p, size=11, bold=False)
 
-            if role.get("bullets"):
-                for b in role["bullets"]:
-                    bp = doc.add_paragraph(b, style="List Bullet")
+ # --- NEW: structured responsibilities/achievements with optional mini-headings ---
+            _resp = [x for x in (role.get("responsibilities") or []) if x]
+            _ach  = [x for x in (role.get("achievements") or []) if x]
+            _has_structured = bool(_resp or _ach)
+
+            if _resp or _ach:
+                # Optional bold sub-heading for responsibilities (captured from CV, e.g., “Responsibilities”)
+                _resp_hdr = (role.get("_resp_title") or "").strip()
+                if _resp_hdr:
+                    ph = doc.add_paragraph(_resp_hdr)
+                    if ph.runs:
+                        ph.runs[0].bold = True
+                    else:
+                        ph.add_run(_resp_hdr).bold = True
+
+                # Responsibilities list (bulleted)
+                for item in _resp:
+                    bp = doc.add_paragraph(item, style="List Bullet")
                     bp.paragraph_format.space_before = Pt(0)
-                    bp.paragraph_format.space_after = Pt(0)
+                    bp.paragraph_format.space_after  = Pt(0)
                     _tone_runs(bp, size=11, bold=False)
-            elif role.get("raw_text"):
-                rp = doc.add_paragraph(role["raw_text"])
-                rp.paragraph_format.space_after = Pt(0)
-                _tone_runs(rp, size=11, bold=False)
+
+                # Optional bold sub-heading for achievements (captured from CV, e.g., “Key Deliveries”)
+                _ach_hdr = (role.get("_ach_title") or "").strip()
+                if _ach_hdr:
+                    ph = doc.add_paragraph(_ach_hdr)
+                    if ph.runs:
+                        ph.runs[0].bold = True
+                    else:
+                        ph.add_run(_ach_hdr).bold = True
+
+                # Achievements list (bulleted)
+                for item in _ach:
+                    bp = doc.add_paragraph(item, style="List Bullet")
+                    bp.paragraph_format.space_before = Pt(0)
+                    bp.paragraph_format.space_after  = Pt(0)
+                    _tone_runs(bp, size=11, bold=False)
+
+            # --- legacy fallback continues below (only if nothing structured) ---
+            if not _has_structured:
+                if role.get("bullets"):
+                    for b in role["bullets"]:
+                        bp = doc.add_paragraph(b, style="List Bullet")
+                        bp.paragraph_format.space_before = Pt(0)
+                        bp.paragraph_format.space_after = Pt(0)
+                        _tone_runs(bp, size=11, bold=False)
+                elif role.get("raw_text"):
+                    rp = doc.add_paragraph(role["raw_text"])
+                    rp.paragraph_format.space_after = Pt(0)
+                    _tone_runs(rp, size=11, bold=False)
 
     # --- Education ---
     if edu:
@@ -9032,6 +9072,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

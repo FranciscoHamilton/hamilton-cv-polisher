@@ -520,224 +520,6 @@ from docx.shared import Pt, Inches, RGBColor
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-# === PATCH 1: extra imports for post-processing ===
-from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-from docx.enum.style import WD_STYLE_TYPE
-
-# === PATCH 2: CV post-processing helpers ===
-def _clear_paragraph(p):
-    p.text = ""
-    for r in list(p.runs):
-        r.text = ""
-
-# Canonical section headings we’ll enforce
-H_EXEC_SUMMARY   = "EXECUTIVE SUMMARY"
-H_PERSONAL_INFO  = "PERSONAL INFORMATION"
-H_PROF_QUALS     = "PROFESSIONAL QUALIFICATIONS"
-H_PROF_EXP       = "PROFESSIONAL EXPERIENCE"
-H_SKILLS         = "PROFESSIONAL SKILLS"
-H_EDUCATION      = "EDUCATION"
-H_REFERENCES     = "REFERENCES"
-
-def _norm(text: str) -> str:
-    return (text or "").strip().upper()
-
-def _find_heading_indexes(doc, heading_texts):
-    """Return dict of heading -> paragraph index if present."""
-    wanted = {h: None for h in heading_texts}
-    for i, p in enumerate(doc.paragraphs):
-        t = _norm(p.text)
-        if t in wanted and wanted[t] is None:
-            wanted[t] = i
-    return wanted
-
-def _insert_heading(doc, after_idx, heading):
-    """Insert a heading paragraph (bold, all-caps) after index."""
-    new = doc.paragraphs[after_idx].insert_paragraph_before("")  # insert before current
-    # Move it one step down by swapping text
-    doc.paragraphs[after_idx].text, new.text = doc.paragraphs[after_idx].text, heading
-    run = doc.paragraphs[after_idx].runs
-    if run:
-        for r in run: r.font.bold = True
-    return after_idx  # the new heading now sits at 'after_idx'
-
-def _append_simple_line(doc, idx, text):
-    p = doc.paragraphs[idx].insert_paragraph_before(text)
-    return idx  # content lines stack above the heading we’re anchoring on
-
-def _heading_style_like(doc, p):
-    # keep it minimal: bold + caps is enough to visually match your current HR layout
-    if not p.runs:
-        r = p.add_run(p.text or "")
-    for r in p.runs:
-        r.font.bold = True
-    p.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
-
-def _ensure_personal_info_after_exec_summary(doc):
-    """Add PERSONAL INFORMATION after EXECUTIVE SUMMARY if missing, with placeholders."""
-    idxs = _find_heading_indexes(doc, [H_EXEC_SUMMARY, H_PERSONAL_INFO])
-    exec_i = idxs.get(H_EXEC_SUMMARY)
-    if exec_i is None:
-        return  # don’t invent section ordering if there is no exec summary
-    if idxs.get(H_PERSONAL_INFO) is not None:
-        return  # already present
-
-    # Find where EXECUTIVE SUMMARY content ends (next heading or end)
-    insert_after = None
-    for j in range(exec_i + 1, len(doc.paragraphs)):
-        if _norm(doc.paragraphs[j].text) in {
-            H_PERSONAL_INFO, H_PROF_QUALS, H_PROF_EXP, H_SKILLS, H_EDUCATION, H_REFERENCES
-        }:
-            insert_after = j - 1
-            break
-    if insert_after is None:
-        insert_after = len(doc.paragraphs) - 1
-
-    # Insert heading + one line of placeholders
-    h_para = doc.paragraphs[insert_after].insert_paragraph_before(H_PERSONAL_INFO)
-    _heading_style_like(doc, h_para)
-    info_para = h_para.insert_paragraph_before("Nationality: ______ | Marital Status: ______")
-
-def _merge_education_into_prof_quals(doc):
-    """Move EDUCATION lines into PROFESSIONAL QUALIFICATIONS, then remove EDUCATION block."""
-    idxs = _find_heading_indexes(doc, [H_PROF_QUALS, H_EDUCATION])
-    q_i, e_i = idxs.get(H_PROF_QUALS), idxs.get(H_EDUCATION)
-    if q_i is None or e_i is None:
-        return  # nothing to merge
-
-    # Collect EDUCATION block lines (until next heading or end)
-    edu_lines = []
-    end_i = len(doc.paragraphs)
-    for j in range(e_i + 1, len(doc.paragraphs)):
-        if _norm(doc.paragraphs[j].text) in {
-            H_PERSONAL_INFO, H_PROF_QUALS, H_PROF_EXP, H_SKILLS, H_EDUCATION, H_REFERENCES
-        }:
-            end_i = j
-            break
-    for j in range(e_i + 1, end_i):
-        txt = doc.paragraphs[j].text.strip()
-        if txt:
-            edu_lines.append(txt)
-
-    if not edu_lines:
-        # Remove empty EDUCATION heading only
-        _clear_paragraph(doc.paragraphs[e_i])
-        return
-
-    # Append EDUCATION entries under QUALIFICATIONS (line-separated, no bullets)
-    # Find the insertion point = first paragraph after the QUALS heading, but before any next heading
-    quals_end = len(doc.paragraphs)
-    for j in range(q_i + 1, len(doc.paragraphs)):
-        if _norm(doc.paragraphs[j].text) in {
-            H_PERSONAL_INFO, H_PROF_QUALS, H_PROF_EXP, H_SKILLS, H_EDUCATION, H_REFERENCES
-        }:
-            if j > q_i + 1:
-                quals_end = j
-            break
-    anchor = q_i
-    for line in edu_lines:
-        p = doc.paragraphs[anchor].insert_paragraph_before(line)
-        p.paragraph_format.left_indent = None
-        p.style = doc.styles['Normal'] if 'Normal' in doc.styles else p.style
-        # add a blank spacer between entries (visual gap like HR)
-        spacer = doc.paragraphs[anchor].insert_paragraph_before("")
-
-    # Remove EDUCATION block (content + heading)
-    for j in range(e_i, end_i):
-        _clear_paragraph(doc.paragraphs[j])
-
-def _move_skills_to_bottom(doc):
-    """Ensure PROFESSIONAL SKILLS is the last section before REFERENCES (if refs exist)."""
-    idxs = _find_heading_indexes(doc, [H_SKILLS, H_REFERENCES])
-    s_i, r_i = idxs.get(H_SKILLS), idxs.get(H_REFERENCES)
-    if s_i is None:
-        return
-    # If already below references or last, do nothing
-    if r_i is None and s_i > (len(doc.paragraphs) - 5):
-        return
-    if r_i is not None and s_i > r_i:
-        return
-
-    # Extract SKILLS block
-    end_i = len(doc.paragraphs)
-    for j in range(s_i + 1, len(doc.paragraphs)):
-        if _norm(doc.paragraphs[j].text) in {
-            H_PERSONAL_INFO, H_PROF_QUALS, H_PROF_EXP, H_SKILLS, H_EDUCATION, H_REFERENCES
-        }:
-            end_i = j
-            break
-    block = [doc.paragraphs[k].text for k in range(s_i, end_i)]
-
-    # Clear original
-    for k in range(s_i, end_i):
-        _clear_paragraph(doc.paragraphs[k])
-
-    # Insert before REFERENCES (or at end if no references)
-    insert_at = r_i if r_i is not None else len(doc.paragraphs)
-    # Insert from bottom to top to preserve order
-    for line in reversed(block):
-        p = doc.paragraphs[insert_at - 1].insert_paragraph_before(line)
-
-def _normalize_prof_experience_layout(doc):
-    """
-    Enforce HR layout inside PROFESSIONAL EXPERIENCE:
-      Job Title
-      Company – Location
-      Dates
-      (blank line)
-      • bullets aligned left (no extra left indent)
-    NOTE: We don't rewrite content; we just normalize spacing and bullet indentation.
-    """
-    idxs = _find_heading_indexes(doc, [H_PROF_EXP])
-    exp_i = idxs.get(H_PROF_EXP)
-    if exp_i is None:
-        return
-
-    # Find block bounds
-    end_i = len(doc.paragraphs)
-    for j in range(exp_i + 1, len(doc.paragraphs)):
-        if _norm(doc.paragraphs[j].text) in {
-            H_PERSONAL_INFO, H_PROF_QUALS, H_PROF_EXP, H_SKILLS, H_EDUCATION, H_REFERENCES
-        } and j != exp_i:
-            end_i = j
-            break
-
-    # Pass 1: align bullets left & ensure blank line before first bullet list after a header triplet
-    # Heuristic: whenever we see a line that looks like a bullet (starts with "•", "-", "–", or "·"),
-    # ensure paragraph left indent = None and there's a blank spacer above the first bullet after a non-bullet line.
-    prev_was_bullet = False
-    for j in range(exp_i + 1, end_i):
-        p = doc.paragraphs[j]
-        txt = p.text.strip()
-        is_bullet = bool(txt.startswith(("•", "-", "–", "·")))
-        if is_bullet:
-            # align bullets left
-            p.paragraph_format.left_indent = None
-            # apply a bullet style if available
-            try:
-                p.style = doc.styles['List Bullet']
-            except KeyError:
-                pass
-            # ensure a blank line above the first bullet after a non-bullet block
-            if j > exp_i + 1 and not prev_was_bullet:
-                # only insert if the line above isn't already blank
-                above = doc.paragraphs[j - 1]
-                if above.text.strip() != "":
-                    above.insert_paragraph_before("")  # spacer
-        prev_was_bullet = is_bullet
-
-def postprocess_cv_doc(doc):
-    """
-    Apply ONLY the four requested layout rules, preserving everything else:
-      1) PERSONAL INFORMATION after EXECUTIVE SUMMARY (placeholders if missing)
-      2) Merge EDUCATION into PROFESSIONAL QUALIFICATIONS (no bullets, spaced lines)
-      3) Normalize PROFESSIONAL EXPERIENCE spacing & bullet alignment
-      4) Move PROFESSIONAL SKILLS to the bottom (before REFERENCES if present)
-    """
-    _ensure_personal_info_after_exec_summary(doc)
-    _merge_education_into_prof_quals(doc)
-    _normalize_prof_experience_layout(doc)
-    _move_skills_to_bottom(doc)
 
 PROJECT_DIR = Path(__file__).parent.resolve()
 MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")  # used only if OPENAI_API_KEY is set
@@ -3563,14 +3345,12 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     # Profile-based labels (optional, per-org)
     labels = {
         "summary": "EXECUTIVE SUMMARY",
-        "personal": "PERSONAL INFORMATION", 
         "certifications": "PROFESSIONAL QUALIFICATIONS",
         "skills": "PROFESSIONAL SKILLS",
         "experience": "PROFESSIONAL EXPERIENCE",
         "education": "EDUCATION",
         "references": "REFERENCES",
     }
-    labels = {**default_labels, **labels_in}
     try:
         oid = _current_user_org_id()
         if oid:
@@ -3609,77 +3389,27 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         _add_section_heading(doc, labels["summary"])
         p = doc.add_paragraph(cv["summary"]); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
 
-    # --- PERSONAL INFORMATION ---
-    # Always show both lines; blank if value not provided.
-    nat = ((cv.get("personal_info") or {}).get("nationality") or "").strip()
-    mar = ((cv.get("personal_info") or {}).get("marital_status") or "").strip()
-
-    _add_section_heading(doc, labels.get("personal", "PERSONAL INFORMATION"))
-
-    p_nat = doc.add_paragraph(f"Nationality: {nat}")
-    p_nat.paragraph_format.space_after = Pt(0)
-    _tone_runs(p_nat, size=11, bold=False)
-
-    p_mar = doc.add_paragraph(f"Marital Status: {mar}")
-    p_mar.paragraph_format.space_after = Pt(8)  # small gap before next section
-    _tone_runs(p_mar, size=11, bold=False)
-
-    # --- PROFESSIONAL QUALIFICATIONS (Certifications + Education, unified, spaced, sorted) ---
-    import re  # ok to import here; if you prefer, move to the top of the file once.
-
-    quals = [q for q in (cv.get("certifications") or []) if q]
+    quals = []
+    if cv.get("certifications"): quals += [q for q in cv["certifications"] if q]
     edu = cv.get("education") or []
-
-    if quals or edu:
-        _add_section_heading(doc, labels["certifications"])
-
-    def _extract_year(text: str) -> int:
-        """Return the last 4-digit year in a string, or -1 if none."""
-        if not text:
-            return -1
-        yrs = re.findall(r'(19|20)\d{2}', text)
-        return int(yrs[-1]) if yrs else -1
-
-    def _year_from_edu(ed: dict) -> int:
-        """Prefer end_date year, then start_date year, else try fields."""
-        for key in ("end_date", "start_date"):
-            y = _extract_year((ed.get(key) or "").strip())
-            if y != -1:
-                return y
-        return _extract_year(" ".join([(ed.get("degree") or ""), (ed.get("institution") or "")]))
-
-    items = []  # (year_int, line_str, is_bold)
-
-    # Certifications: keep the text, try to pull a year from it
-    for q in quals:
-        items.append((_extract_year(q), q, False))
-
-    # Education: single line "Degree | Institution (dates)"; no bullets, uniform spacing
     for ed in edu:
         deg = (ed.get("degree") or "").strip()
         inst = (ed.get("institution") or "").strip()
-        sd = (ed.get("start_date") or "").strip()
-        ee = (ed.get("end_date") or "").strip()
-        dates = f"{sd} – {ee}".strip(" –")
-        date_part = f" ({dates})" if dates else ""
-        title = " | ".join([s for s in [deg, inst] if s]).strip()
-        line = (title + date_part) if title else (dates or "Education")
-        items.append((_year_from_edu(ed), line, True))  # bold education line
+        date_span = " – ".join([x for x in [(ed.get("start_date") or "").strip(), (ed.get("end_date") or "").strip()] if x]).strip(" –")
+        line = " | ".join([s for s in [deg, inst, date_span] if s])
+        if line: quals.append(line)
+    if quals:
+        _add_section_heading(doc, labels["certifications"])
+        for q in quals:
+            p = doc.add_paragraph(q)
+            p.paragraph_format.space_before = Pt(0); p.paragraph_format.space_after = Pt(0)
+            _tone_runs(p, size=11, bold=False)
 
-    # Sort newest first; items without a year (-1) go last
-    items.sort(key=lambda t: t[0], reverse=True)
-
-    # Render: one paragraph per item, same spacing for all, no bullets
-    for _, line, is_bold in items:
-        p = doc.add_paragraph()
-        r = p.add_run(line)
-        r.font.name = "Calibri"
-        r.font.size = Pt(11)
-        r.bold = is_bold
-        r.font.color.rgb = SOFT_BLACK
-        p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(8)  # uniform gap between qualifications
-        _tone_runs(p, size=11, bold=is_bold)
+    skills = cv.get("skills") or []
+    if skills:
+        _add_section_heading(doc, labels["skills"])
+        line = " | ".join(skills)
+        p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
 
     exp = cv.get("experience") or []
     if exp:
@@ -3719,11 +3449,31 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 rp.paragraph_format.space_after = Pt(0)
                 _tone_runs(rp, size=11, bold=False)
 
-    skills = cv.get("skills") or []
-    if skills:
-        _add_section_heading(doc, labels["skills"])
-        line = " | ".join(skills)
-        p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
+    # --- Education ---
+    if edu:
+        _add_section_heading(doc, labels["education"])
+        for ed in edu:
+            line = " — ".join([x for x in [ed.get("degree",""), ed.get("institution","")] if x]).strip()
+            p = doc.add_paragraph(); rr = p.add_run(line or "Education")
+            rr.font.name="Calibri"; rr.font.size=Pt(11); rr.bold=True; rr.font.color.rgb=SOFT_BLACK
+            p.paragraph_format.space_after = Pt(0)
+
+            sd = (ed.get("start_date") or "").strip()
+            ee = (ed.get("end_date") or "").strip()
+            dates = f"{sd} – {ee}".strip(" –")
+            loc = (ed.get("location") or "").strip()
+            meta = " | ".join([x for x in [dates, loc] if x])
+            if meta:
+                meta_p = doc.add_paragraph(meta)
+                meta_p.paragraph_format.space_after = Pt(2)
+                _tone_runs(meta_p, size=11, bold=False)
+
+            if ed.get("bullets"):
+                for b in ed["bullets"]:
+                    bp = doc.add_paragraph(b, style="List Bullet")
+                    bp.paragraph_format.space_before = Pt(0)
+                    bp.paragraph_format.space_after = Pt(0)
+                    _tone_runs(bp, size=11, bold=False)
 
     # --- References (fixed text) ---
     _add_section_heading(doc, labels["references"])
@@ -3732,28 +3482,10 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     _tone_runs(p, size=11, bold=False)
 
     _ensure_primary_header_spacer(doc)
-    
-    try:
-        postprocess_cv_doc(doc)
-    except Exception as e:
-        print("Postprocess error:", e)
 
     out = PROJECT_DIR / "polished_cv.docx"
     doc.save(str(out))
-    
-    # sanity check — prove file is there
-    try:
-        import os
-        print("Saved DOCX exists:", os.path.exists(out))
-    except Exception as e:
-        print("Exists check error:", e)
-
-    # do not block download if scrub fails
-    try:
-        _zip_scrub_header_labels(out)
-    except Exception as e:
-        print("Zip-scrub error:", e)
-
+    _zip_scrub_header_labels(out)
     return out
 
 # ---------- helpers ----------
@@ -9092,9 +8824,3 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
-
-
-
-
-
-

@@ -3345,10 +3345,10 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     # Profile-based labels (optional, per-org)
     labels = {
         "summary": "EXECUTIVE SUMMARY",
-        "personal": "PERSONAL INFORMATION",  # NEW
         "certifications": "PROFESSIONAL QUALIFICATIONS",
         "skills": "PROFESSIONAL SKILLS",
         "experience": "PROFESSIONAL EXPERIENCE",
+        "education": "EDUCATION",
         "references": "REFERENCES",
     }
     try:
@@ -3388,85 +3388,28 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     if cv.get("summary"):
         _add_section_heading(doc, labels["summary"])
         p = doc.add_paragraph(cv["summary"]); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
-    # --- PERSONAL INFORMATION ---
-    pi = cv.get("personal_info") or {}
-    nat = (pi.get("nationality") or "").strip()
-    mar = (pi.get("marital_status") or "").strip()
 
-    _add_section_heading(doc, labels.get("personal", "PERSONAL INFORMATION"))
-    
-    line = f"Nationality: {nat} |  Marital Status: {mar}"
-    p = doc.add_paragraph(line)
-    p.paragraph_format.space_after = Pt(8)
-    _tone_runs(p, size=11, bold=False)
-    # --- PERSONAL INFORMATION ---
-    pi = cv.get("personal_info") or {}
-    nat = (pi.get("nationality") or "").strip()
-    mar = (pi.get("marital_status") or "").strip()
-
-    _add_section_heading(doc, labels.get("personal", "PERSONAL INFORMATION"))
-
-    line = f"Nationality: {nat} |  Marital Status: {mar}"
-    p = doc.add_paragraph(line)
-    p.paragraph_format.space_after = Pt(8)
-    _tone_runs(p, size=11, bold=False)
-
-    # --- PROFESSIONAL QUALIFICATIONS (Certifications + Education, unified, spaced, sorted) ---
-    import re  # keep here (file has no 'import re' earlier)
-
-    quals = [q for q in (cv.get("certifications") or []) if q]
+    quals = []
+    if cv.get("certifications"): quals += [q for q in cv["certifications"] if q]
     edu = cv.get("education") or []
-
-    if quals or edu:
-        _add_section_heading(doc, labels["certifications"])
-
-    def _extract_year(text: str) -> int:
-        """Return the last 4-digit year in a string, or -1 if none."""
-        if not text:
-            return -1
-        yrs = re.findall(r'(19|20)\d{2}', text)
-        return int(yrs[-1]) if yrs else -1
-
-    def _year_from_edu(ed: dict) -> int:
-        """Prefer end_date year, then start_date year, else try degree/institution."""
-        for key in ("end_date", "start_date"):
-            y = _extract_year((ed.get(key) or "").strip())
-            if y != -1:
-                return y
-        return _extract_year(" ".join([(ed.get("degree") or ""), (ed.get("institution") or "")]))
-
-    items = []  # (year_int, line_str, is_bold)
-
-    # Certifications: keep text, try to pull a year
-    for q in quals:
-        items.append((_extract_year(q), q, False))
-
-    # Education: single line "Degree | Institution (dates)"; no bullets, uniform spacing
     for ed in edu:
         deg = (ed.get("degree") or "").strip()
         inst = (ed.get("institution") or "").strip()
-        sd = (ed.get("start_date") or "").strip()
-        ee = (ed.get("end_date") or "").strip()
-        dates = f"{sd} – {ee}".strip(" –")
-        date_part = f" ({dates})" if dates else ""
-        title = " | ".join([s for s in [deg, inst] if s]).strip()
-        line = (title + date_part) if title else (dates or "Education")
-        items.append((_year_from_edu(ed), line, True))  # bold education line
+        date_span = " – ".join([x for x in [(ed.get("start_date") or "").strip(), (ed.get("end_date") or "").strip()] if x]).strip(" –")
+        line = " | ".join([s for s in [deg, inst, date_span] if s])
+        if line: quals.append(line)
+    if quals:
+        _add_section_heading(doc, labels["certifications"])
+        for q in quals:
+            p = doc.add_paragraph(q)
+            p.paragraph_format.space_before = Pt(0); p.paragraph_format.space_after = Pt(0)
+            _tone_runs(p, size=11, bold=False)
 
-    # Sort newest first; unknown years (-1) go last
-    items.sort(key=lambda t: t[0], reverse=True)
-
-    # Render: one paragraph per item, same spacing, no bullets
-    for _, line, is_bold in items:
-        p = doc.add_paragraph()
-        r = p.add_run(line)
-        r.font.name = "Calibri"
-        r.font.size = Pt(11)
-        r.bold = is_bold
-        r.font.color.rgb = SOFT_BLACK
-        p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(8)
-        _tone_runs(p, size=11, bold=is_bold)
+    skills = cv.get("skills") or []
+    if skills:
+        _add_section_heading(doc, labels["skills"])
+        line = " | ".join(skills)
+        p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
 
     exp = cv.get("experience") or []
     if exp:
@@ -3506,12 +3449,32 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 rp.paragraph_format.space_after = Pt(0)
                 _tone_runs(rp, size=11, bold=False)
 
-    skills = cv.get("skills") or []
-    if skills:
-        _add_section_heading(doc, labels["skills"])
-        line = " | ".join(skills)
-        p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
-        
+    # --- Education ---
+    if edu:
+        _add_section_heading(doc, labels["education"])
+        for ed in edu:
+            line = " — ".join([x for x in [ed.get("degree",""), ed.get("institution","")] if x]).strip()
+            p = doc.add_paragraph(); rr = p.add_run(line or "Education")
+            rr.font.name="Calibri"; rr.font.size=Pt(11); rr.bold=True; rr.font.color.rgb=SOFT_BLACK
+            p.paragraph_format.space_after = Pt(0)
+
+            sd = (ed.get("start_date") or "").strip()
+            ee = (ed.get("end_date") or "").strip()
+            dates = f"{sd} – {ee}".strip(" –")
+            loc = (ed.get("location") or "").strip()
+            meta = " | ".join([x for x in [dates, loc] if x])
+            if meta:
+                meta_p = doc.add_paragraph(meta)
+                meta_p.paragraph_format.space_after = Pt(2)
+                _tone_runs(meta_p, size=11, bold=False)
+
+            if ed.get("bullets"):
+                for b in ed["bullets"]:
+                    bp = doc.add_paragraph(b, style="List Bullet")
+                    bp.paragraph_format.space_before = Pt(0)
+                    bp.paragraph_format.space_after = Pt(0)
+                    _tone_runs(bp, size=11, bold=False)
+
     # --- References (fixed text) ---
     _add_section_heading(doc, labels["references"])
     p = doc.add_paragraph("Full references are available on request")
@@ -8861,6 +8824,16 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
+
+
+
+
+
+
+
+
+
 
 
 

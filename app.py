@@ -8846,12 +8846,15 @@ def polish():
         try:
             if sec:
                 data = deep_merge_lossless(data, sec)
+        except Exception:
+            pass
                 
         # ⬇️ NEW: group Experience by date spans (safe, Experience-only)
         try:
             if sec:
                 data = attach_experience_by_date_spans(data, sec, text_norm)
         except Exception:
+            pass
 
         # 5) Keep legacy skills extraction, then merge (don’t overwrite)
         try:
@@ -8934,6 +8937,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

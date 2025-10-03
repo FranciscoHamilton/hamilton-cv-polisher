@@ -719,13 +719,13 @@ HOMEPAGE_HTML = r"""
       </div>
       <div class="card">
         <h3>Built for recruiters</h3>
-        <p>No invented facts. Lustra only structures what’s in the candidate’s CV.</p>
+        <p>No invented facts. We only structure what’s in the candidate’s CV.</p>
       </div>
     </div>
 
     <div class="stepper">
       <div class="step"><span class="b">1</span>Upload a CV</div>
-      <div class="step"><span class="b">2</span>Lustra extracts &amp; structure</div>
+      <div class="step"><span class="b">2</span>We extract &amp; structure</div>
       <div class="step"><span class="b">3</span>Download polished DOCX</div>
     </div>
   </div>
@@ -931,7 +931,7 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
         <h2>How it works</h2>
         <ul>
           <li><strong>Upload</strong> a raw CV (PDF / DOCX / TXT).</li>
-          <li><strong>Extract & structure:</strong> Lustra pulls out the real content (experience, education, skills) without inventing facts.</li>
+          <li><strong>Extract & structure:</strong> we pull out the real content (experience, education, skills) without inventing facts.</li>
           <li><strong>Lay out in your template:</strong> headers/footers, fonts, sizes and spacing are applied automatically.</li>
           <li><strong>Download</strong> a polished DOCX.</li>
         </ul>
@@ -944,7 +944,7 @@ ul{margin:8px 0 16px 20px;color:var(--ink);font-size:13.5px;line-height:1.65}
 
         <h2>What’s on the site</h2>
         <ul>
-          <li><strong>Multi-company login:</strong> Separate logins and dashboards for each company.</li>
+          <li><strong>Multi-company login (coming soon):</strong> Separate logins and dashboards for each company.</li>
           <li><strong>Director Console:</strong> Manage users, track usage, reset passwords, and monitor credits in real time. Export data and review activity trends.</li>
           <li><strong>Credit Plans:</strong> Flexible options — choose between monthly bundles (Starter, Growth, Scale) or pay-as-you-go Packs.</li>
           <li><strong>Savings Calculator:</strong> Instantly see the ROI by comparing manual effort vs. automated polish, with plan recommendations tailored to your usage.</li>
@@ -3438,56 +3438,16 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 meta_p.paragraph_format.space_after = Pt(6)
                 _tone_runs(meta_p, size=11, bold=False)
 
- # --- NEW: structured responsibilities/achievements with optional mini-headings ---
-            _resp = [x for x in (role.get("responsibilities") or []) if x]
-            _ach  = [x for x in (role.get("achievements") or []) if x]
-            _has_structured = bool(_resp or _ach)
-
-            if _resp or _ach:
-                # Optional bold sub-heading for responsibilities (captured from CV, e.g., “Responsibilities”)
-                _resp_hdr = (role.get("_resp_title") or "").strip()
-                if _resp_hdr:
-                    ph = doc.add_paragraph(_resp_hdr)
-                    if ph.runs:
-                        ph.runs[0].bold = True
-                    else:
-                        ph.add_run(_resp_hdr).bold = True
-
-                # Responsibilities list (bulleted)
-                for item in _resp:
-                    bp = doc.add_paragraph(item, style="List Bullet")
+            if role.get("bullets"):
+                for b in role["bullets"]:
+                    bp = doc.add_paragraph(b, style="List Bullet")
                     bp.paragraph_format.space_before = Pt(0)
-                    bp.paragraph_format.space_after  = Pt(0)
+                    bp.paragraph_format.space_after = Pt(0)
                     _tone_runs(bp, size=11, bold=False)
-
-                # Optional bold sub-heading for achievements (captured from CV, e.g., “Key Deliveries”)
-                _ach_hdr = (role.get("_ach_title") or "").strip()
-                if _ach_hdr:
-                    ph = doc.add_paragraph(_ach_hdr)
-                    if ph.runs:
-                        ph.runs[0].bold = True
-                    else:
-                        ph.add_run(_ach_hdr).bold = True
-
-                # Achievements list (bulleted)
-                for item in _ach:
-                    bp = doc.add_paragraph(item, style="List Bullet")
-                    bp.paragraph_format.space_before = Pt(0)
-                    bp.paragraph_format.space_after  = Pt(0)
-                    _tone_runs(bp, size=11, bold=False)
-
-            # --- legacy fallback continues below (only if nothing structured) ---
-            if not _has_structured:
-                if role.get("bullets"):
-                    for b in role["bullets"]:
-                        bp = doc.add_paragraph(b, style="List Bullet")
-                        bp.paragraph_format.space_before = Pt(0)
-                        bp.paragraph_format.space_after = Pt(0)
-                        _tone_runs(bp, size=11, bold=False)
-                elif role.get("raw_text"):
-                    rp = doc.add_paragraph(role["raw_text"])
-                    rp.paragraph_format.space_after = Pt(0)
-                    _tone_runs(rp, size=11, bold=False)
+            elif role.get("raw_text"):
+                rp = doc.add_paragraph(role["raw_text"])
+                rp.paragraph_format.space_after = Pt(0)
+                _tone_runs(rp, size=11, bold=False)
 
     # --- Education ---
     if edu:
@@ -4684,107 +4644,6 @@ def admin_set_user_active():
         return jsonify({"ok": True, "user_id": uid, "username": target_username, "active": bool(active_val)})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500    
-
-# --- Owner API: hard delete an organisation (dangerous, admin-only) ---
-@app.post("/owner/api/org/delete")
-def owner_api_org_delete():
-    # Guard: admin only
-    try:
-        uname = (session.get("user") or "").strip().lower()
-        is_admin_flag = bool(session.get("is_admin")) or (uname == "admin")
-    except Exception:
-        is_admin_flag = False
-    if not is_admin_flag:
-        return jsonify({"ok": False, "error": "forbidden"}), 403
-
-    # Params (JSON)
-    payload = request.get_json(silent=True) or {}
-    try:
-        org_id = int(payload.get("org_id") or 0)
-    except Exception:
-        org_id = 0
-    confirm = (payload.get("confirm") or "").strip()
-
-    if org_id <= 0:
-        return jsonify({"ok": False, "error": "org_id_required"}), 400
-    if confirm != "DELETE":
-        return jsonify({"ok": False, "error": "confirm_required", "hint": "send confirm='DELETE'"}), 400
-
-    # Optional safety: protect seed org(s) from deletion
-    PROTECTED_ORG_IDS = {1}  # change/remove as you wish
-    if org_id in PROTECTED_ORG_IDS:
-        return jsonify({"ok": False, "error": "protected_org"}), 400
-
-    if not DB_POOL:
-        return jsonify({"ok": False, "error": "db_unavailable"}), 500
-
-    conn = None
-    try:
-        conn = DB_POOL.getconn()
-        with conn:
-            with conn.cursor() as cur:
-                # Child rows that reference users from this org
-                try:
-                    cur.execute(
-                        "DELETE FROM usage_events WHERE user_id IN (SELECT id FROM users WHERE org_id=%s)",
-                        (org_id,)
-                    )
-                except Exception:
-                    pass
-                try:
-                    cur.execute(
-                        "DELETE FROM credits_ledger WHERE user_id IN (SELECT id FROM users WHERE org_id=%s)",
-                        (org_id,)
-                    )
-                except Exception:
-                    pass
-
-                # Org-level ledgers / limits
-                try:
-                    cur.execute("DELETE FROM org_credits_ledger WHERE org_id=%s", (org_id,))
-                except Exception:
-                    pass
-                try:
-                    cur.execute("DELETE FROM org_user_limits WHERE org_id=%s", (org_id,))
-                except Exception:
-                    pass
-
-                # Users in this org
-                try:
-                    cur.execute("DELETE FROM users WHERE org_id=%s", (org_id,))
-                except Exception:
-                    pass
-
-                # Finally delete the org row
-                cur.execute("DELETE FROM orgs WHERE id=%s", (org_id,))
-
-        # Remove org-specific files after DB commit (best effort)
-        try:
-            from pathlib import Path
-            import shutil
-            try:
-                root = storage_root()  # your helper
-            except Exception:
-                root = "/mnt/data"
-            paths = [
-                Path(root) / "org_assets" / str(org_id),     # logos etc
-                Path(root) / "org_templates" / str(org_id),  # DOCX templates
-            ]
-            for p in paths:
-                shutil.rmtree(p, ignore_errors=True)
-        except Exception as e:
-            print("org delete: rmtree failed", e)
-
-        return jsonify({"ok": True, "deleted_org_id": org_id})
-
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-    finally:
-        try:
-            if conn:
-                DB_POOL.putconn(conn)
-        except Exception:
-            pass
 
 # --- Admin: ONE-TIME migration to enable org-shared credits ---
 @app.get("/__admin/migrate_org_pool")
@@ -7698,7 +7557,6 @@ async function load(){
     <a class="btn" href="/__admin/org-profile?org_id=${o.id}">Profile</a>
     <a class="btn" href="/__admin/upload-org-template">Template</a>
     <a class="btn" href="/__admin/upload-org-logo?org_id=${o.id}">Logo</a>
-    ${o.id !== 1 ? `<a class="btn btn-danger delete-org" href="#" data-org-id="${o.id}" data-org-name="${o.name}">Delete</a>` : ``}
   </div>
 </td>
     `;
@@ -7749,38 +7607,6 @@ function setSaveState(t){
   const el = document.getElementById('saveState');
   if(el) el.textContent = t||'';
 }
-
-// Delete org (admin-only): prompt → call API → remove row
-document.addEventListener('click', async function(ev){
-  const a = ev.target.closest('a.delete-org');
-  if(!a) return;
-  ev.preventDefault();
-
-  const id   = Number(a.getAttribute('data-org-id') || '0');
-  const name = a.getAttribute('data-org-name') || ('Org ' + id);
-
-  const conf = prompt(`Type DELETE to permanently remove "${name}" (ID ${id}). This cannot be undone.`);
-  if(conf !== 'DELETE'){ return; }
-
-  try{
-    const r = await fetch('/owner/api/org/delete', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      credentials: 'include',
-      body: JSON.stringify({ org_id: id, confirm: 'DELETE' })
-    });
-    const j = await r.json();
-    if(!j.ok){
-      alert('Delete failed: ' + (j.error || r.status));
-      return;
-    }
-    const tr = a.closest('tr');
-    if(tr) tr.remove();
-  }catch(e){
-    console.log('delete failed', e);
-    alert('Delete failed.');
-  }
-});
 
 document.addEventListener('DOMContentLoaded', load);
 </script>
@@ -8409,411 +8235,6 @@ def storage_root() -> str:
     _STORAGE_ROOT = "/tmp"
     return _STORAGE_ROOT
 
-# ---- Lossless re-sectionizer (no wording changes) ----
-# Buckets raw text into canonical sections using heading synonyms and simple regex cues.
-# Produces a stable, extractor-friendly text that reduces misses on messy PDFs.
-
-import re
-
-_CANON_SECTIONS = [
-    "name",
-    "contact_details",
-    "summary",
-    "education",
-    "skills",
-    "experience",
-    "certifications",
-    "achievements",
-    "projects",
-    "languages",
-    "references",
-]
-
-# Map many possible headings to our canonical buckets
-_SECTION_SYNONYMS = {
-    "summary":           [r"summary", r"personal profile", r"profile", r"executive summary"],
-    "education":         [r"education", r"academic history", r"qualifications", r"academic qualifications"],
-    "skills":            [r"skills", r"technical skills", r"professional skills", r"capabilities", r"capability summary"],
-    "experience":        [r"experience", r"employment", r"work history", r"professional experience", r"career history"],
-    "certifications":    [r"certifications?", r"licenses?", r"credentials?", r"certificates?"],
-    "achievements":      [r"achievements?", r"key achievements?", r"key results?"],
-    "projects":          [r"projects?"],
-    "languages":         [r"languages?"],
-    "references":        [r"references?", r"referees?"],
-    "contact_details":   [r"contact details?", r"contacts?"],
-}
-
-# Pre-compile heading matchers
-_SECTION_HEADINGS = [(canon, re.compile(rf"^(?:<<H>>\s*)?({ '|'.join(pats) })\b[:\s]*$", re.I))
-                     for canon, pats in ((k, [p for p in v]) for k, v in _SECTION_SYNONYMS.items())]
-
-_EMAIL_RE = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.I)
-_PHONE_RE = re.compile(r"(\+?\d[\d \-\(\)]{6,}\d)")
-_LINK_RE  = re.compile(r"\b(?:https?://|www\.)\S+", re.I)
-_LINKEDIN_RE = re.compile(r"linkedin\.com/[^ \t\r\n]+", re.I)
-_NAME_LINE_RE = re.compile(r"^[A-Z][A-Za-z'`\-]+(?:\s+[A-Z][A-Za-z'`\-]+){0,3}$")
-
-def lossless_sectionize(text: str) -> dict:
-    """
-    Returns a dict: {
-      'sections': {canon: [lines...]},
-      'contacts': {'emails':[], 'phones':[], 'links':[], 'linkedin':[]},
-      'name': '...'(optional)
-    }
-    No rewriting; preserves original lines (trimmed).
-    """
-    out = {"sections": {k: [] for k in _CANON_SECTIONS}, "contacts": {"emails": [], "phones": [], "links": [], "linkedin": []}}
-    if not text:
-        return out
-
-    lines = [ln.rstrip() for ln in text.split("\n")]
-    # Collect contacts everywhere
-    emails = set(); phones = set(); links = set(); linkedins = set()
-    for ln in lines:
-        for m in _EMAIL_RE.findall(ln): emails.add(m.strip())
-        for m in _PHONE_RE.findall(ln): 
-            ph = re.sub(r"\s+", " ", m.strip())
-            if len(re.sub(r"\D","",ph)) >= 7: phones.add(ph)
-        for m in _LINK_RE.findall(ln): links.add(m.strip())
-        for m in _LINKEDIN_RE.findall(ln): linkedins.add(m.strip())
-    out["contacts"]["emails"]   = sorted(emails)
-    out["contacts"]["phones"]   = sorted(phones)
-    out["contacts"]["links"]    = sorted(links)
-    out["contacts"]["linkedin"] = sorted(linkedins)
-
-    # Heuristic name: first non-empty line near top that looks like a person name (before a contact block)
-    for i, ln in enumerate(lines[:8]):  # only scan top 8 lines
-        s = ln.strip()
-        if not s: 
-            continue
-        if _EMAIL_RE.search(s) or _PHONE_RE.search(s) or _LINKEDIN_RE.search(s): 
-            break
-        if _NAME_LINE_RE.match(s) and len(s) <= 60:
-            out["name"] = s
-            break
-
-    # Walk lines and bucket by headings
-    current = None
-    for ln in lines:
-        raw = ln.strip()
-        if not raw:
-            continue
-        # Is this a heading?
-        matched = False
-        for canon, rx in _SECTION_HEADINGS:
-            if rx.match(raw):
-                current = canon
-                matched = True
-                break
-        if matched:
-            continue
-
-        # Tag bullets more explicitly helps the extractor later
-        line_clean = re.sub(r"^\s*[-•‣]\s*", "• ", raw)
-
-        # If we have a current heading, add there
-        if current:
-            out["sections"].setdefault(current, []).append(line_clean)
-            continue
-
-        # Otherwise, smart fallbacks:
-        # If it looks like contact information but we don't have a Contact section, keep it there too.
-        if _EMAIL_RE.search(raw) or _PHONE_RE.search(raw) or _LINKEDIN_RE.search(raw):
-            out["sections"].setdefault("contact_details", []).append(line_clean)
-        else:
-            # Unplaced lines: gently bias toward 'summary' at the very top; otherwise leave for extractor
-            pass
-
-    return out
-
-def render_lossless_for_extractor(sec: dict) -> str:
-    """
-    Turn sectionized buckets into a clean, canonical text for your extractor.
-    This *does not add or rewrite text*, it only groups under canonical headings.
-    """
-    if not isinstance(sec, dict): 
-        return ""
-    sections = sec.get("sections") or {}
-    parts = []
-
-    # Name
-    nm = (sec.get("name") or "").strip()
-    if nm:
-        parts.append("NAME:\n" + nm)
-
-    # Contact block
-    c = sec.get("contacts") or {}
-    contact_lines = []
-    for k in ("emails","phones","linkedin","links"):
-        for v in c.get(k, []):
-            if v: contact_lines.append(v)
-    if sections.get("contact_details"):
-        contact_lines.extend([s for s in sections["contact_details"] if s.strip()])
-    if contact_lines:
-        parts.append("CONTACT DETAILS:\n" + "\n".join(dict.fromkeys(contact_lines)))
-
-    # Then the rest in a fixed, safe order
-    order = ["summary","experience","achievements","education","skills","certifications","projects","languages","references"]
-    for key in order:
-        vals = sections.get(key) or []
-        if not vals: 
-            continue
-        title = key.replace("_"," ").upper()
-        parts.append(f"{title}:\n" + "\n".join(vals))
-
-    return "\n\n".join(parts)
-
-def deep_merge_lossless(extracted: dict, lossless: dict) -> dict:
-    """
-    Union-only merge: if the extractor missed a section, we add the plain lines.
-    We never delete or rewrite fields the extractor already provided.
-    Safe targets: summary (string), skills (list-of-strings), education (list-of-strings),
-                  experience (list-of-strings when missing), certifications (list-of-strings),
-                  languages (list-of-strings), references (list-of-strings).
-    """
-    if not isinstance(extracted, dict): 
-        extracted = {}
-    out = dict(extracted)
-
-    if not isinstance(lossless, dict):
-        return out
-    secs = lossless.get("sections") or {}
-
-    # name/contact only if completely missing
-    if not out.get("name") and lossless.get("name"):
-        out["name"] = lossless.get("name")
-
-    # contacts: add if extractor has none
-    if not out.get("contact_details"):
-        contact_lines = []
-        c = lossless.get("contacts") or {}
-        for k in ("emails","phones","linkedin","links"):
-            for v in c.get(k, []):
-                if v: contact_lines.append(v)
-        if secs.get("contact_details"):
-            contact_lines.extend([s for s in secs["contact_details"] if s.strip()])
-        if contact_lines:
-            out["contact_details"] = list(dict.fromkeys(contact_lines))
-
-    # simple list sections we can add safely if missing
-    SIMPLE_LISTS = ["skills","education","experience","certifications","languages","references","projects","achievements"]
-    for key in SIMPLE_LISTS:
-        if key in out and out.get(key):
-            continue
-        vals = [s for s in (secs.get(key) or []) if s and str(s).strip()]
-        if vals:
-            out[key] = vals
-
-    # summary: join lines (no rewrite) if missing
-    if not out.get("summary"):
-        vals = secs.get("summary") or []
-        if vals:
-            out["summary"] = "\n".join(vals)
-
-    return out
-# ---- /Lossless re-sectionizer ----
-
-# ---- Experience: attach all lines within date spans (Experience-only) ----
-import re as _re
-
-# Robust date span matcher:
-# - Month Year to Month Year  (Jan 2020 - Mar 2023)
-# - Year to Year              (2016 to 2021)
-# - 10/2019 - 2022, 2019/10 - 2022, 2019.10 - 2022
-# - “from/since … until/through/till …”
-# - End tokens: Present/Current/Now/To date
-_MONTH = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*"
-_YR    = r"\d{4}"
-_NUMMY = r"(?:\d{1,2}[\/\.\-]\d{4})"   # 10/2019, 10-2019, 10.2019
-_ENDTOK= r"(?:Present|Current|Now|To\s*date|"+_YR+r"|"+_MONTH+r"\s+"+_YR+r"|"+_NUMMY+r")"
-_START = r"(?:From|Since|Starting|Started\s+in)?\s*"
-_SEP   = r"(?:–|-|—|to|until|through|till)"
-_DATE_LINE_RE = _re.compile(
-    rf"(?:^|\s)(?:<<DATE>>\s*)?(?:{_START})(?:{_MONTH}\s+{_YR}|{_YR}|{_NUMMY})\s*{_SEP}\s*{_ENDTOK}\b",
-    _re.I
-)
-
-# Mini-headings that flip capture mode to achievements or responsibilities (Experience only)
-_ACH_HDR_RE  = _re.compile(
-    r'^(?:'
-    r'(?:key|major|notable|selected)?\s*'
-    r'(?:achievements?|accomplishments?|results?|outcomes?|deliverables?|deliveries|contributions?|milestones|impacts?|wins|highlights|successes)'
-    r'(?:\s+include[s]?)?'
-    r')\s*:?\s*$',
-    _re.I
-)
-_RESP_HDR_RE = _re.compile(
-    r'^(?:'
-    r'(?:core|primary|key)?\s*'
-    r'(?:responsibilit(?:y|ies)|duties|tasks|accountabilit(?:y|ies)|scope|role\s+(?:summary|overview|description))'
-    r')\s*:?\s*$',
-    _re.I
-)
-
-# A light parser for lines like  "Company — Title"  or  "Title at Company"
-_SPLIT_SEP = _re.compile(r"\s*(?:[-–—|·•]| at )\s*", _re.I)
-
-def _guess_employer_role(from_lines):
-    """
-    Try to guess employer/role using the last 2 non-empty, non-heading lines
-    before a date span. Returns (employer, role).
-    """
-    a = [s for s in from_lines if s]
-    a = a[-2:] if len(a) >= 2 else a
-    employer, role = "", ""
-    if not a:
-        return employer, role
-    if len(a) == 1:
-        # Split single line if it has a separator
-        parts = _SPLIT_SEP.split(a[0])
-        if len(parts) >= 2:
-            # Heuristic: if " at " present, left is role, right is employer; else first is employer, second is role
-            if " at " in a[0].lower():
-                role, employer = parts[0].strip(), parts[1].strip()
-            else:
-                employer, role = parts[0].strip(), parts[1].strip()
-        else:
-            role = a[0].strip()
-    else:
-        # two lines: prefer employer then role
-        employer, role = a[0].strip(), a[1].strip()
-    return employer, role
-
-def attach_experience_by_date_spans(data: dict, lossless: dict, raw_text: str) -> dict:
-    """
-    Experience-only enhancer:
-      • Start a new role at each date span (e.g., 'Feb 2016 - Sep 2021', '2019/10 - 2022', 'Oct 2019 until 2022').
-      • All lines UNTIL the next date span stay inside that role—even if mini-headings appear.
-      • Mini-headings route bullets to achievements/responsibilities.
-    Non-destructive: if your extractor already built roles, we only add missing achievements/responsibilities by date match.
-    """
-    if not isinstance(data, dict):
-        return data or {}
-    secs = (lossless or {}).get("sections") or {}
-    exp_lines = secs.get("experience") or []
-    if not exp_lines:
-        return data
-
-    blocks = []
-    context = []   # last few non-empty context lines to infer employer/role
-    current = None
-    mode = "responsibilities"
-
-    def push_context(line: str):
-        s = (line or "").strip()
-        if not s or s.startswith("• ") or _ACH_HDR_RE.match(s) or _RESP_HDR_RE.match(s) or _DATE_LINE_RE.search(s):
-            return
-        context.append(s)
-        if len(context) > 3:
-            del context[0]
-
-    for raw in exp_lines:
-        ln = (raw or "").strip()
-        if not ln:
-            continue
-
-        # New date span → start a new role
-        if _DATE_LINE_RE.search(ln):
-            employer, role = _guess_employer_role(context)
-            # normalize date label (strip <<DATE>> if present)
-            date_text = _re.sub(r'^\s*<<DATE>>\s*', '', ln).strip()
-            current = {
-                "employer": employer,
-                "role": role,
-                "date": date_text,
-                "responsibilities": [],
-                "achievements": []
-            }
-            blocks.append(current)
-            mode = "responsibilities"
-            continue
-
-        # Inside a role: route by mini-headings or collect bullets
-        if current:
-            # Strip a leading bullet marker if present (•, -, *, or <<BULLET>>)
-            _hdr_candidate = _re.sub(r'^(?:[•\-\*\u2022]\s+|<<BULLET>>\s*)', '', ln).strip()
-
-            # ACHIEVEMENTS-like headings
-            if _ACH_HDR_RE.match(_hdr_candidate):
-                # remember the *actual* heading text as it appeared, minus a trailing colon
-                current["_ach_title"] = _re.sub(r':\s*$', '', _hdr_candidate, flags=_re.I).strip()
-                mode = "achievements"
-                continue
-
-            # RESPONSIBILITIES-like headings
-            if _RESP_HDR_RE.match(_hdr_candidate):
-                current["_resp_title"] = _re.sub(r':\s*$', '', _hdr_candidate, flags=_re.I).strip()
-                mode = "responsibilities"
-                continue
-
-            if ln.startswith(("• ", "- ", "* ")):
-                item = ln[2:].strip()
-                if item:
-                    target = current["achievements"] if mode == "achievements" else current["responsibilities"]
-                    if item.lower() not in {x.lower() for x in target}:
-                        target.append(item)
-            else:
-                if ln.lower() not in {x.lower() for x in current["responsibilities"]}:
-                    current["responsibilities"].append(ln)
-
-        # keep context fresh for employer/role inference
-        push_context(ln)
-
-    # Remove empty roles and tidy lists
-    clean = []
-    for r in blocks:
-        if any([r.get("employer"), r.get("role"), r.get("date"), r["responsibilities"], r["achievements"]]):
-            # strip/dedupe
-            for k in ("responsibilities","achievements"):
-                seen = set(); kept=[]
-                for x in r[k]:
-                    x2 = (x or "").strip()
-                    if not x2: continue
-                    key = x2.lower()
-                    if key in seen: continue
-                    seen.add(key); kept.append(x2)
-                r[k] = kept
-            clean.append(r)
-
-    if not clean:
-        return data
-
-    out = dict(data)
-
-    # If extractor has no roles, take ours
-    if not isinstance(out.get("experience"), list) or not out.get("experience"):
-        out["experience"] = clean
-        return out
-
-    # Otherwise augment existing roles by matching the date span substring
-    for blk in clean:
-        d = (blk.get("date") or "").strip()
-        if not d:
-            continue
-        matched = False
-        for role in out.get("experience") or []:
-            hay = " ".join([str(role.get(x,"")) for x in ("date","dates","period","tenure","when","title","role","employer")]).strip()
-            if d and d.lower() in hay.lower():
-                # extend, never overwrite
-                if blk.get("achievements"):
-                    role.setdefault("achievements", [])
-                    for a in blk["achievements"]:
-                        if a and a.lower() not in {x.lower() for x in role["achievements"]}:
-                            role["achievements"].append(a)
-                if blk.get("responsibilities"):
-                    role.setdefault("responsibilities", [])
-                    for r in blk["responsibilities"]:
-                        if r and r.lower() not in {x.lower() for x in role["responsibilities"]}:
-                            role["responsibilities"].append(r)
-                matched = True
-                break
-        if not matched:
-            # If no existing entry matches, append as its own role
-            out.setdefault("experience", []).append(blk)
-
-    return out
-# ---- /Experience date-span attach ----
-
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
@@ -8957,61 +8378,9 @@ def polish():
                 # If balance check fails, don't block polishing; just log
                 print("credits precheck failed:", e)
 
-        
-        # ---- Polishing logic (enhanced, non-destructive) ----
-        # 1) Normalize messy PDF text
-        try:
-            text_norm = normalize_cv_text(text)
-        except Exception:
-            text_norm = text
-
-        # 2) Lossless re-sectionization (no new wording)
-        try:
-            sec = lossless_sectionize(text_norm)
-        except Exception:
-            sec = None
-
-        # 3) Main extraction prefers normalized text
-        try:
-            data = ai_or_heuristic_structuring(text_norm)
-        except Exception:
-            data = ai_or_heuristic_structuring(text)
-
-        # 4) Union-merge: add anything the sectionizer found that the extractor missed
-        try:
-            if sec:
-                data = deep_merge_lossless(data, sec)
-
-                # ⬇️ NEW: group Experience by date spans (safe, Experience-only)
-                try:
-                    data = attach_experience_by_date_spans(data, sec, text_norm)
-                except Exception:
-                    pass
-                    
-        except Exception:
-            pass
-
-        # 5) Keep legacy skills extraction, then merge (don’t overwrite)
-        try:
-            legacy_sk = extract_top_skills(text_norm)
-            if legacy_sk:
-                if isinstance(data.get("skills"), dict):
-                    data["skills"]["professional"] = list(dict.fromkeys(
-                        [*data["skills"].get("professional", []), *legacy_sk]
-                    ))
-                else:
-                    data.setdefault("skills", [])
-                    if isinstance(data["skills"], list):
-                        data["skills"].extend([s for s in legacy_sk if s not in data["skills"]])
-        except Exception:
-            pass
-
-        # 6) Map to Hamilton fields & fix-ups (never drop info)
-        try:
-            data = postprocess_to_hamilton(data, raw_text=text_norm)
-        except Exception:
-            pass
-        # ---- /Polishing logic (enhanced) ----
+        # ---- Polishing logic (unchanged) ----
+        data = ai_or_heuristic_structuring(text)
+        data["skills"] = extract_top_skills(text)  # keywords-only list as before
 
         # Optional per-org DOCX template (falls back to default if none)
         template_override = None
@@ -9072,22 +8441,6 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

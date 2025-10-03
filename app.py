@@ -3351,6 +3351,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         "education": "EDUCATION",
         "references": "REFERENCES",
     }
+    labels = {**default_labels, **labels_in}
     try:
         oid = _current_user_org_id()
         if oid:
@@ -8824,3 +8825,4 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+

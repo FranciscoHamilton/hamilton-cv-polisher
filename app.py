@@ -7658,6 +7658,7 @@ async function load(){
     <a class="btn" href="/__admin/org-profile?org_id=${o.id}">Profile</a>
     <a class="btn" href="/__admin/upload-org-template">Template</a>
     <a class="btn" href="/__admin/upload-org-logo?org_id=${o.id}">Logo</a>
+    ${o.id !== 1 ? `<a class="btn btn-danger delete-org" href="#" data-org-id="${o.id}" data-org-name="${o.name}">Delete</a>` : ``}
   </div>
 </td>
     `;
@@ -7708,6 +7709,38 @@ function setSaveState(t){
   const el = document.getElementById('saveState');
   if(el) el.textContent = t||'';
 }
+
+// Delete org (admin-only): prompt → call API → remove row
+document.addEventListener('click', async function(ev){
+  const a = ev.target.closest('a.delete-org');
+  if(!a) return;
+  ev.preventDefault();
+
+  const id   = Number(a.getAttribute('data-org-id') || '0');
+  const name = a.getAttribute('data-org-name') || ('Org ' + id);
+
+  const conf = prompt(`Type DELETE to permanently remove "${name}" (ID ${id}). This cannot be undone.`);
+  if(conf !== 'DELETE'){ return; }
+
+  try{
+    const r = await fetch('/owner/api/org/delete', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({ org_id: id, confirm: 'DELETE' })
+    });
+    const j = await r.json();
+    if(!j.ok){
+      alert('Delete failed: ' + (j.error || r.status));
+      return;
+    }
+    const tr = a.closest('tr');
+    if(tr) tr.remove();
+  }catch(e){
+    console.log('delete failed', e);
+    alert('Delete failed.');
+  }
+});
 
 document.addEventListener('DOMContentLoaded', load);
 </script>
@@ -8791,6 +8824,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

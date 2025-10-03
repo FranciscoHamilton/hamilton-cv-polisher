@@ -8690,20 +8690,29 @@ def attach_experience_by_date_spans(data: dict, lossless: dict, raw_text: str) -
 
         # Inside a role: route by mini-headings or collect bullets
         if current:
-            if _ACH_HDR_RE.match(ln):
-                mode = "achievements"; continue
-            if _RESP_HDR_RE.match(ln):
-                mode = "responsibilities"; continue
+            # Strip a leading bullet marker if present (•, -, *, or <<BULLET>>)
+            _hdr_candidate = _re.sub(r'^(?:[•\-\*\u2022]\s+|<<BULLET>>\s*)', '', ln).strip()
+
+            # ACHIEVEMENTS-like headings
+            if _ACH_HDR_RE.match(_hdr_candidate):
+                # remember the *actual* heading text as it appeared, minus a trailing colon
+                current["_ach_title"] = _re.sub(r':\s*$', '', _hdr_candidate, flags=_re.I).strip()
+                mode = "achievements"
+                continue
+
+            # RESPONSIBILITIES-like headings
+            if _RESP_HDR_RE.match(_hdr_candidate):
+                current["_resp_title"] = _re.sub(r':\s*$', '', _hdr_candidate, flags=_re.I).strip()
+                mode = "responsibilities"
+                continue
 
             if ln.startswith(("• ", "- ", "* ")):
                 item = ln[2:].strip()
                 if item:
                     target = current["achievements"] if mode == "achievements" else current["responsibilities"]
-                    # de-dupe within the role
                     if item.lower() not in {x.lower() for x in target}:
                         target.append(item)
             else:
-                # plain line inside role → treat as responsibility text
                 if ln.lower() not in {x.lower() for x in current["responsibilities"]}:
                     current["responsibilities"].append(ln)
 
@@ -9023,6 +9032,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

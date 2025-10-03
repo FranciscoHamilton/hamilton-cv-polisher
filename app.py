@@ -3449,6 +3449,38 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 rp.paragraph_format.space_after = Pt(0)
                 _tone_runs(rp, size=11, bold=False)
 
+    # --- Professional Qualifications / Certifications ---
+    certs = (cv.get("certifications") or []) or (cv.get("professional_qualifications") or [])
+    if certs:
+        _add_section_heading(doc, labels.get("professional_qualifications", "Professional Qualifications"))
+        for c in certs:
+            if isinstance(c, dict):
+                line = " — ".join([x for x in [c.get("name",""), c.get("issuer",""), c.get("date","")] if x]).strip()
+            else:
+                line = str(c)
+            if not line:
+                continue
+            p = doc.add_paragraph(line, style="List Bullet")
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after  = Pt(0)
+            _tone_runs(p, size=11, bold=False)
+
+    # --- Professional Qualifications / Certifications ---
+    certs = (cv.get("certifications") or []) or (cv.get("professional_qualifications") or [])
+    if certs:
+        _add_section_heading(doc, labels.get("professional_qualifications", "Professional Qualifications"))
+        for c in certs:
+            if isinstance(c, dict):
+                line = " — ".join([x for x in [c.get("name",""), c.get("issuer",""), c.get("date","")] if x]).strip()
+            else:
+                line = str(c)
+            if not line:
+                continue
+            p = doc.add_paragraph(line, style="List Bullet")
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after  = Pt(0)
+            _tone_runs(p, size=11, bold=False)
+            
     # --- Education ---
     if edu:
         _add_section_heading(doc, labels["education"])
@@ -8846,13 +8878,18 @@ def polish():
         try:
             if sec:
                 data = deep_merge_lossless(data, sec)
-        except Exception:
-            pass
-                
-        # ⬇️ NEW: group Experience by date spans (safe, Experience-only)
-        try:
-            if sec:
-                data = attach_experience_by_date_spans(data, sec, text_norm)
+
+                # ⬇️ NEW: group Experience by date spans (safe, Experience-only)
+                try:
+                    data = attach_experience_by_date_spans(data, sec, text_norm)
+                except Exception:
+                    pass
+
+                # ⬇️ NEW: separate degrees vs certifications (non-destructive)
+                try:
+                    data = separate_edu_certs(data, sec, text_norm)
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -8937,6 +8974,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

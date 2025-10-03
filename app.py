@@ -3449,38 +3449,58 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 rp.paragraph_format.space_after = Pt(0)
                 _tone_runs(rp, size=11, bold=False)
 
-    # --- Professional Qualifications / Certifications ---
-    certs = (cv.get("certifications") or []) or (cv.get("professional_qualifications") or [])
-    if certs:
-        _add_section_heading(doc, labels.get("professional_qualifications", "Professional Qualifications"))
-        for c in certs:
-            if isinstance(c, dict):
-                line = " — ".join([x for x in [c.get("name",""), c.get("issuer",""), c.get("date","")] if x]).strip()
-            else:
-                line = str(c)
-            if not line:
+    # --- Professional Qualifications / Certifications (safe, deduped) ---
+    # Combine both sources without duplicating sections
+    certs_raw = []
+    for fld in ("certifications", "professional_qualifications"):
+        v = cv.get(fld)
+        if isinstance(v, list):
+            certs_raw.extend(v)
+
+    # Normalize to displayable lines; skip dicts that look like Education/Experience
+    def _looks_like_edu_dict(d: dict) -> bool:
+        if not isinstance(d, dict): return False
+        k = {str(x).lower() for x in d.keys()}
+        # Typical edu/experience keys; if present, don't show under qualifications
+        return (
+            {"degree", "institution"} & k or
+            {"start_date","end_date"} & k or
+            ("bullets" in k)
+        )
+
+    norm_lines = []
+    for c in certs_raw:
+        if isinstance(c, dict):
+            if _looks_like_edu_dict(c):
+                # skip here; Education/Experience will handle it
                 continue
-            p = doc.add_paragraph(line, style="List Bullet")
+            name  = str(c.get("name","")).strip()
+            issue = str(c.get("issuer","")).strip()
+            date  = str(c.get("date","")).strip()
+            line  = " — ".join([x for x in (name, issue, date) if x])
+        else:
+            line = str(c or "").strip()
+        if line:
+            norm_lines.append(line)
+
+    # De-dupe (case-insensitive)
+    deduped = []
+    seen = set()
+    for t in norm_lines:
+        key = t.lower()
+        if key in seen: 
+            continue
+        seen.add(key)
+        deduped.append(t)
+
+    if deduped:
+        _add_section_heading(doc, labels.get("professional_qualifications", "Professional Qualifications"))
+        for t in deduped:
+            p = doc.add_paragraph(t, style="List Bullet")
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after  = Pt(0)
             _tone_runs(p, size=11, bold=False)
 
-    # --- Professional Qualifications / Certifications ---
-    certs = (cv.get("certifications") or []) or (cv.get("professional_qualifications") or [])
-    if certs:
-        _add_section_heading(doc, labels.get("professional_qualifications", "Professional Qualifications"))
-        for c in certs:
-            if isinstance(c, dict):
-                line = " — ".join([x for x in [c.get("name",""), c.get("issuer",""), c.get("date","")] if x]).strip()
-            else:
-                line = str(c)
-            if not line:
-                continue
-            p = doc.add_paragraph(line, style="List Bullet")
-            p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after  = Pt(0)
-            _tone_runs(p, size=11, bold=False)
-            
     # --- Education ---
     if edu:
         _add_section_heading(doc, labels["education"])
@@ -8974,6 +8994,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

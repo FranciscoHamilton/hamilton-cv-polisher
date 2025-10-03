@@ -3449,54 +3449,48 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 rp.paragraph_format.space_after = Pt(0)
                 _tone_runs(rp, size=11, bold=False)
 
-    # --- Professional Qualifications / Certifications (safe, deduped) ---
-    # Combine both sources without duplicating sections
+    # --- Professional Qualifications / Certifications (robust) ---
     certs_raw = []
-    for fld in ("certifications", "professional_qualifications"):
-        v = cv.get(fld)
-        if isinstance(v, list):
-            certs_raw.extend(v)
+    v = cv.get("certifications")
+    if isinstance(v, list): certs_raw += v
+    v = cv.get("professional_qualifications")
+    if isinstance(v, list): certs_raw += v
 
-    # Normalize to displayable lines; skip dicts that look like Education/Experience
-    def _looks_like_edu_dict(d: dict) -> bool:
-        if not isinstance(d, dict): return False
-        k = {str(x).lower() for x in d.keys()}
-        # Typical edu/experience keys; if present, don't show under qualifications
-        return (
-            {"degree", "institution"} & k or
-            {"start_date","end_date"} & k or
-            ("bullets" in k)
-        )
+    def _cert_line(x):
+        if isinstance(x, dict):
+            # ignore edu-shaped dicts that were misrouted
+            if x.get("degree") or x.get("institution"):
+                return ""
+            name   = (x.get("name")  or x.get("title")   or "").strip()
+            issuer = (x.get("issuer") or x.get("awarder") or "").strip()
+            date   = (x.get("date")  or x.get("year")    or "").strip()
+            line = " — ".join([p for p in [name, issuer, date] if p])
+            return line
+        s = str(x or "").strip()
+        return s
 
-    norm_lines = []
-    for c in certs_raw:
-        if isinstance(c, dict):
-            if _looks_like_edu_dict(c):
-                # skip here; Education/Experience will handle it
-                continue
-            name  = str(c.get("name","")).strip()
-            issue = str(c.get("issuer","")).strip()
-            date  = str(c.get("date","")).strip()
-            line  = " — ".join([x for x in (name, issue, date) if x])
-        else:
-            line = str(c or "").strip()
-        if line:
-            norm_lines.append(line)
-
-    # De-dupe (case-insensitive)
-    deduped = []
+    # dedupe, drop empties and placeholder junk
+    _junk_keys = {
+        "titleinstitutionyear",
+        "degreeinstitutionyear",
+        "degreeinstitutionlocationstart_dateend_datebullets",
+    }
     seen = set()
-    for t in norm_lines:
-        key = t.lower()
-        if key in seen: 
+    certs_norm = []
+    for item in certs_raw:
+        line = _cert_line(item)
+        if not line:
+            continue
+        key = line.replace(" ", "").lower()
+        if key in _junk_keys or key in seen:
             continue
         seen.add(key)
-        deduped.append(t)
+        certs_norm.append(line)
 
-    if deduped:
+    if certs_norm:
         _add_section_heading(doc, labels.get("professional_qualifications", "Professional Qualifications"))
-        for t in deduped:
-            p = doc.add_paragraph(t, style="List Bullet")
+        for line in certs_norm:
+            p = doc.add_paragraph(line, style="List Bullet")
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after  = Pt(0)
             _tone_runs(p, size=11, bold=False)
@@ -9022,6 +9016,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

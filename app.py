@@ -8573,6 +8573,198 @@ def deep_merge_lossless(extracted: dict, lossless: dict) -> dict:
     return out
 # ---- /Lossless re-sectionizer ----
 
+# ---- Experience: attach all lines within date spans (Experience-only) ----
+import re as _re
+
+# Robust date span matcher:
+# - Month Year to Month Year  (Jan 2020 - Mar 2023)
+# - Year to Year              (2016 to 2021)
+# - 10/2019 - 2022, 2019/10 - 2022, 2019.10 - 2022
+# - “from/since … until/through/till …”
+# - End tokens: Present/Current/Now/To date
+_MONTH = r"(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*"
+_YR    = r"\d{4}"
+_NUMMY = r"(?:\d{1,2}[\/\.\-]\d{4})"   # 10/2019, 10-2019, 10.2019
+_ENDTOK= r"(?:Present|Current|Now|To\s*date|"+_YR+r"|"+_MONTH+r"\s+"+_YR+r"|"+_NUMMY+r")"
+_START = r"(?:From|Since|Starting|Started\s+in)?\s*"
+_SEP   = r"(?:–|-|—|to|until|through|till)"
+_DATE_LINE_RE = _re.compile(
+    rf"(?:^|\s)(?:<<DATE>>\s*)?(?:{_START})(?:{_MONTH}\s+{_YR}|{_YR}|{_NUMMY})\s*{_SEP}\s*{_ENDTOK}\b",
+    _re.I
+)
+
+# Mini-headings that flip capture mode to achievements or responsibilities (Experience only)
+_ACH_HDR_RE  = _re.compile(
+    r'^(?:'
+    r'(?:key|major|notable|selected)?\s*'
+    r'(?:achievements?|accomplishments?|results?|outcomes?|deliverables?|deliveries|contributions?|milestones|impacts?|wins|highlights|successes)'
+    r'(?:\s+include[s]?)?'
+    r')\s*:?\s*$',
+    _re.I
+)
+_RESP_HDR_RE = _re.compile(
+    r'^(?:'
+    r'(?:core|primary|key)?\s*'
+    r'(?:responsibilit(?:y|ies)|duties|tasks|accountabilit(?:y|ies)|scope|role\s+(?:summary|overview|description))'
+    r')\s*:?\s*$',
+    _re.I
+)
+
+# A light parser for lines like  "Company — Title"  or  "Title at Company"
+_SPLIT_SEP = _re.compile(r"\s*(?:[-–—|·•]| at )\s*", _re.I)
+
+def _guess_employer_role(from_lines):
+    """
+    Try to guess employer/role using the last 2 non-empty, non-heading lines
+    before a date span. Returns (employer, role).
+    """
+    a = [s for s in from_lines if s]
+    a = a[-2:] if len(a) >= 2 else a
+    employer, role = "", ""
+    if not a:
+        return employer, role
+    if len(a) == 1:
+        # Split single line if it has a separator
+        parts = _SPLIT_SEP.split(a[0])
+        if len(parts) >= 2:
+            # Heuristic: if " at " present, left is role, right is employer; else first is employer, second is role
+            if " at " in a[0].lower():
+                role, employer = parts[0].strip(), parts[1].strip()
+            else:
+                employer, role = parts[0].strip(), parts[1].strip()
+        else:
+            role = a[0].strip()
+    else:
+        # two lines: prefer employer then role
+        employer, role = a[0].strip(), a[1].strip()
+    return employer, role
+
+def attach_experience_by_date_spans(data: dict, lossless: dict, raw_text: str) -> dict:
+    """
+    Experience-only enhancer:
+      • Start a new role at each date span (e.g., 'Feb 2016 - Sep 2021', '2019/10 - 2022', 'Oct 2019 until 2022').
+      • All lines UNTIL the next date span stay inside that role—even if mini-headings appear.
+      • Mini-headings route bullets to achievements/responsibilities.
+    Non-destructive: if your extractor already built roles, we only add missing achievements/responsibilities by date match.
+    """
+    if not isinstance(data, dict):
+        return data or {}
+    secs = (lossless or {}).get("sections") or {}
+    exp_lines = secs.get("experience") or []
+    if not exp_lines:
+        return data
+
+    blocks = []
+    context = []   # last few non-empty context lines to infer employer/role
+    current = None
+    mode = "responsibilities"
+
+    def push_context(line: str):
+        s = (line or "").strip()
+        if not s or s.startswith("• ") or _ACH_HDR_RE.match(s) or _RESP_HDR_RE.match(s) or _DATE_LINE_RE.search(s):
+            return
+        context.append(s)
+        if len(context) > 3:
+            del context[0]
+
+    for raw in exp_lines:
+        ln = (raw or "").strip()
+        if not ln:
+            continue
+
+        # New date span → start a new role
+        if _DATE_LINE_RE.search(ln):
+            employer, role = _guess_employer_role(context)
+            # normalize date label (strip <<DATE>> if present)
+            date_text = _re.sub(r'^\s*<<DATE>>\s*', '', ln).strip()
+            current = {
+                "employer": employer,
+                "role": role,
+                "date": date_text,
+                "responsibilities": [],
+                "achievements": []
+            }
+            blocks.append(current)
+            mode = "responsibilities"
+            continue
+
+        # Inside a role: route by mini-headings or collect bullets
+        if current:
+            if _ACH_HDR_RE.match(ln):
+                mode = "achievements"; continue
+            if _RESP_HDR_RE.match(ln):
+                mode = "responsibilities"; continue
+
+            if ln.startswith("• "):
+                item = ln[2:].strip()
+                if item:
+                    target = current["achievements"] if mode == "achievements" else current["responsibilities"]
+                    # de-dupe within the role
+                    if item.lower() not in {x.lower() for x in target}:
+                        target.append(item)
+            else:
+                # plain line inside role → treat as responsibility text
+                if ln.lower() not in {x.lower() for x in current["responsibilities"]}:
+                    current["responsibilities"].append(ln)
+
+        # keep context fresh for employer/role inference
+        push_context(ln)
+
+    # Remove empty roles and tidy lists
+    clean = []
+    for r in blocks:
+        if any([r.get("employer"), r.get("role"), r.get("date"), r["responsibilities"], r["achievements"]]):
+            # strip/dedupe
+            for k in ("responsibilities","achievements"):
+                seen = set(); kept=[]
+                for x in r[k]:
+                    x2 = (x or "").strip()
+                    if not x2: continue
+                    key = x2.lower()
+                    if key in seen: continue
+                    seen.add(key); kept.append(x2)
+                r[k] = kept
+            clean.append(r)
+
+    if not clean:
+        return data
+
+    out = dict(data)
+
+    # If extractor has no roles, take ours
+    if not isinstance(out.get("experience"), list) or not out.get("experience"):
+        out["experience"] = clean
+        return out
+
+    # Otherwise augment existing roles by matching the date span substring
+    for blk in clean:
+        d = (blk.get("date") or "").strip()
+        if not d:
+            continue
+        matched = False
+        for role in out.get("experience") or []:
+            hay = " ".join([str(role.get(x,"")) for x in ("date","dates","period","tenure","when","title","role","employer")]).strip()
+            if d and d.lower() in hay.lower():
+                # extend, never overwrite
+                if blk.get("achievements"):
+                    role.setdefault("achievements", [])
+                    for a in blk["achievements"]:
+                        if a and a.lower() not in {x.lower() for x in role["achievements"]}:
+                            role["achievements"].append(a)
+                if blk.get("responsibilities"):
+                    role.setdefault("responsibilities", [])
+                    for r in blk["responsibilities"]:
+                        if r and r.lower() not in {x.lower() for x in role["responsibilities"]}:
+                            role["responsibilities"].append(r)
+                matched = True
+                break
+        if not matched:
+            # If no existing entry matches, append as its own role
+            out.setdefault("experience", []).append(blk)
+
+    return out
+# ---- /Experience date-span attach ----
+
 # ---- Quick diagnostic (no secrets) ----
 @app.get("/__me/diag")
 def me_diag_v2():
@@ -8740,6 +8932,13 @@ def polish():
         try:
             if sec:
                 data = deep_merge_lossless(data, sec)
+
+                # ⬇️ NEW: group Experience by date spans (safe, Experience-only)
+                try:
+                    data = attach_experience_by_date_spans(data, sec, text_norm)
+                except Exception:
+                    pass
+                    
         except Exception:
             pass
 
@@ -8824,6 +9023,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

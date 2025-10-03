@@ -525,6 +525,10 @@ from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from docx.enum.style import WD_STYLE_TYPE
 
 # === PATCH 2: CV post-processing helpers ===
+def _clear_paragraph(p):
+    p.text = ""
+    for r in list(p.runs):
+        r.text = ""
 
 # Canonical section headings we’ll enforce
 H_EXEC_SUMMARY   = "EXECUTIVE SUMMARY"
@@ -617,7 +621,7 @@ def _merge_education_into_prof_quals(doc):
 
     if not edu_lines:
         # Remove empty EDUCATION heading only
-        doc.paragraphs[e_i].clear()
+        _clear_paragraph(doc.paragraphs[e_i])
         return
 
     # Append EDUCATION entries under QUALIFICATIONS (line-separated, no bullets)
@@ -640,7 +644,7 @@ def _merge_education_into_prof_quals(doc):
 
     # Remove EDUCATION block (content + heading)
     for j in range(e_i, end_i):
-        doc.paragraphs[j].clear()
+        _clear_paragraph(doc.paragraphs[j])
 
 def _move_skills_to_bottom(doc):
     """Ensure PROFESSIONAL SKILLS is the last section before REFERENCES (if refs exist)."""
@@ -666,7 +670,7 @@ def _move_skills_to_bottom(doc):
 
     # Clear original
     for k in range(s_i, end_i):
-        doc.paragraphs[k].clear()
+        _clear_paragraph(doc.paragraphs[k])
 
     # Insert before REFERENCES (or at end if no references)
     insert_at = r_i if r_i is not None else len(doc.paragraphs)
@@ -3697,6 +3701,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     _tone_runs(p, size=11, bold=False)
 
     _ensure_primary_header_spacer(doc)
+    
     try:
         postprocess_cv_doc(doc)
     except Exception as e:
@@ -3704,7 +3709,20 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     out = PROJECT_DIR / "polished_cv.docx"
     doc.save(str(out))
-    _zip_scrub_header_labels(out)
+    
+    # sanity check — prove file is there
+    try:
+        import os
+        print("Saved DOCX exists:", os.path.exists(out))
+    except Exception as e:
+        print("Exists check error:", e)
+
+    # do not block download if scrub fails
+    try:
+        _zip_scrub_header_labels(out)
+    except Exception as e:
+        print("Zip-scrub error:", e)
+
     return out
 
 # ---------- helpers ----------
@@ -9043,6 +9061,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

@@ -8695,7 +8695,7 @@ def attach_experience_by_date_spans(data: dict, lossless: dict, raw_text: str) -
             if _RESP_HDR_RE.match(ln):
                 mode = "responsibilities"; continue
 
-            if ln.startswith("• "):
+            if ln.startswith(("• ", "- ", "* ")):
                 item = ln[2:].strip()
                 if item:
                     target = current["achievements"] if mode == "achievements" else current["responsibilities"]
@@ -9023,6 +9023,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

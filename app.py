@@ -3345,10 +3345,10 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     # Profile-based labels (optional, per-org)
     labels = {
         "summary": "EXECUTIVE SUMMARY",
+        "personal": "PERSONAL INFORMATION",  # NEW
         "certifications": "PROFESSIONAL QUALIFICATIONS",
         "skills": "PROFESSIONAL SKILLS",
         "experience": "PROFESSIONAL EXPERIENCE",
-        "education": "EDUCATION",
         "references": "REFERENCES",
     }
     try:
@@ -3388,6 +3388,17 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     if cv.get("summary"):
         _add_section_heading(doc, labels["summary"])
         p = doc.add_paragraph(cv["summary"]); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
+    # --- PERSONAL INFORMATION ---
+    pi = cv.get("personal_info") or {}
+    nat = (pi.get("nationality") or "").strip()
+    mar = (pi.get("marital_status") or "").strip()
+
+    _add_section_heading(doc, labels.get("personal", "PERSONAL INFORMATION"))
+    
+    line = f"Nationality: {nat} |  Marital Status: {mar}"
+    p = doc.add_paragraph(line)
+    p.paragraph_format.space_after = Pt(8)
+    _tone_runs(p, size=11, bold=False)
 
     quals = []
     if cv.get("certifications"): quals += [q for q in cv["certifications"] if q]
@@ -8824,3 +8835,4 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+

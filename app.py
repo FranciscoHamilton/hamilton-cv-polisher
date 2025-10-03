@@ -3501,31 +3501,59 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             p.paragraph_format.space_after  = Pt(0)
             _tone_runs(p, size=11, bold=False)
 
-    # --- Education ---
-    if edu:
+    # --- Education (robust, no placeholders, deduped) ---
+    edu = cv.get("education") or []
+    # normalize into displayable rows
+    def _edu_line(x):
+        if isinstance(x, dict):
+            deg  = (x.get("degree") or "").strip()
+            inst = (x.get("institution") or "").strip()
+            yr   = (x.get("date") or x.get("year") or "").strip()
+            # guard against schema placeholders like "degreeinstitution..."
+            junk = {"degreeinstitutionyear", "degreeinstitutionlocationstart_dateend_datebullets"}
+            cat  = (deg+inst+(yr or "")).replace(" ", "").lower()
+            if cat in junk:
+                return ""
+            # prefer "Degree — Institution", date as separate meta line below
+            main = " — ".join([v for v in [deg, inst] if v])
+            return (main, yr)
+        else:
+            s = str(x or "").strip()
+            if not s: return ""
+            return (s, "")
+
+    # build normalized + deduped list
+    norm = []
+    seen = set()
+    for item in edu:
+        row = _edu_line(item)
+        if not row: 
+            continue
+        if isinstance(row, tuple):
+            main, yr = row
+        else:
+            main, yr = str(row), ""
+        key = (main.lower(), yr.lower())
+        if not main or key in seen:
+            continue
+        seen.add(key)
+        norm.append((main, yr))
+
+    if norm:
         _add_section_heading(doc, labels["education"])
-        for ed in edu:
-            line = " — ".join([x for x in [ed.get("degree",""), ed.get("institution","")] if x]).strip()
-            p = doc.add_paragraph(); rr = p.add_run(line or "Education")
-            rr.font.name="Calibri"; rr.font.size=Pt(11); rr.bold=True; rr.font.color.rgb=SOFT_BLACK
+        for main, yr in norm:
+            # bold main line
+            p = doc.add_paragraph()
+            r = p.add_run(main or "Education")
+            r.font.name = "Calibri"; r.font.size = Pt(11); r.bold = True; r.font.color.rgb = SOFT_BLACK
             p.paragraph_format.space_after = Pt(0)
+            _tone_runs(p, size=11, bold=True)
 
-            sd = (ed.get("start_date") or "").strip()
-            ee = (ed.get("end_date") or "").strip()
-            dates = f"{sd} – {ee}".strip(" –")
-            loc = (ed.get("location") or "").strip()
-            meta = " | ".join([x for x in [dates, loc] if x])
-            if meta:
-                meta_p = doc.add_paragraph(meta)
-                meta_p.paragraph_format.space_after = Pt(2)
-                _tone_runs(meta_p, size=11, bold=False)
-
-            if ed.get("bullets"):
-                for b in ed["bullets"]:
-                    bp = doc.add_paragraph(b, style="List Bullet")
-                    bp.paragraph_format.space_before = Pt(0)
-                    bp.paragraph_format.space_after = Pt(0)
-                    _tone_runs(bp, size=11, bold=False)
+        # optional year as a light meta line
+        if yr:
+            meta_p = doc.add_paragraph(yr)
+            meta_p.paragraph_format.space_after = Pt(6)
+            _tone_runs(meta_p, size=11, bold=False)
 
     # --- References (fixed text) ---
     _add_section_heading(doc, labels["references"])
@@ -8994,6 +9022,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

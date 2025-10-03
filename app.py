@@ -3435,9 +3435,34 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     items = []  # (year_int, line_str, is_bold)
 
-    # Certifications: keep text, try to pull a year
+    # Certifications: normalise to text (dicts → "Title | Issuer (Date)"), then year-detect
+    def _cert_line(q):
+        if isinstance(q, str):
+            return q.strip()
+        if isinstance(q, dict):
+            # best-guess common keys; ignore empties; join with pipes
+            parts = []
+            for k in ("name", "title", "cert", "certificate"):
+                v = q.get(k)
+                if isinstance(v, str) and v.strip():
+                    parts.append(v.strip()); break
+            for k in ("issuer", "institution", "provider", "body"):
+                v = q.get(k)
+                if isinstance(v, str) and v.strip():
+                    parts.append(v.strip()); break
+            # date-ish field
+            for k in ("date", "awarded", "year", "end_date"):
+                v = q.get(k)
+                if isinstance(v, str) and v.strip():
+                    parts.append(v.strip()); break
+            line = " | ".join(parts).strip()
+            return line or str(q)
+        # anything else → string
+        return str(q).strip()
+
     for q in quals:
-        items.append((_extract_year(q), q, False))
+        line = _cert_line(q)
+        items.append((_extract_year(line), line, False))
 
     # Education: single line "Degree | Institution (dates)"; no bullets, uniform spacing
     for ed in edu:
@@ -8810,6 +8835,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

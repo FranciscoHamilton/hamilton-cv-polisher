@@ -4671,7 +4671,7 @@ def owner_api_org_delete():
         return jsonify({"ok": False, "error": "confirm_required", "hint": "send confirm='DELETE'"}), 400
 
     # Optional safety: protect seed org(s) from deletion
-    PROTECTED_ORG_IDS = {1}  # change/remove as you wish
+    PROTECTED_ORG_IDS = {1}  # adjust/remove if needed
     if org_id in PROTECTED_ORG_IDS:
         return jsonify({"ok": False, "error": "protected_org"}), 400
 
@@ -4683,7 +4683,7 @@ def owner_api_org_delete():
         conn = DB_POOL.getconn()
         with conn:
             with conn.cursor() as cur:
-                # Child rows that reference users from this org
+                # child rows referencing users from this org
                 try:
                     cur.execute(
                         "DELETE FROM usage_events WHERE user_id IN (SELECT id FROM users WHERE org_id=%s)",
@@ -4698,53 +4698,37 @@ def owner_api_org_delete():
                     )
                 except Exception:
                     pass
-
-                # Org-level ledgers / limits
                 try:
                     cur.execute("DELETE FROM org_credits_ledger WHERE org_id=%s", (org_id,))
                 except Exception:
                     pass
-                try:
-                    cur.execute("DELETE FROM org_user_limits WHERE org_id=%s", (org_id,))
-                except Exception:
-                    pass
 
-                # Users in this org
+                # delete users then the org row
                 try:
                     cur.execute("DELETE FROM users WHERE org_id=%s", (org_id,))
                 except Exception:
                     pass
-
-                # Finally delete the org row
                 cur.execute("DELETE FROM orgs WHERE id=%s", (org_id,))
-
-        # Remove org-specific files after DB commit (best effort)
-        try:
-            from pathlib import Path
-            import shutil
-            try:
-                root = storage_root()  # your helper
-            except Exception:
-                root = "/mnt/data"
-            paths = [
-                Path(root) / "org_assets" / str(org_id),     # logos etc
-                Path(root) / "org_templates" / str(org_id),  # DOCX templates
-            ]
-            for p in paths:
-                shutil.rmtree(p, ignore_errors=True)
-        except Exception as e:
-            print("org delete: rmtree failed", e)
-
-        return jsonify({"ok": True, "deleted_org_id": org_id})
-
+        # commit happens on exiting the context managers
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
     finally:
-        try:
-            if conn:
-                DB_POOL.putconn(conn)
-        except Exception:
-            pass
+        if conn:
+            DB_POOL.putconn(conn)
+
+    # best-effort filesystem cleanup (logo/template folders)
+    try:
+        from pathlib import Path
+        import shutil
+        root = storage_root()
+        for sub in ("org_assets", "org_templates"):
+            p = Path(root) / sub / str(org_id)
+            if p.exists():
+                shutil.rmtree(p, ignore_errors=True)
+    except Exception:
+        pass
+
+    return jsonify({"ok": True, "deleted_org_id": org_id})
 
 # --- Admin: ONE-TIME migration to enable org-shared credits ---
 @app.get("/__admin/migrate_org_pool")
@@ -8950,6 +8934,7 @@ def polish():
         resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
         resp.headers["Cache-Control"] = "no-store"
         return resp
+
 
 
 

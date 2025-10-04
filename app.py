@@ -9101,6 +9101,8 @@ def polish():
             STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
             _save_stats()
 
+            return send_file(out, as_attachment=True, download_name="polished_cv.docx")
+
             # --- Log usage + debit one org credit (best-effort; never blocks) ---
             try:
                 uid = int(session.get("user_id") or 0)
@@ -9135,6 +9137,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

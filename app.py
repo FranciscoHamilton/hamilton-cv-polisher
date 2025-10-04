@@ -3386,27 +3386,38 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             for h in heads:
                 sections.setdefault(h, "")
 
-        # --- Name/contact banner from PERSONAL INFORMATION ---
+        # --- Centered name / contact banner (from PERSONAL INFORMATION) ---
         pi_raw = (sections.get("PERSONAL INFORMATION") or "")
-        # crude extraction (works with "Name: …", "Phone:", "Email:", "Address:"| "Location:")
-        name_m = re.search(r"(?im)^\s*(?:name)\s*:\s*(.+)$", pi_raw)
-        email_m = re.search(r"(?im)^\s*(?:email)\s*:\s*([^\s]+@[^\s]+)$", pi_raw)
-        phone_m = re.search(r"(?im)^\s*(?:phone|tel)\s*:\s*([^\n]+)$", pi_raw)
-        loc_m   = re.search(r"(?im)^\s*(?:address|location)\s*:\s*(.+)$", pi_raw)
 
-        full_name = (name_m.group(1).strip() if name_m else "").strip()
-        email = (email_m.group(1).strip() if email_m else "").strip()
-        tel   = (phone_m.group(1).strip() if phone_m else "").strip()
-        location = (loc_m.group(1).strip() if loc_m else "").strip()
+        # Full name
+        m_name = re.search(r'(?im)^\s*(?:name|full\s*name)\s*[:\-]\s*(.+)$', pi_raw)
+        full_name = (m_name.group(1).strip() if m_name else "").strip() or "Candidate"
 
-        # Render like the oldstyle builder
-        name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # Email
+        m_email = re.search(r'(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}', pi_raw, re.I)
+        email = (m_email.group(0).strip() if m_email else "")
+
+        # Phone
+        m_phone = re.search(r'(?im)(?:phone|tel(?:ephone)?|mobile)\s*[:\-]?\s*([+()\d][\d\s()+\-]{6,})', pi_raw)
+        phone = (m_phone.group(1).strip() if m_phone else "")
+
+        # Location
+        m_loc = re.search(r'(?im)^\s*(?:location|address)\s*[:\-]\s*(.+)$', pi_raw)
+        location = (m_loc.group(1).strip() if m_loc else "")
+
+        # Render name (Calibri 18 bold, centered)
+        name_p = doc.add_paragraph()
+        name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         name_p.paragraph_format.space_after = Pt(2)
-        name_r = name_p.add_run(full_name or "")
-        name_r.font.name="Calibri"; name_r.font.size=Pt(18); name_r.bold=True; name_r.font.color.rgb=SOFT_BLACK
+        name_r = name_p.add_run(full_name)
+        name_r.font.name = "Calibri"
+        name_r.font.size = Pt(18)
+        name_r.bold = True
+        name_r.font.color.rgb = SOFT_BLACK
 
+        # Render contact line(s)
         bits = []
-        if tel: bits.append(f"Tel: {tel}")
+        if phone: bits.append(f"Tel: {phone}")
         if email: bits.append(f"Email: {email}")
         if bits:
             _add_center_line(doc, " | ".join(bits), size=11, bold=False, space_after=0)
@@ -3431,11 +3442,19 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             blocks = re.split(r"\n\s*\n", body)
             for block in blocks:
                 blk = (block or "").strip()
+                blk = re.sub(r'(?m)^\s*#{1,6}\s*', '', blk)          # remove leading ### markdown headings
+                blk = re.sub(r'\*\*(.+?)\*\*', r'\1', blk)           # **bold** -> plain
+                blk = re.sub(r'\*(.+?)\*', r'\1', blk)               # *italic* -> plain
+                blk = re.sub(r'(?m)^\s*(?:--+|—+)\s*$', '', blk)     # drop lines that are just dashes/em-dashes
+
                 if not blk:
                     continue
 
                 # Heuristic: if the block looks like a list, output as bullets
                 lines = [l.strip() for l in blk.splitlines() if l.strip()]
+                marker_rx = re.compile(r'^\s*(?:[-•o]|\*)\s+')
+                markers = sum(1 for l in lines if marker_rx.match(l))
+                listy = markers >= max(2, int(0.6 * len(lines)))
 
                 # Count true bullet markers only: "- ", "• ", "o ", "* " (star+space), not "**…", "###…"
                 marker_rx = re.compile(r'^\s*(?:[-•o]|\*)\s+')
@@ -9352,6 +9371,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

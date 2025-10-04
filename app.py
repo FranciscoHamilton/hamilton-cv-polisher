@@ -3440,20 +3440,20 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             _add_section_heading(doc, heading)
             body = (sections.get(heading) or "").strip()
 
-        # PERSONAL INFORMATION prints the line even if body is empty
-        if heading == "PERSONAL INFORMATION":
-            line = f"Nationality: {nat} | Marital Status: {mar}"
-            p = doc.add_paragraph(line)
-            p.paragraph_format.space_after = Pt(8)
-            for run in p.runs:
-                run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-            # If GPT provided no extra PI text, move on; otherwise let the rest render
-            if not body:
-                continue
+            # PERSONAL INFORMATION prints the line even if body is empty
+            if heading == "PERSONAL INFORMATION":
+                line = f"Nationality: {nat} | Marital Status: {mar}"
+                p = doc.add_paragraph(line)
+                p.paragraph_format.space_after = Pt(8)
+                for run in p.runs:
+                    run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
+                # If GPT provided no extra PI text, move on; otherwise let the rest render
+                if not body:
+                    continue
 
-        # For all other sections, skip if empty (keep headings for Exec Summary & PI)
-        if not body and heading not in ("EXECUTIVE SUMMARY", "PERSONAL INFORMATION"):
-             continue  
+            # For all other sections, skip if empty (keep headings for Exec Summary & PI)
+            if not body and heading not in ("EXECUTIVE SUMMARY", "PERSONAL INFORMATION"):
+                continue
 
             # Split into blocks by blank line; render bullets vs paragraphs
             blocks = re.split(r"\n\s*\n", body)
@@ -3463,16 +3463,35 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 blk = re.sub(r'\*\*(.+?)\*\*', r'\1', blk)           # **bold** -> plain
                 blk = re.sub(r'\*(.+?)\*', r'\1', blk)               # *italic* -> plain
                 blk = re.sub(r'(?m)^\s*(?:--+|—+)\s*$', '', blk)     # drop lines that are just dashes/em-dashes
-
                 if not blk:
                     continue
 
-            if heading == "PROFESSIONAL QUALIFICATIONS":
-                # Force paragraphs: every non-empty line becomes its own paragraph (no bullets)
-                items = [re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip() for l in blk.splitlines()]
-                items = [i for i in items if i]
-                for item in items:
-                    p = doc.add_paragraph(item)
+                if heading == "PROFESSIONAL QUALIFICATIONS":
+                    # Force paragraphs: every non-empty line becomes its own paragraph (no bullets)
+                    items = [re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip() for l in blk.splitlines()]
+                    items = [i for i in items if i]
+                    for item in items:
+                        p = doc.add_paragraph(item)
+                        p.paragraph_format.space_after = Pt(8)
+                        for run in p.runs:
+                            run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
+                    continue
+
+                # Heuristic: if the block looks like a list, output as bullets
+                lines = [l.strip() for l in blk.splitlines() if l.strip()]
+                marker_rx = re.compile(r'^\s*(?:[-•o]|\*)\s+')
+                markers = sum(1 for l in lines if marker_rx.match(l))
+                listy = markers >= max(2, int(0.6 * len(lines)))
+
+                if listy:
+                    for l in lines:
+                        text = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip()
+                        p = doc.add_paragraph()
+                        r = p.add_run(f"• {text}")
+                        r.font.name = "Calibri"; r.font.size = Pt(11); r.font.color.rgb = SOFT_BLACK
+                        p.paragraph_format.space_after = Pt(2)
+                else:
+                    p = doc.add_paragraph(blk)
                     p.paragraph_format.space_after = Pt(8)
                     for run in p.runs:
                         run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
@@ -9405,6 +9424,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

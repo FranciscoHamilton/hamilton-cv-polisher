@@ -3325,6 +3325,185 @@ def _ensure_primary_header_spacer(doc: Docx):
     except Exception:
         pass
 
+def render_hamilton_from_text(doc, formatted):
+    """
+    Render a GPT-formatted CV into the exact Hamilton layout & styling:
+    - Centered name (bold), then Tel|Email, then Residence|Address|Location
+    - EXECUTIVE SUMMARY (heading shows even if empty)
+    - PERSONAL INFORMATION (prints 'Nationality: … | Marital Status: …' only)
+    - PROFESSIONAL QUALIFICATIONS (paragraphs, no bullets)
+    - PROFESSIONAL EXPERIENCE (role/company/location/dates as first line, duties as bullets)
+    - PROFESSIONAL SKILLS (bar-separated)
+    - REFERENCES ('Full references are available on request.')
+    """
+    # 1) Canonicalize into sections (keep 100% of content)
+    try:
+        sections = enforce_hamilton_order(formatted)
+    except Exception:
+        sections = {}
+        heads = [
+            "EXECUTIVE SUMMARY",
+            "PERSONAL INFORMATION",
+            "PROFESSIONAL QUALIFICATIONS",
+            "PROFESSIONAL SKILLS",
+            "PROFESSIONAL EXPERIENCE",
+            "REFERENCES",
+        ]
+        cur = None; buf = []
+        for line in (formatted or "").splitlines():
+            line_up = (line or "").strip().upper()
+            if line_up in heads:
+                if cur is not None:
+                    sections[cur] = "\n".join(buf).strip()
+                cur = line_up; buf = []
+            else:
+                buf.append(line)
+        if cur is not None:
+            sections[cur] = "\n".join(buf).strip()
+        for h in heads:
+            sections.setdefault(h, "")
+
+    # 2) Top banner (Name + contacts)
+    import re
+    pi_raw = (sections.get("PERSONAL INFORMATION") or "")
+    m_name = re.search(r'(?im)^\s*(?:name|full\s*name)\s*[:\-]\s*(.+)$', pi_raw)
+    full_name = (m_name.group(1).strip() if m_name else "").strip() or "Candidate"
+
+    m_email = re.search(r'(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}', pi_raw, re.I)
+    email = (m_email.group(0).strip() if m_email else "")
+    m_phone = re.search(r'(?im)(?:phone|tel(?:ephone)?|mobile)\s*[:\-]?\s*([+()\d][\d\s()+\-]{6,})', pi_raw)
+    phone = (m_phone.group(1).strip() if m_phone else "")
+    m_loc = re.search(r'(?im)^\s*location\s*[:\-]\s*(.+)$', pi_raw)
+    location = (m_loc.group(1).strip() if m_loc else "")
+    res_m = re.search(r'(?im)^\s*residence\s*[:\-]\s*(.+)$', pi_raw)
+    addr_m = re.search(r'(?im)^\s*address\s*[:\-]\s*(.+)$', pi_raw)
+    residence = (res_m.group(1).strip() if res_m else "")
+    address = (addr_m.group(1).strip() if addr_m else "")
+
+    name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    name_p.paragraph_format.space_after = Pt(2)
+    name_r = name_p.add_run(full_name)
+    name_r.font.name = "Calibri"; name_r.font.size = Pt(18); name_r.bold = True; name_r.font.color.rgb = SOFT_BLACK
+
+    _add_center_line(doc, f"Tel: {phone} | Email: {email}", size=11, bold=False, space_after=0)
+    _add_center_line(doc, f"Residence: {residence} | Address: {address} | Location: {location}", size=11, bold=False, space_after=6)
+
+    # 3) Nat/Mar for PI
+    nat_m = re.search(r'(?im)^\s*nationality\s*[:\-]\s*(.+)$', pi_raw)
+    mar_m = re.search(r'(?im)^\s*marital\s*status\s*[:\-]\s*(.+)$', pi_raw)
+    nat = (nat_m.group(1).strip() if nat_m else "")
+    mar = (mar_m.group(1).strip() if mar_m else "")
+
+    # 4) Render sections in the exact order (Skills AFTER Experience)
+    ORDER = [
+        "EXECUTIVE SUMMARY",
+        "PERSONAL INFORMATION",
+        "PROFESSIONAL QUALIFICATIONS",
+        "PROFESSIONAL EXPERIENCE",
+        "PROFESSIONAL SKILLS",
+        "REFERENCES",
+    ]
+
+    def _strip_md(s: str) -> str:
+        s = re.sub(r'(?m)^\s*#{1,6}\s*', '', s)
+        s = re.sub(r'\*\*(.+?)\*\*', r'\1', s)
+        s = re.sub(r'\*(.+?)\*', r'\1', s)
+        s = re.sub(r'(?m)^\s*(?:--+|—+)\s*$', '', s)
+        return s
+
+    def _skills_bar(text: str) -> str:
+        # Convert any bullets/commas/pipes/newlines to a single bar-separated line
+        parts = []
+        for l in (text or "").splitlines():
+            l = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip()
+            if not l: continue
+            parts.extend([p.strip() for p in re.split(r'\s*[|,;]\s*', l) if p.strip()])
+        # dedupe, preserve order
+        seen=set(); clean=[]
+        for p in parts:
+            k=p.lower()
+            if k not in seen:
+                seen.add(k); clean.append(p)
+        return " | ".join(clean)
+
+    for heading in ORDER:
+        _add_section_heading(doc, heading)
+        body = (sections.get(heading) or "").strip()
+
+        if heading == "PERSONAL INFORMATION":
+            line = f"Nationality: {nat} | Marital Status: {mar}"
+            p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8)
+            for run in p.runs:
+                run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
+            continue
+
+        if heading == "EXECUTIVE SUMMARY":
+            # show heading even if empty; only add body if present
+            if not body:
+                continue
+
+        if heading == "REFERENCES":
+            ref_text = "Full references are available on request."
+            p = doc.add_paragraph(ref_text); p.paragraph_format.space_after = Pt(8)
+            for run in p.runs:
+                run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
+            continue
+
+        if heading == "PROFESSIONAL SKILLS":
+            bar = _skills_bar(body)
+            p = doc.add_paragraph(bar); p.paragraph_format.space_after = Pt(8)
+            for run in p.runs:
+                run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
+            continue
+
+        if heading == "PROFESSIONAL QUALIFICATIONS":
+            # paragraphs only
+            for line in [l for l in (body or "").splitlines() if l.strip()]:
+                txt = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', line).strip()
+                if not txt: continue
+                p = doc.add_paragraph(txt)
+                p.paragraph_format.space_after = Pt(8)
+                for run in p.runs:
+                    run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
+            continue
+
+        if not body:
+            continue
+
+        # EXPERIENCE + generic sections: split blocks, clean md, bullets vs paragraphs
+        blocks = re.split(r"\n\s*\n", body)
+        for block in blocks:
+            blk = _strip_md((block or "").strip())
+            if not blk:
+                continue
+
+            lines = [l.strip() for l in blk.splitlines() if l.strip()]
+            marker_rx = re.compile(r'^\s*(?:[-•o]|\*)\s+')
+            markers = sum(1 for l in lines if marker_rx.match(l))
+            listy = markers >= max(2, int(0.6 * len(lines)))
+
+            # In EXPERIENCE, try to treat the first line as a header (role/company/location/dates)
+            if heading == "PROFESSIONAL EXPERIENCE" and lines:
+                first = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', lines[0]).strip()
+                if re.search(r'\b(\d{4}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|Present)\b', first, re.I):
+                    p = doc.add_paragraph(first); p.paragraph_format.space_after = Pt(4)
+                    for run in p.runs:
+                        run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
+                    lines = lines[1:]
+                    listy = True  # remaining lines become bullets if any
+
+            if listy and lines:
+                for l in lines:
+                    text = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip()
+                    if not text: continue
+                    p = doc.add_paragraph(); r = p.add_run(f"• {text}")
+                    r.font.name = "Calibri"; r.font.size = Pt(11); r.font.color.rgb = SOFT_BLACK
+                    p.paragraph_format.space_after = Pt(2)
+            else:
+                p = doc.add_paragraph(blk); p.paragraph_format.space_after = Pt(8)
+                for run in p.runs:
+                    run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
+
 # ---------- Compose CV ----------
 def get_org_pref(cv: dict, key: str, default=None):
     try:
@@ -3354,9 +3533,19 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     _remove_all_body_content(doc)
     
-    # GPT-formatted path: render with Hamilton styles (no early return)
+     # GPT-formatted path: render with Hamilton styles
     if "hamilton_formatted_text" in cv:
         formatted = cv["hamilton_formatted_text"]
+
+        # Render with strict Hamilton rules (Skills after Experience), styled
+        render_hamilton_from_text(doc, formatted)
+
+        # Finish & return
+        _ensure_primary_header_spacer(doc)
+        out = Path("/tmp/polished_cv.docx")
+        doc.save(str(out))
+        _zip_scrub_header_labels(out)
+        return out
 
         # If our section-enforcer is available, fold/normalize first
         try:
@@ -9424,6 +9613,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

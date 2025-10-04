@@ -3354,14 +3354,74 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     _remove_all_body_content(doc)
     
-    # GPT-formatted fallback: insert full Hamilton-style text directly
+    # GPT-formatted path: render with Hamilton styles (no early return)
     if "hamilton_formatted_text" in cv:
         formatted = cv["hamilton_formatted_text"]
-        for paragraph in formatted.split("\n\n"):
-            doc.add_paragraph(paragraph)
-        output_path = Path("/tmp/polished_cv.docx")
-        doc.save(output_path)
-        return output_path
+
+        # If our section-enforcer is available, fold/normalize first
+        try:
+            sections = enforce_hamilton_order(formatted)
+        except Exception:
+            # Fallback: naive split using our six headings in order
+            sections = {}
+            heads = [
+                "EXECUTIVE SUMMARY",
+                "PERSONAL INFORMATION",
+                "PROFESSIONAL QUALIFICATIONS",
+                "PROFESSIONAL SKILLS",
+                "PROFESSIONAL EXPERIENCE",
+                "REFERENCES",
+            ]
+            cur = None; buf = []
+            for line in (formatted or "").splitlines():
+                line_up = (line or "").strip().upper()
+                if line_up in heads:
+                    if cur is not None:
+                        sections[cur] = "\n".join(buf).strip()
+                    cur = line_up; buf = []
+                else:
+                    buf.append(line)
+            if cur is not None:
+                sections[cur] = "\n".join(buf).strip()
+            for h in heads:
+                sections.setdefault(h, "")
+
+        # Now render each Hamilton section with your styles
+        for heading in [
+            "EXECUTIVE SUMMARY",
+            "PERSONAL INFORMATION",
+            "PROFESSIONAL QUALIFICATIONS",
+            "PROFESSIONAL SKILLS",
+            "PROFESSIONAL EXPERIENCE",
+            "REFERENCES",
+        ]:
+            _add_section_heading(doc, heading)
+            body = (sections.get(heading) or "").strip()
+            if not body:
+                continue
+
+            # Split into blocks by blank line; render bullets vs paragraphs
+            blocks = re.split(r"\n\s*\n", body)
+            for block in blocks:
+                blk = (block or "").strip()
+                if not blk:
+                    continue
+
+                # Heuristic: if the block looks like a list, output as bullets
+                lines = [l.strip() for l in blk.splitlines() if l.strip()]
+                listy = all(l.startswith(("-", "•", "*")) for l in lines) or any(l.startswith(("-", "•", "*")) for l in lines)
+                if listy:
+                    for l in lines:
+                        text = re.sub(r"^[\-\*\u2022]\s*", "", l).strip()
+                        p = doc.add_paragraph()
+                        r = p.add_run(f"• {text}")
+                        r.font.name = "Calibri"; r.font.size = Pt(11); r.font.color.rgb = SOFT_BLACK
+                        p.paragraph_format.space_after = Pt(2)
+                else:
+                    p = doc.add_paragraph(blk)
+                    p.paragraph_format.space_after = Pt(8)
+                    for run in p.runs:
+                        run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
         
     # Profile-based labels (optional, per-org)
     labels = {

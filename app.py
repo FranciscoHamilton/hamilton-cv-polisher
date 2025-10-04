@@ -3080,34 +3080,34 @@ def ai_or_heuristic_structuring(cv_text: str) -> dict:
                     temperature=0
                 )
                 out = resp.choices[0].message.content.strip()
-if out.startswith("```"):
-    out = out.strip("`")
-    if out.lower().startswith("json"):
-        out = out[4:].strip()
-import json as _json
-data = _json.loads(out)
+                if out.startswith("```"):
+                    out = out.strip("`")
+                    if out.lower().startswith("json"):
+                        out = out[4:].strip()
+                import json as _json
+                data = _json.loads(out)
 
-# NEW: Guarded retry with STRICT prompt if the first pass looks incomplete
-try:
-    if _looks_incomplete(data):
-        resp2 = client.chat.completions.create(
-            model=MODEL,
-            messages=[{"role":"system","content":STRICT_SCHEMA_PROMPT},
-                      {"role":"user","content":cv_text}],
-            temperature=0
-        )
-        out2 = resp2.choices[0].message.content.strip()
-        if out2.startswith("```"):
-            out2 = out2.strip("`")
-            if out2.lower().startswith("json"):
-                out2 = out2[4:].strip()
-        data2 = _json.loads(out2)
-        if not _looks_incomplete(data2):
-            return data2
-except Exception:
-    pass
+                # NEW: Guarded retry with STRICT prompt if the first pass looks incomplete
+                try:
+                    if _looks_incomplete(data):
+                        resp2 = client.chat.completions.create(
+                            model=MODEL,
+                            messages=[{"role":"system","content":STRICT_SCHEMA_PROMPT},
+                                      {"role":"user","content":cv_text}],
+                            temperature=0
+                        )
+                        out2 = resp2.choices[0].message.content.strip()
+                        if out2.startswith("```"):
+                            out2 = out2.strip("`")
+                            if out2.lower().startswith("json"):
+                                out2 = out2[4:].strip()
+                        data2 = _json.loads(out2)
+                        if not _looks_incomplete(data2):
+                            return data2
+                except Exception:
+                    pass
 
-return data
+                return data
 
             except Exception as e:
                 print("OpenAI failed, falling back to heuristics:", e)
@@ -9417,6 +9417,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

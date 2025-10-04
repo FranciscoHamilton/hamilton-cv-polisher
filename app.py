@@ -8451,7 +8451,19 @@ _SECTION_SYNONYMS = {
     "education":         [r"education", r"academic history", r"qualifications", r"academic qualifications"],
     "skills":            [r"skills", r"technical skills", r"professional skills", r"capabilities", r"capability summary"],
     "experience":        [r"experience", r"employment", r"work history", r"professional experience", r"career history"],
-    "certifications":    [r"certifications?", r"licenses?", r"credentials?", r"certificates?"],
+    "certifications": [
+        r"certifications?",
+        r"credentials?",
+        r"certificates?",
+        r"licenses?",
+        r"licences?",
+        r"courses?",
+        r"coursework",
+        r"training",
+        r"professional development",
+        r"continuing professional development",
+        r"\bcpd\b"
+    ],
     "achievements":      [r"achievements?", r"key achievements?", r"key results?"],
     "projects":          [r"projects?"],
     "languages":         [r"languages?"],
@@ -8902,6 +8914,47 @@ def sanitize_roles(data: dict) -> dict:
     except Exception:
         return data
 
+def harvest_course_orphans(data: dict, lossless: dict) -> dict:
+    """
+    Sweep stray course/cert lines from lossless and append to Professional Qualifications.
+    Conservative + deduped. No wording changes.
+    """
+    try:
+        import re
+        if not isinstance(data, dict) or not isinstance(lossless, dict):
+            return data
+
+        certs = list(data.get("certifications") or [])
+        seen = {re.sub(r'\s+', ' ', (c or '')).strip().lower() for c in certs if isinstance(c, str)}
+
+        kw = r'(course|training|certificate|certification|credential|diploma|degree|bachelor|master|mba|msc|bsc|phd|licen[cs]e|cpd|workshop|seminar|bootcamp|nanodegree|mooc)'
+        bodies = r'(AICPCU|AINS|CPCU|CFA|FRM|PRM|ACCA|ACA|CIMA|CPA|CIA|CMA|PMP|PRINCE2|Six Sigma|Lean|ITIL|AWS|Azure|GCP|CCNA|CCNP|RHCE|Scrum|TOGAF|CISM|CISSP|BLS|ACLS)'
+        course_re = re.compile(rf'\b({kw}|{bodies})\b', re.I)
+
+        secs = (lossless.get("sections") or {})
+        for v in secs.values():
+            if not isinstance(v, list):
+                continue
+            for ln in v:
+                if not isinstance(ln, str):
+                    continue
+                s = re.sub(r'\s+', ' ', ln).strip()
+                if not s:
+                    continue
+                if re.search(r'^\s*references?\b.*$', s, re.I) and len(s.split()) <= 6:
+                    continue
+                if course_re.search(s):
+                    key = s.lower()
+                    if key not in seen:
+                        certs.append(s)
+                        seen.add(key)
+
+        if certs:
+            data["certifications"] = certs
+        return data
+    except Exception:
+        return data
+
 # ---- /Lossless re-sectionizer ----
 
 # ---- Quick diagnostic (no secrets) ----
@@ -9077,7 +9130,7 @@ def polish():
                 data = deep_merge_lossless(data, sec)
             data = backfill_role_overviews_from_lossless(data, sec)
             data = sanitize_roles(data)   
-            
+            data = harvest_course_orphans(data, sec)
         except Exception:
             pass
 
@@ -9163,6 +9216,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

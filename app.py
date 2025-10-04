@@ -6,6 +6,7 @@ from flask import Flask, request, send_file, render_template_string, abort, json
 from flask import session, redirect, url_for  # <-- ADDED earlier
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import HTTPException
+from gpt_formatter import extract_full_cv_content, format_to_hamilton_style
 def is_admin() -> bool:
     """Return True if the logged-in session user matches APP_ADMIN_USER."""
     try:
@@ -3351,6 +3352,16 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         doc = Docx()
 
     _remove_all_body_content(doc)
+    
+    # GPT-formatted fallback: insert full Hamilton-style text directly
+    if "hamilton_formatted_text" in cv:
+        formatted = cv["hamilton_formatted_text"]
+        for paragraph in formatted.split("\n\n"):
+            doc.add_paragraph(paragraph)
+        output_path = Path("/tmp/polished_cv.docx")
+        doc.save(output_path)
+        return output_path
+        
     # Profile-based labels (optional, per-org)
     labels = {
         "summary": "EXECUTIVE SUMMARY",
@@ -3375,8 +3386,14 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     spacer = doc.add_paragraph(); spacer.paragraph_format.space_after = Pt(6)
 
-    pi = (cv or {}).get("personal_info") or {}
-    full_name = (pi.get("full_name") or "Candidate").strip()
+    if "hamilton_formatted_text" in cv:
+        # New GPT-based formatting
+        formatted = cv["hamilton_formatted_text"]
+        for paragraph in formatted.split("\n\n"):
+            doc.add_paragraph(paragraph)
+        output_path = Path("/tmp/polished_cv.docx")
+        doc.save(output_path)
+        return output_path
     name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER; name_p.paragraph_format.space_after = Pt(2)
     name_r = name_p.add_run(full_name)
     name_r.font.name="Calibri"; name_r.font.size=Pt(18); name_r.bold=True; name_r.font.color.rgb=SOFT_BLACK
@@ -9002,75 +9019,21 @@ def polish():
     if not f:
         abort(400, "No file uploaded")
 
-    with tempfile.TemporaryDirectory() as td:
-        p = Path(td) / f.filename
-        f.save(str(p))
-
-        text = extract_text_any(p)
-        if not text or len(text.strip()) < 30:
-            abort(400, "Couldn't read enough text. If it's a scanned PDF, please use a DOCX or an OCRed PDF.")
-
-        # --- Pre-check credits (org-aware). Admin bypasses. ---
+    
         try:
-            uid_check = int(session.get("user_id") or 0)
-        except Exception:
-            uid_check = 0
+            # Step 1: Extract everything from the CV (lossless)
+            extracted = extract_full_cv_content(text)
 
-        try:
-            can_bypass = (session.get("user","").strip().lower() == "admin") or bool(session.get("is_admin"))
-        except Exception:
-            can_bypass = False
+            # Step 2: Format into Hamilton structure
+            formatted = format_to_hamilton_style(extracted)
 
-        if DB_POOL and uid_check > 0 and not can_bypass:
-            # If the user belongs to an org, check the org pool; otherwise check personal balance.
-            try:
-                org_id = _user_org_id(uid_check)
-            except Exception:
-                org_id = None
-
-            try:
-                if org_id:
-                    bal = org_balance(org_id)
-                    if bal <= 0:
-                        raise PaymentRequired("No credits remaining for your organization. Please top up to continue.")
-                    # Optional per-user monthly cap (only applies if a cap is set)
-                    cap = get_user_monthly_cap(org_id, uid_check)
-                    if cap is not None:
-                        spent = org_user_spent_this_month(org_id, uid_check)
-                        if spent >= cap:
-                            raise PaymentRequired("Your monthly polish limit has been reached. Ask your director to raise your cap.")
-                else:
-                    row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid_check,))
-                    bal = int(row[0]) if row else 0
-                    if bal <= 0:
-                        raise PaymentRequired("No credits remaining for this account. Please top up to continue.")
-            except Exception as e:
-                # If balance check fails, don't block polishing; just log
-                print("credits precheck failed:", e)
-
-        
-        # ---- Polishing logic (enhanced, non-destructive) ----
-        # 1) Normalize messy PDF text
-        try:
-            text_norm = normalize_cv_text(text)
-        except Exception:
-            text_norm = text
-
-        # 2) Lossless re-sectionization (no new wording)
-        try:
-            sec = lossless_sectionize(text_norm)
-        except Exception:
-            sec = None
-
-        # 3) Main extraction prefers normalized text
-        try:
-                    if sec:
-                        combined = text_norm + "\n\n---\nCANONICAL OUTLINE (verbatim lines for recall):\n" + render_lossless_for_extractor(sec)
-                    else:
-                        combined = text_norm
-                    data = ai_or_heuristic_structuring(combined)
-        except Exception:
-                    data = ai_or_heuristic_structuring(text)
+            # Step 3: Wrap in dict format expected by build_cv_document
+            data = {
+                "hamilton_formatted_text": formatted
+            }
+        except Exception as e:
+            print("GPT polishing failed:", e)
+            return make_response(("Polish failed during GPT formatting: " + str(e)), 400)
 
         # 4) Union-merge: add anything the sectionizer found that the extractor missed
         try:
@@ -9164,6 +9127,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

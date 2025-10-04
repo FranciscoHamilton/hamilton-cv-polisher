@@ -3383,9 +3383,38 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     links = [s for s in (pi.get("links") or []) if s]
     if links: _add_center_line(doc, " | ".join(links), size=11, bold=False, space_after=6)
 
-    if cv.get("summary"):
-        _add_section_heading(doc, labels["summary"])
-        p = doc.add_paragraph(cv["summary"]); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
+    # --- EXECUTIVE SUMMARY (move short “qual lines” to qualifications) ---
+    raw_summary = (cv.get("summary") or "").strip()
+
+    def _looks_like_qual_line(s: str) -> bool:
+        if not s: return False
+        if len(s) > 140:  # paragraphs stay in summary
+            return False
+        kw = ("fellow", "chartered", "cfa", "actuar", "msc", "bsc", "phd", "diploma", "certificate", "certification")
+        return any(k in s.lower() for k in kw)
+
+    moved = []
+    if raw_summary:
+        lines = [x.strip() for x in raw_summary.splitlines() if x.strip()]
+        keep_lines = []
+        for line in lines:
+            if _looks_like_qual_line(line):
+                moved.append(line)
+            else:
+                keep_lines.append(line)
+        raw_summary = "\n".join(keep_lines).strip()
+        if moved:
+            cv.setdefault("certifications", [])
+            cv["certifications"].extend(moved)
+
+    # Render summary per your rule:
+    # - if text remains, show heading + text
+    # - if not, show just the heading (blank section)
+    _add_section_heading(doc, labels["summary"])
+    if raw_summary:
+        p = doc.add_paragraph(raw_summary)
+        p.paragraph_format.space_after = Pt(8)
+        _tone_runs(p, size=11, bold=False)
     # --- PERSONAL INFORMATION ---
     pi = cv.get("personal_info") or {}
     nat = (pi.get("nationality") or "").strip()
@@ -3506,17 +3535,36 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 meta_p = doc.add_paragraph(meta)
                 meta_p.paragraph_format.space_after = Pt(6)
                 _tone_runs(meta_p, size=11, bold=False)
+        # --- intro/body text before bullets (keep prose if present) ---
+        intro = None
+        for k in ("intro", "summary", "overview", "description", "about", "body", "text"):
+            v = role.get(k)
+            if v:
+                intro = v
+                break
 
-            if role.get("bullets"):
-                for b in role["bullets"]:
-                    bp = doc.add_paragraph(b, style="List Bullet")
-                    bp.paragraph_format.space_before = Pt(0)
-                    bp.paragraph_format.space_after = Pt(0)
-                    _tone_runs(bp, size=11, bold=False)
-            elif role.get("raw_text"):
-                rp = doc.add_paragraph(role["raw_text"])
-                rp.paragraph_format.space_after = Pt(0)
-                _tone_runs(rp, size=11, bold=False)
+        if isinstance(intro, str):
+            intro = intro.strip()
+            if intro:
+                ip = doc.add_paragraph(intro)
+                ip.paragraph_format.space_after = Pt(6)
+                _tone_runs(ip, size=11, bold=False)
+        elif isinstance(intro, list):
+            for para in [x for x in intro if isinstance(x, str) and x.strip()]:
+                ip = doc.add_paragraph(para.strip())
+                ip.paragraph_format.space_after = Pt(4)
+                _tone_runs(ip, size=11, bold=False)
+
+        if role.get("bullets"):
+            for b in role["bullets"]:
+                bp = doc.add_paragraph(b, style="List Bullet")
+                bp.paragraph_format.space_before = Pt(0)
+                bp.paragraph_format.space_after = Pt(0)
+                _tone_runs(bp, size=11, bold=False)
+        elif role.get("raw_text"):
+            rp = doc.add_paragraph(role["raw_text"])
+            rp.paragraph_format.space_after = Pt(0)
+            _tone_runs(rp, size=11, bold=False)
 
     skills = cv.get("skills") or []
     if skills:
@@ -8824,4 +8872,5 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 

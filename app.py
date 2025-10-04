@@ -9081,6 +9081,14 @@ def polish():
             except Exception as e:
                 print("template resolve failed:", e)
 
+            try:
+                full_text = extract_full_cv_content(f, text_norm)
+                formatted = format_to_hamilton_style(full_text)
+                if formatted:
+                    data["hamilton_formatted_text"] = formatted
+            except Exception as e:
+                print("GPT formatting failed:", e)
+
             out = build_cv_document(data, template_override=template_override)
 
             # ---- Update legacy JSON stats (for continuity) ----
@@ -9127,6 +9135,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

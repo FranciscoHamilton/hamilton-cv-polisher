@@ -3530,14 +3530,16 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 if isinstance(max_bullets, int) and max_bullets >= 0:
                     bullets = bullets[:max_bullets]
 
-                # NEW: indent experience bullets (default ~14pt)
+                # Indent experience bullets (default ~14pt; adjustable per org)
                 indent_pt = get_org_pref(cv, "experience_bullet_indent_pt", 14)
 
                 for b in bullets:
                     bp = doc.add_paragraph(b, style="List Bullet")
-                    bp.paragraph_format.left_indent = Pt(indent_pt)  # ← add this
-                    bp.paragraph_format.space_before = Pt(0)
-                    bp.paragraph_format.space_after = Pt(0)
+                    pf = bp.paragraph_format
+                    pf.left_indent = Pt(indent_pt)           # move list inward
+                    pf.first_line_indent = Pt(0)             # cancel hanging indent from style
+                    pf.space_before = Pt(0)
+                    pf.space_after = Pt(0)
                     _tone_runs(bp, size=11, bold=False)
 
 
@@ -9220,6 +9222,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

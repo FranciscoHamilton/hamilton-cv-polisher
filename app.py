@@ -8898,9 +8898,13 @@ def polish():
 
         # 3) Main extraction prefers normalized text
         try:
-            data = ai_or_heuristic_structuring(render_lossless_for_extractor(sec) if sec else text_norm)
+                    if sec:
+                        combined = text_norm + "\n\n---\nCANONICAL OUTLINE (verbatim lines for recall):\n" + render_lossless_for_extractor(sec)
+                    else:
+                        combined = text_norm
+                    data = ai_or_heuristic_structuring(combined)
         except Exception:
-            data = ai_or_heuristic_structuring(text)
+                    data = ai_or_heuristic_structuring(text)
 
         # 4) Union-merge: add anything the sectionizer found that the extractor missed
         try:
@@ -8993,6 +8997,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

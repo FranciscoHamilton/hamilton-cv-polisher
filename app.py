@@ -3397,17 +3397,6 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     p = doc.add_paragraph(line)
     p.paragraph_format.space_after = Pt(8)
     _tone_runs(p, size=11, bold=False)
-    # --- PERSONAL INFORMATION ---
-    pi = cv.get("personal_info") or {}
-    nat = (pi.get("nationality") or "").strip()
-    mar = (pi.get("marital_status") or "").strip()
-
-    _add_section_heading(doc, labels.get("personal", "PERSONAL INFORMATION"))
-
-    line = f"Nationality: {nat} |  Marital Status: {mar}"
-    p = doc.add_paragraph(line)
-    p.paragraph_format.space_after = Pt(8)
-    _tone_runs(p, size=11, bold=False)
 
     # --- PROFESSIONAL QUALIFICATIONS (Certifications + Education, unified, spaced, sorted) ---
     import re  # keep here (file has no 'import re' earlier)
@@ -8835,3 +8824,4 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+

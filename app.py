@@ -3424,7 +3424,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                         run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
 
         # Finish & return when GPT-formatted text is present
-         _ensure_primary_header_spacer(doc)
+        _ensure_primary_header_spacer(doc)
         out = Path("/tmp/polished_cv.docx")
         doc.save(str(out))
         _zip_scrub_header_labels(out)
@@ -9321,6 +9321,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

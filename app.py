@@ -8660,7 +8660,9 @@ def backfill_role_overviews_from_lossless(data: dict, lossless: dict) -> dict:
                 continue
             has_bullets = bool(role.get("bullets"))
             has_overview = bool((role.get("raw_text") or "").strip())
+            # If the role already has an overview, skip backfill.
             if has_overview:
+                continue
 
             title = (role.get("job_title") or "").strip()
             company = (role.get("company") or "").strip()
@@ -9162,5 +9164,6 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 

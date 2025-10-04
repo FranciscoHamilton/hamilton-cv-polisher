@@ -9031,7 +9031,7 @@ def polish():
 
         # Step 1: GPT-based CV extraction
         try:
-            extracted = extract_full_cv_content(f, text_norm)
+            extracted = extract_full_cv_content(text_norm)
             formatted = format_to_hamilton_style(extracted)
             data = {"hamilton_formatted_text": formatted}
         except Exception as e:
@@ -9042,13 +9042,14 @@ def polish():
 
         # --- Sectionizer + merging (optional) ---
         try:
-            sec = sectionize_cv(text_norm)  # <-- this assumes you have this function
-            if sec:
-                data = deep_merge_lossless(data, sec)
-            data = backfill_role_overviews_from_lossless(data, sec)
-            data = sanitize_roles(data)
+            sec = lossless_sectionize(text_norm)
         except Exception:
-            pass
+            sec = None
+
+        if sec:
+            data = deep_merge_lossless(data, sec)
+        data = backfill_role_overviews_from_lossless(data, sec)
+        data = sanitize_roles(data)
 
         # --- Legacy skill extraction ---
         try:
@@ -9111,6 +9112,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

@@ -8736,7 +8736,144 @@ def backfill_role_overviews_from_lossless(data: dict, lossless: dict) -> dict:
     except Exception:
         # Never block on backfill errors; just return original data
         return data
-    
+
+def sanitize_roles(data: dict) -> dict:
+    """
+    Last-mile defense to prevent duplication:
+    - Move bullet-looking lines out of role['raw_text'] into role['bullets']
+    - Split multi-bullets glued into one line
+    - Trim duplicates
+    - Cut accidental cross-role headers that leaked into 'raw_text'
+    No wording changes; conservative; no-ops on clean CVs.
+    """
+    try:
+        if not isinstance(data, dict):
+            return data
+        # Feature flag per org (default: ON)
+        prefs = data.get("org_prefs") or {}
+        if prefs.get("sanitize_roles", True) is False:
+            return data
+
+        roles = data.get("experience") or []
+        if not isinstance(roles, list):
+            return data
+
+        # Helper regexes
+        month = r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)'
+        date_rng = re.compile(rf'\b{month}\s+\d{{4}}\s*[\u2013\-]\s*(?:{month}\s+\d{{4}}|Present|Current)\b', re.I)
+        bullet_line = re.compile(r'^\s*[•\u2022\-\u2013\*]\s+')
+        inline_multi_bullet = re.compile(r'\s*[•\u2022]\s+')
+        header_sep = re.compile(r'\s+[—\-–]\s+')  # em/en dash or hyphen surrounded by spaces
+
+        def norm_b(s: str) -> str:
+            s = re.sub(r'^[•\u2022\-\u2013\*]\s+', '', (s or '').strip())
+            s = re.sub(r'\s+', ' ', s).strip().lower()
+            return s
+
+        def looks_like_role_header(line: str) -> bool:
+            # A header-ish line has a dash separator AND a date range somewhere around it.
+            return bool(header_sep.search(line) and date_rng.search(line))
+
+        for idx, role in enumerate(roles):
+            if not isinstance(role, dict):
+                continue
+            bullets = list(role.get("bullets") or [])
+            raw = (role.get("raw_text") or "").strip()
+            if not raw:
+                # nothing to sanitize
+                continue
+
+            changed = False
+
+            # 1) Split inline multi-bullets inside raw_text (e.g., "... ● foo ● bar")
+            if '•' in raw or '●' in raw:
+                # Normalize '●' to '•' for splitting
+                raw_norm = raw.replace('●', '•')
+                # If multiple bullets appear inline, put each on its own line
+                if inline_multi_bullet.search(raw_norm.strip()[1:]):  # skip very first char to avoid matching at pos 0
+                    raw_norm = raw_norm.replace(' • ', '\n• ')
+                else:
+                    raw_norm = raw_norm
+                raw = raw_norm
+
+            # 2) Move bullet-looking lines from raw_text -> bullets
+            kept_raw_lines = []
+            for ln in raw.splitlines():
+                # Also handle lines that contain a date range + then bullets glued after
+                if date_rng.search(ln) and ('•' in ln or '●' in ln):
+                    # split at first bullet marker
+                    parts = re.split(r'[•\u2022]\s+', ln, maxsplit=1)
+                    kept_raw_lines.append(parts[0].rstrip())
+                    if len(parts) > 1 and parts[1].strip():
+                        bullets.append(parts[1].strip())
+                        changed = True
+                    continue
+
+                # pure bullet line?
+                if bullet_line.match(ln):
+                    bullets.append(re.sub(r'^\s*[•\u2022\-\u2013\*]\s+', '', ln).strip())
+                    changed = True
+                else:
+                    # lines with " ... • foo • bar" inline
+                    if '•' in ln or '●' in ln:
+                        subparts = re.split(r'[•\u2022]\s+', ln)
+                        head = subparts[0].rstrip()
+                        if head:
+                            kept_raw_lines.append(head)
+                        for part in subparts[1:]:
+                            p = part.strip()
+                            if p:
+                                bullets.append(p)
+                                changed = True
+                    else:
+                        kept_raw_lines.append(ln)
+
+            # 3) De-duplicate bullets (case/space-insensitive)
+            seen = set()
+            deduped = []
+            for b in bullets:
+                k = norm_b(b)
+                if k and k not in seen:
+                    deduped.append(b)
+                    seen.add(k)
+            bullets = deduped
+
+            # 4) Cross-role header guard: if raw_text still contains a new header+dates, cut at that header
+            if kept_raw_lines:
+                # scan for the earliest header-ish line
+                cut_at = -1
+                for i, ln in enumerate(kept_raw_lines):
+                    if looks_like_role_header(ln):
+                        # only cut if that header seems to reference a later role we already have
+                        tail = " ".join(kept_raw_lines[i:]).lower()
+                        later_refs = False
+                        for later in roles[idx+1:]:
+                            if not isinstance(later, dict):
+                                continue
+                            title = (later.get("job_title") or "").lower()
+                            company = (later.get("company") or "").lower()
+                            # strong but safe: require company or title token to appear
+                            if (title and title in tail) or (company and company in tail):
+                                later_refs = True
+                                break
+                        if later_refs:
+                            cut_at = i
+                            break
+                if cut_at != -1:
+                    kept_raw_lines = kept_raw_lines[:cut_at]
+                    changed = True
+
+            # 5) Write back
+            new_raw = "\n".join([ln for ln in kept_raw_lines if ln.strip()]).strip()
+            role["raw_text"] = new_raw
+            role["bullets"] = bullets
+            # optional: if raw_text becomes empty and there are bullets, keep it empty (renderer already handles both)
+            # changed flag is informational only here
+
+        return data
+    except Exception:
+        return data
+
 # ---- /Lossless re-sectionizer ----
 
 # ---- Quick diagnostic (no secrets) ----
@@ -8911,7 +9048,8 @@ def polish():
             if sec:
                 data = deep_merge_lossless(data, sec)
             data = backfill_role_overviews_from_lossless(data, sec)
-                
+            data = sanitize_roles(data)   
+            
         except Exception:
             pass
 
@@ -8997,6 +9135,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

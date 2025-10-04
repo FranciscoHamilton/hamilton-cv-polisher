@@ -9020,41 +9020,58 @@ def polish():
         abort(400, "No file uploaded")
 
     try:
-        # Step 0: Extract plain text from the uploaded file
+        # Step 0: Extract raw text from file
         text = extract_text_from_any(f)
 
-        # Step 0.5: Normalize text (fallback to raw if normalization fails)
+        # Step 0.5: Normalize text
         try:
             text_norm = normalize_cv_text(text)
         except Exception:
             text_norm = text
 
-        # Step 1: GPT-based full CV content extraction
+        # Step 1: GPT-based CV extraction
         try:
-            extracted = extract_full_cv_content(text_norm)
+            extracted = extract_full_cv_content(f, text_norm)
             formatted = format_to_hamilton_style(extracted)
             data = {"hamilton_formatted_text": formatted}
         except Exception as e:
             print("GPT formatting failed:", e)
             return make_response(("Polish failed during GPT formatting: " + str(e)), 400)
 
-        # Step 2: Legacy skill extraction
+        # Step 2: Add back your legacy polish logic
+
+        # --- Sectionizer + merging (optional) ---
         try:
-            legacy_sk = extract_top_skills(text_norm)
-            if legacy_sk:
-                data.setdefault("skills", [])
-                if isinstance(data["skills"], list):
-                    data["skills"].extend([s for s in legacy_sk if s not in data["skills"]])
+            sec = sectionize_cv(text_norm)  # <-- this assumes you have this function
+            if sec:
+                data = deep_merge_lossless(data, sec)
+            data = backfill_role_overviews_from_lossless(data, sec)
+            data = sanitize_roles(data)
         except Exception:
             pass
 
-        # Step 3: Map to Hamilton fields
+        # --- Legacy skill extraction ---
+        try:
+            legacy_sk = extract_top_skills(text_norm)
+            if legacy_sk:
+                if isinstance(data.get("skills"), dict):
+                    data["skills"]["professional"] = list(dict.fromkeys(
+                        [*data["skills"].get("professional", []), *legacy_sk]
+                    ))
+                else:
+                    data.setdefault("skills", [])
+                    if isinstance(data["skills"], list):
+                        data["skills"].extend([s for s in legacy_sk if s not in data["skills"]])
+        except Exception:
+            pass
+
+        # --- Final Hamilton postprocessing ---
         try:
             data = postprocess_to_hamilton(data, raw_text=text_norm)
         except Exception:
             pass
 
-        # Step 4: Template override (optional, per-org)
+        # Step 3: Handle org-specific templates
         template_override = None
         try:
             oid = _current_user_org_id()
@@ -9067,10 +9084,10 @@ def polish():
         except Exception as e:
             print("Template resolve failed:", e)
 
-        # Step 5: Build the final document
+        # Step 4: Build final DOCX
         out = build_cv_document(data, template_override=template_override)
 
-        # Step 6: Update legacy JSON stats (for continuity)
+        # Step 5: Track stats / usage (optional)
         try:
             candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -9078,48 +9095,23 @@ def polish():
             STATS["last_candidate"] = candidate_name
             STATS["last_time"] = now
             STATS.setdefault("history", [])
-            STATS["history"].append({
-                "candidate": candidate_name,
-                "filename": f.filename,
-                "ts": now
-            })
+            STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
             _save_stats()
         except Exception as e:
-            print("stats update failed:", e)
+            print("stats failed:", e)
 
-        # Step 7: Log usage + debit org credit (best-effort)
-        try:
-            uid = int(session.get("user_id") or 0)
-            if uid:
-                log_usage_event(uid, f.filename, candidate_name)
-                can_bypass = (session.get("user", "").strip().lower() == "admin") or bool(session.get("is_admin"))
-                if not can_bypass:
-                    oid = _current_user_org_id()
-                    if DB_POOL and oid:
-                        db_execute(
-                            "INSERT INTO org_credits_ledger (org_id, delta, reason, created_by) VALUES (%s, -1, %s, %s)",
-                            (oid, 'polish', uid)
-                        )
-        except Exception as e:
-            print("usage/credit logging failed:", e)
-
-        # Step 8: Optional trial credit decrement
-        try:
-            left = int(session.get("trial_credits", 0))
-            if left > 0:
-                session["trial_credits"] = max(0, left - 1)
-        except Exception:
-            pass
-
-        # Step 9: Return the final file
-        resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
-        resp.headers["Cache-Control"] = "no-store"
-        return resp
+        # Step 6: Return the DOCX
+        return send_file(
+            str(out),
+            as_attachment=True,
+            download_name="polished_cv.docx"
+        )
 
     except Exception as e:
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

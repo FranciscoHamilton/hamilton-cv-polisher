@@ -3386,6 +3386,33 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             for h in heads:
                 sections.setdefault(h, "")
 
+        # --- Name/contact banner from PERSONAL INFORMATION ---
+        pi_raw = (sections.get("PERSONAL INFORMATION") or "")
+        # crude extraction (works with "Name: …", "Phone:", "Email:", "Address:"| "Location:")
+        name_m = re.search(r"(?im)^\s*(?:name)\s*:\s*(.+)$", pi_raw)
+        email_m = re.search(r"(?im)^\s*(?:email)\s*:\s*([^\s]+@[^\s]+)$", pi_raw)
+        phone_m = re.search(r"(?im)^\s*(?:phone|tel)\s*:\s*([^\n]+)$", pi_raw)
+        loc_m   = re.search(r"(?im)^\s*(?:address|location)\s*:\s*(.+)$", pi_raw)
+
+        full_name = (name_m.group(1).strip() if name_m else "").strip()
+        email = (email_m.group(1).strip() if email_m else "").strip()
+        tel   = (phone_m.group(1).strip() if phone_m else "").strip()
+        location = (loc_m.group(1).strip() if loc_m else "").strip()
+
+        # Render like the oldstyle builder
+        name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        name_p.paragraph_format.space_after = Pt(2)
+        name_r = name_p.add_run(full_name or "")
+        name_r.font.name="Calibri"; name_r.font.size=Pt(18); name_r.bold=True; name_r.font.color.rgb=SOFT_BLACK
+
+        bits = []
+        if tel: bits.append(f"Tel: {tel}")
+        if email: bits.append(f"Email: {email}")
+        if bits:
+            _add_center_line(doc, " | ".join(bits), size=11, bold=False, space_after=0)
+        if location:
+            _add_center_line(doc, f"Location: {location}", size=11, bold=False, space_after=6)
+
         # Now render each Hamilton section with your styles
         for heading in [
             "EXECUTIVE SUMMARY",
@@ -3409,10 +3436,14 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
                 # Heuristic: if the block looks like a list, output as bullets
                 lines = [l.strip() for l in blk.splitlines() if l.strip()]
-                listy = all(l.startswith(("-", "•", "*")) for l in lines) or any(l.startswith(("-", "•", "*")) for l in lines)
+
+                # Count true bullet markers only: "- ", "• ", "o ", "* " (star+space), not "**…", "###…"
+                marker_rx = re.compile(r'^\s*(?:[-•o]|\*)\s+')
+                markers = sum(1 for l in lines if marker_rx.match(l))
+                listy = markers >= max(2, int(0.6 * len(lines)))
                 if listy:
                     for l in lines:
-                        text = re.sub(r"^[\-\*\u2022]\s*", "", l).strip()
+                        text = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip()
                         p = doc.add_paragraph()
                         r = p.add_run(f"• {text}")
                         r.font.name = "Calibri"; r.font.size = Pt(11); r.font.color.rgb = SOFT_BLACK
@@ -9321,6 +9352,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

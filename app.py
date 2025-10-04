@@ -3451,9 +3451,9 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             if not body:
                 continue
 
-        # For all other sections, skip if empty
-        if not body:
-            continue  
+        # For all other sections, skip if empty (keep headings for Exec Summary & PI)
+        if not body and heading not in ("EXECUTIVE SUMMARY", "PERSONAL INFORMATION"):
+             continue  
 
             # Split into blocks by blank line; render bullets vs paragraphs
             blocks = re.split(r"\n\s*\n", body)
@@ -3467,6 +3467,17 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 if not blk:
                     continue
 
+            if heading == "PROFESSIONAL QUALIFICATIONS":
+                # Force paragraphs: every non-empty line becomes its own paragraph (no bullets)
+                items = [re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip() for l in blk.splitlines()]
+                items = [i for i in items if i]
+                for item in items:
+                    p = doc.add_paragraph(item)
+                    p.paragraph_format.space_after = Pt(8)
+                    for run in p.runs:
+                        run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
+                continue                
+                
                 # Heuristic: if the block looks like a list, output as bullets
                 lines = [l.strip() for l in blk.splitlines() if l.strip()]
                 marker_rx = re.compile(r'^\s*(?:[-•o]|\*)\s+')
@@ -9285,21 +9296,27 @@ def polish():
                 client_lc = [s.lower() for s in client_skills]
                 extras = [c for c in cand_skills if c.lower() not in client_lc]
 
+                # Build bar-separated lines instead of bullets
+                def _bar_join(seq):
+                    return " | ".join([s for s in (seq or []) if s])
+
                 lines = []
                 if matched:
-                    lines.append(_render_bullets(matched))
+                    lines.append(_bar_join(matched))
                 elif client_skills:
-                    # If no overlap, still show the client's configured list
-                    lines.append(_render_bullets(client_skills))
+                    # no overlap, still show the client's configured list
+                    lines.append(_bar_join(client_skills))
+                else:
+                    # no client config: show candidate skills from CV
+                    lines.append(_bar_join(cand_skills))
 
                 if extras:
-                    if lines:
-                        lines.append("")
-                    lines.append("Additional Skills (from CV):")
-                    lines.append(_render_bullets(extras))
+                    extras_line = _bar_join(extras)
+                    if extras_line:
+                        lines.append("")  # spacer
+                        lines.append(f"Additional Skills (from CV): {extras_line}")
 
-                # If nothing at all, keep original text (to ensure 100% preservation)
-                new_skills_text = "\n".join(lines).strip() if lines else sections.get("PROFESSIONAL SKILLS", "")
+                new_skills_text = "\n".join(lines).strip()
                 sections["PROFESSIONAL SKILLS"] = new_skills_text
             except Exception:
                 # On any failure, do not lose content
@@ -9388,6 +9405,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

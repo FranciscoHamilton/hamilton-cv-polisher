@@ -3402,27 +3402,31 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         phone = (m_phone.group(1).strip() if m_phone else "")
 
         # Location
-        m_loc = re.search(r'(?im)^\s*(?:location|address)\s*[:\-]\s*(.+)$', pi_raw)
+        m_loc = re.search(r'(?im)^\s*location\s*[:\-]\s*(.+)$', pi_raw)
         location = (m_loc.group(1).strip() if m_loc else "")
 
         # Render name (Calibri 18 bold, centered)
         name_p = doc.add_paragraph()
         name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         name_p.paragraph_format.space_after = Pt(2)
-        name_r = name_p.add_run(full_name)
-        name_r.font.name = "Calibri"
-        name_r.font.size = Pt(18)
-        name_r.bold = True
-        name_r.font.color.rgb = SOFT_BLACK
+        name_r = name_p.add_run(full_name or "Candidate")
+        name_r.font.name = "Calibri"; name_r.font.size = Pt(18); name_r.bold = True; name_r.font.color.rgb = SOFT_BLACK
 
-        # Render contact line(s)
-        bits = []
-        if phone: bits.append(f"Tel: {phone}")
-        if email: bits.append(f"Email: {email}")
-        if bits:
-            _add_center_line(doc, " | ".join(bits), size=11, bold=False, space_after=0)
-        if location:
-            _add_center_line(doc, f"Location: {location}", size=11, bold=False, space_after=6)
+        # New: always show labels, even if values are blank.
+        # Also include Residence and Address (pulled from PERSONAL INFORMATION if present).
+        res_m = re.search(r'(?im)^\s*(?:residence)\s*[:\-]\s*(.+)$', pi_raw)
+        addr_m = re.search(r'(?im)^\s*(?:address)\s*[:\-]\s*(.+)$', pi_raw)
+        residence = (res_m.group(1).strip() if res_m else "")
+        address   = (addr_m.group(1).strip() if addr_m else "")
+
+        _add_center_line(doc, f"Tel: {phone} | Email: {email}", size=11, bold=False, space_after=0)
+        _add_center_line(doc, f"Residence: {residence} | Address: {address} | Location: {location}", size=11, bold=False, space_after=6)
+
+        # Extract nationality & marital status from PERSONAL INFORMATION
+        nat_m = re.search(r'(?im)^\s*nationality\s*[:\-]\s*(.+)$', pi_raw)
+        mar_m = re.search(r'(?im)^\s*marital\s*status\s*[:\-]\s*(.+)$', pi_raw)
+        nat = (nat_m.group(1).strip() if nat_m else "")
+        mar = (mar_m.group(1).strip() if mar_m else "")
 
         # Now render each Hamilton section with your styles
         for heading in [
@@ -3435,8 +3439,21 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         ]:
             _add_section_heading(doc, heading)
             body = (sections.get(heading) or "").strip()
+
+        # PERSONAL INFORMATION prints the line even if body is empty
+        if heading == "PERSONAL INFORMATION":
+            line = f"Nationality: {nat} | Marital Status: {mar}"
+            p = doc.add_paragraph(line)
+            p.paragraph_format.space_after = Pt(8)
+            for run in p.runs:
+                run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
+            # If GPT provided no extra PI text, move on; otherwise let the rest render
             if not body:
                 continue
+
+        # For all other sections, skip if empty
+        if not body:
+            continue  
 
             # Split into blocks by blank line; render bullets vs paragraphs
             blocks = re.split(r"\n\s*\n", body)
@@ -9371,6 +9388,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

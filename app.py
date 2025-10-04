@@ -2963,6 +2963,70 @@ Rules:
 - Use "currently_employed": true when the role is ongoing; leave "end_date" empty in that case.
 """
 
+# A stricter, recall-first variant used only as a guarded retry
+STRICT_SCHEMA_PROMPT = """
+You are a CV structuring assistant for recruiters.
+Return STRICT JSON ONLY and NEVER drop content. Preserve order and wording (normalise whitespace only).
+
+JSON shape (identical to the primary schema):
+{
+  "personal_info": {"full_name":"","email":"","phone":"","location":"","links":[]},
+  "summary":"",
+  "experience":[{"job_title":"","company":"","location":"","start_date":"","end_date":"","currently_employed":false,"bullets":[],"raw_text":""}],
+  "education":[{"degree":"","institution":"","location":"","start_date":"","end_date":"","bullets":[]}],
+  "skills":[],
+  "certifications":[],
+  "languages":[],
+  "awards":[],
+  "other":[{"section_title":"","items":[]}]
+}
+
+STRICT rules (recall-first):
+- DO NOT invent. DO NOT omit. If unsure where a line belongs, include it in the closest section rather than dropping it.
+- EXPERIENCE:
+  - Create a role for **every job block** you see. If some fields (title/company/location/dates) are unclear, leave them empty but still create the role and keep the prose in "raw_text".
+  - "raw_text": all non-bullet sentences/paragraphs immediately under a role header (company/title/dates). Keep order. Do NOT duplicate bullet lines here.
+  - "bullets": each bullet-point as a separate item. Detect bullets starting with •, ●, -, – or similar.
+  - NEVER merge two different jobs into one role. Prefer more roles to fewer.
+  - If dates are shown as a range, set start_date/end_date; if ongoing, set "currently_employed": true and leave end_date empty.
+- EDUCATION & CERTIFICATIONS:
+  - Any courses, trainings, certificates, diplomas, degrees, CPD, workshops, bootcamps → put under "certifications" (list of strings) unless they are clearly full degrees (which go to "education").
+- PERSONAL INFO: fill when present; otherwise leave empty strings.
+- Output MUST be valid JSON and nothing else.
+"""
+
+def _looks_incomplete(data: dict) -> bool:
+    """Returns True if the structured result likely missed content."""
+    try:
+        if not isinstance(data, dict):
+            return True
+        roles = data.get("experience") or []
+        if not isinstance(roles, list):
+            return True
+        if not roles:
+            return True
+        total_bullets = 0
+        empty_roles = 0
+        for r in roles:
+            if not isinstance(r, dict):
+                continue
+            bs = r.get("bullets") or []
+            total_bullets += len(bs) if isinstance(bs, list) else 0
+            has_overview = bool((r.get("raw_text") or "").strip())
+            has_bullets = bool(bs)
+            if not has_overview and not has_bullets:
+                empty_roles += 1
+        # Trigger retry if:
+        # - over half the roles have neither overview nor bullets, OR
+        # - there are multiple roles but zero bullets at all (classic "all bullets stuck under one header" case)
+        if empty_roles >= max(1, len(roles) // 2):
+            return True
+        if len(roles) >= 2 and total_bullets == 0:
+            return True
+        return False
+    except Exception:
+        return False
+
 def ai_or_heuristic_structuring(cv_text: str) -> dict:
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if api_key:
@@ -2981,7 +3045,30 @@ def ai_or_heuristic_structuring(cv_text: str) -> dict:
                 if out.lower().startswith("json"):
                     out = out[4:].strip()
             import json as _json
-            return _json.loads(out)
+            data = _json.loads(out)
+
+            # NEW: Guarded retry with STRICT prompt if the first pass looks incomplete
+            try:
+                if _looks_incomplete(data):
+                    resp2 = client.chatCompletions.create(
+                        model=MODEL,
+                        messages=[{"role":"system","content":STRICT_SCHEMA_PROMPT},
+                                  {"role":"user","content":cv_text}],
+                        temperature=0
+                    )
+                    out2 = resp2.choices[0].message.content.strip()
+                    if out2.startswith("```"):
+                        out2 = out2.strip("`")
+                        if out2.lower().startswith("json"):
+                            out2 = out2[4:].strip()
+                    data2 = _json.loads(out2)
+                    if not _looks_incomplete(data2):
+                        return data2
+            except Exception:
+                pass
+
+            return data
+
         except Exception:
             try:
                 from openai import OpenAI
@@ -2993,12 +3080,35 @@ def ai_or_heuristic_structuring(cv_text: str) -> dict:
                     temperature=0
                 )
                 out = resp.choices[0].message.content.strip()
-                if out.startswith("```"):
-                    out = out.strip("`")
-                    if out.lower().startswith("json"):
-                        out = out[4:].strip()
-                import json as _json
-                return _json.loads(out)
+if out.startswith("```"):
+    out = out.strip("`")
+    if out.lower().startswith("json"):
+        out = out[4:].strip()
+import json as _json
+data = _json.loads(out)
+
+# NEW: Guarded retry with STRICT prompt if the first pass looks incomplete
+try:
+    if _looks_incomplete(data):
+        resp2 = client.chat.completions.create(
+            model=MODEL,
+            messages=[{"role":"system","content":STRICT_SCHEMA_PROMPT},
+                      {"role":"user","content":cv_text}],
+            temperature=0
+        )
+        out2 = resp2.choices[0].message.content.strip()
+        if out2.startswith("```"):
+            out2 = out2.strip("`")
+            if out2.lower().startswith("json"):
+                out2 = out2[4:].strip()
+        data2 = _json.loads(out2)
+        if not _looks_incomplete(data2):
+            return data2
+except Exception:
+    pass
+
+return data
+
             except Exception as e:
                 print("OpenAI failed, falling back to heuristics:", e)
                 print(traceback.format_exc())
@@ -8959,6 +9069,92 @@ def harvest_course_orphans(data: dict, lossless: dict) -> dict:
     except Exception:
         return data
 
+def rebalance_bullets_by_lossless_segments(data: dict, lossless: dict) -> dict:
+    """
+    Conservative fix for 'header-after-bullets' PDFs:
+    If role i has many bullets and role i+1 has none, and the lossless text
+    shows there were few bullet lines between the two headers, move a small
+    tail of bullets from role i to role i+1.
+
+    No wording changes. No effect on clean CVs.
+    Controlled by org_prefs.rebalance_bullets (default True).
+    """
+    try:
+        if not isinstance(data, dict) or not isinstance(lossless, dict):
+            return data
+
+        prefs = data.get("org_prefs") or {}
+        if prefs.get("rebalance_bullets", True) is False:
+            return data
+
+        roles = data.get("experience") or []
+        if not isinstance(roles, list) or len(roles) < 2:
+            return data
+
+        secs = (lossless.get("sections") or {})
+        exp_lines = [s for s in (secs.get("experience") or []) if isinstance(s, str)]
+        if not exp_lines:
+            return data
+
+        # Patterns
+        month = r'(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)'
+        date_rng = re.compile(rf'\b{month}\s+\d{{4}}\s*[\u2013\-]\s*(?:{month}\s+\d{{4}}|Present|Current)\b', re.I)
+        header_sep = re.compile(r'\s+[—\-–]\s+')  # " — " / " – " / " - "
+        bullet_line = re.compile(r'^\s*[•\u2022\-\u2013\*]\s+')
+
+        # Find header lines in lossless experience: "Company — Title ... DateRange"
+        header_idx = []
+        for i, ln in enumerate(exp_lines):
+            if header_sep.search(ln) and date_rng.search(ln):
+                header_idx.append((i, ln.strip()))
+        if len(header_idx) < 2:
+            return data
+
+        # Bullet counts between headers in the lossless text
+        seg_counts = []
+        for k, (start, _line) in enumerate(header_idx):
+            end = header_idx[k + 1][0] if k + 1 < len(header_idx) else len(exp_lines)
+            cnt = 0
+            for s in exp_lines[start + 1:end]:
+                if bullet_line.match(s):
+                    cnt += 1
+            seg_counts.append(cnt)
+
+        # Only proceed if we can align segments and roles by index
+        if len(seg_counts) != len(roles):
+            return data
+
+        # For each adjacent pair, if role i has way more bullets than the segment suggests
+        # and role i+1 has none, move a small tail (up to 5) across.
+        for i in range(len(roles) - 1):
+            r = roles[i]
+            rnext = roles[i + 1]
+            rb = list(r.get("bullets") or [])
+            nb = list(rnext.get("bullets") or [])
+            seg = seg_counts[i]
+
+            # Strong guard: only when next role has zero bullets
+            if len(nb) > 0:
+                continue
+
+            # Excess bullets vs what the segment shows (allow some slack = +2)
+            excess = len(rb) - (seg + 2)
+            if excess <= 0:
+                continue
+
+            # Move a small tail, capped
+            move_n = min(5, excess, len(rb))
+            if move_n <= 0:
+                continue
+
+            tail = rb[-move_n:]
+            r["bullets"] = rb[:-move_n]
+            rnext["bullets"] = nb + tail
+
+        return data
+    except Exception:
+        return data
+
 # ---- /Lossless re-sectionizer ----
 
 # ---- Quick diagnostic (no secrets) ----
@@ -9135,6 +9331,7 @@ def polish():
             data = backfill_role_overviews_from_lossless(data, sec)
             data = sanitize_roles(data)   
             data = harvest_course_orphans(data, sec)
+            data = rebalance_bullets_by_lossless_segments(data, sec)
         except Exception:
             pass
 
@@ -9220,5 +9417,6 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 

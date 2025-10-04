@@ -7,6 +7,7 @@ from flask import session, redirect, url_for  # <-- ADDED earlier
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import HTTPException
 from gpt_formatter import extract_full_cv_content, format_to_hamilton_style
+from text_utils import extract_text_from_any
 def is_admin() -> bool:
     """Return True if the logged-in session user matches APP_ADMIN_USER."""
     try:
@@ -9119,6 +9120,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

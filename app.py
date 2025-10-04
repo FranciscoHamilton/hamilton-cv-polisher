@@ -8811,7 +8811,17 @@ def sanitize_roles(data: dict) -> dict:
 
                 # pure bullet line?
                 if bullet_line.match(ln):
-                    bullets.append(re.sub(r'^\s*[•\u2022\-\u2013\*]\s+', '', ln).strip())
+                    body = re.sub(r'^\s*[•\u2022\-\u2013\*]\s+', '', ln).strip()
+                    # if a new role header with dates leaked into this bullet, split before the header
+                    if header_sep.search(body) and date_rng.search(body):
+                        pre, post = re.split(r'\s+[—\-–]\s+', body, maxsplit=1)
+                        if pre.strip():
+                            bullets.append(pre.strip())
+                        if post.strip():
+                            kept_raw_lines.append(post.strip())  # header chunk goes to raw_text for the header guard
+                        changed = True
+                        continue
+                    bullets.append(body)
                     changed = True
                 else:
                     # lines with " ... • foo • bar" inline
@@ -8862,6 +8872,24 @@ def sanitize_roles(data: dict) -> dict:
                 if cut_at != -1:
                     kept_raw_lines = kept_raw_lines[:cut_at]
                     changed = True
+
+            # 4b) Remove date-only or company-only duplicates from raw_text
+            role_dates = (role.get("dates") or "").replace("–","-").strip().lower()
+            role_company = (role.get("company") or "").strip().lower()
+            role_location = (role.get("location") or "").strip().lower()
+            filtered = []
+            for ln in kept_raw_lines:
+                ln_norm = re.sub(r'\s+', ' ', ln.replace("–","-")).strip().lower()
+                # drop standalone date line (with or without location)
+                if ln_norm == role_dates or (role_location and ln_norm == f"{role_dates} | {role_location}"):
+                    changed = True
+                    continue
+                # drop exact company or "company, location" or "company | location"
+                if ln_norm == role_company or (role_location and (ln_norm == f"{role_company}, {role_location}" or ln_norm == f"{role_company} | {role_location}")):
+                    changed = True
+                    continue
+                filtered.append(ln)
+            kept_raw_lines = filtered
 
             # 5) Write back
             new_raw = "\n".join([ln for ln in kept_raw_lines if ln.strip()]).strip()
@@ -9135,6 +9163,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

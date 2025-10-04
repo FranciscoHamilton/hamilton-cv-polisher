@@ -8387,6 +8387,44 @@ def storage_root() -> str:
     _STORAGE_ROOT = "/tmp"
     return _STORAGE_ROOT
 
+def normalize_cv_text(text: str) -> str:
+    """
+    Conservative PDF/DOCX text normaliser:
+    - join hyphenated line breaks (e.g., 'mod-\nelling' -> 'modelling')
+    - collapse mid-paragraph hard line breaks
+    - normalise bullet markers to a single leading '• '
+    - split multiple bullets that got merged onto one line
+    - trim excessive blank lines
+    """
+    try:
+        import re
+        s = text or ""
+
+        # 1) De-hyphenate words at line breaks: "mod-\nelling" -> "modelling"
+        s = re.sub(r'(\w)-\s*\n\s*(\w)', r'\1\2', s)
+
+        # 2) Convert common bullet markers to a canonical "• " prefix
+        #    Leading spaces + one of (•, -, –, *, ·, o, •) -> "• "
+        s = re.sub(r'^[ \t]*[•\-\u2013\*\u00B7o]\s+', "• ", s, flags=re.M)
+
+        # 3) Sometimes PDFs cram many bullets on one line separated by " • " or " - "
+        #    Ensure each bullet starts on its own line.
+        s = re.sub(r'\s+[•]\s+', '\n• ', s)
+
+        # 4) Collapse hard line-breaks inside paragraphs (but keep real blank lines)
+        #    If a line ends mid-sentence and next line starts lowercase/number/paren, join them.
+        s = re.sub(r'([^\.\:\;\!\?])\n([a-z0-9\(])', r'\1 \2', s)
+
+        # 5) Trim 3+ blank lines down to at most one
+        s = re.sub(r'\n{3,}', '\n\n', s)
+
+        # 6) Strip trailing spaces per line
+        s = "\n".join([ln.rstrip() for ln in s.splitlines()])
+
+        return s
+    except Exception:
+        return text or ""
+
 # ---- Lossless re-sectionizer (no wording changes) ----
 # Buckets raw text into canonical sections using heading synonyms and simple regex cues.
 # Produces a stable, extractor-friendly text that reduces misses on messy PDFs.
@@ -8860,7 +8898,7 @@ def polish():
 
         # 3) Main extraction prefers normalized text
         try:
-            data = ai_or_heuristic_structuring(text_norm)
+            data = ai_or_heuristic_structuring(render_lossless_for_extractor(sec) if sec else text_norm)
         except Exception:
             data = ai_or_heuristic_structuring(text)
 
@@ -8955,6 +8993,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

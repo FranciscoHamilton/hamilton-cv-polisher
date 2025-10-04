@@ -3324,6 +3324,13 @@ def _ensure_primary_header_spacer(doc: Docx):
         pass
 
 # ---------- Compose CV ----------
+def get_org_pref(cv: dict, key: str, default=None):
+    try:
+        prefs = cv.get("org_prefs") or {}
+        return prefs.get(key, default)
+    except Exception:
+        return default
+
 def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     # Prefer an explicit override (per-org), otherwise fall back to bundled templates
     tpath = Path(template_override) if template_override else None
@@ -3517,7 +3524,13 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 _tone_runs(rp, size=11, bold=False)
 
             if role.get("bullets"):
-                for b in role["bullets"]:
+                # Org-configurable cap: overview (raw_text) is NEVER capped
+                max_bullets = get_org_pref(cv, "max_bullets_per_role", None)
+                bullets = list(role.get("bullets") or [])
+                if isinstance(max_bullets, int) and max_bullets >= 0:
+                    bullets = bullets[:max_bullets]
+
+                for b in bullets:
                     bp = doc.add_paragraph(b, style="List Bullet")
                     bp.paragraph_format.space_before = Pt(0)
                     bp.paragraph_format.space_after = Pt(0)
@@ -8576,6 +8589,116 @@ def deep_merge_lossless(extracted: dict, lossless: dict) -> dict:
             out["summary"] = "\n".join(vals)
 
     return out
+
+def backfill_role_overviews_from_lossless(data: dict, lossless: dict) -> dict:
+    """
+    If a role has bullets but empty raw_text, conservatively backfill an overview paragraph
+    from the lossless 'experience' lines immediately after the role header.
+    Never overwrites existing raw_text. Never invents text.
+    """
+    try:
+        if not isinstance(data, dict) or not isinstance(lossless, dict):
+            return data
+
+        roles = data.get("experience") or []
+        if not isinstance(roles, list) or not roles:
+            return data
+
+        secs = lossless.get("sections") or {}
+        exp_lines = [s for s in (secs.get("experience") or []) if isinstance(s, str)]
+        if not exp_lines:
+            return data
+
+        # Pre-compute a normalized, line-by-line index for simple anchor matching
+        norm_lines = [ln.strip() for ln in exp_lines]
+        lower_lines = [ln.lower() for ln in norm_lines]
+
+        def is_bullet(ln: str) -> bool:
+            s = ln.lstrip()
+            return bool(re.match(r'^[\-\u2022\u2013\*]\s+', s))  # -, •, –, *
+
+        for role in roles:
+            if not isinstance(role, dict):
+                continue
+            has_bullets = bool(role.get("bullets"))
+            has_overview = bool((role.get("raw_text") or "").strip())
+            if not has_bullets or has_overview:
+                continue  # only backfill when bullets exist and raw_text is empty
+
+            title = (role.get("job_title") or "").strip()
+            company = (role.get("company") or "").strip()
+            if not title and not company:
+                continue
+
+            # Build simple header anchors to find the right place in lossless experience
+            candidates = []
+            t = title.lower()
+            c = company.lower()
+            if title and company:
+                candidates.extend([
+                    f"{t} at {c}",
+                    f"{t} - {c}",
+                    f"{c} - {t}",
+                    f"{c} | {t}",
+                    f"{t} | {c}",
+                    f"{t} {c}",
+                    f"{c} {t}",
+                ])
+            if title and not company:
+                candidates.append(t)
+            if company and not title:
+                candidates.append(c)
+
+            anchor_idx = -1
+            for i, ln in enumerate(lower_lines):
+                for cand in candidates:
+                    if cand and cand in ln:
+                        anchor_idx = i
+                        break
+                if anchor_idx != -1:
+                    break
+
+            if anchor_idx == -1:
+                continue  # couldn't confidently anchor
+
+            # Collect the contiguous non-bullet lines immediately AFTER the header,
+            # stopping at the first bullet or an empty separator line.
+            collected = []
+            i = anchor_idx + 1
+            # Skip empty lines right after header
+            while i < len(norm_lines) and not norm_lines[i].strip():
+                i += 1
+            # Now collect non-bullet prose until the first bullet or blank block before bullets
+            while i < len(norm_lines):
+                ln = norm_lines[i]
+                if not ln.strip():
+                    # stop if the next non-empty is a bullet (to avoid eating bullet blocks)
+                    j = i + 1
+                    while j < len(norm_lines) and not norm_lines[j].strip():
+                        j += 1
+                    if j < len(norm_lines) and is_bullet(norm_lines[j]):
+                        break
+                    else:
+                        # single blank inside prose; keep one empty as paragraph joiner and continue
+                        collected.append(ln)
+                        i += 1
+                        continue
+                if is_bullet(ln):
+                    break
+                # Keep short/medium prose lines; avoid weird page artifacts
+                if len(ln) <= 400:
+                    collected.append(ln)
+                i += 1
+
+            prose = " ".join([x for x in collected if x.strip()]).strip()
+            if prose:
+                role["raw_text"] = prose
+
+        return data
+    except Exception:
+        # Never block on backfill errors; just return original data
+        return data
+    
 # ---- /Lossless re-sectionizer ----
 
 # ---- Quick diagnostic (no secrets) ----
@@ -8745,6 +8868,8 @@ def polish():
         try:
             if sec:
                 data = deep_merge_lossless(data, sec)
+            data = backfill_role_overviews_from_lossless(data, sec)
+                
         except Exception:
             pass
 
@@ -8830,5 +8955,6 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 

@@ -9031,7 +9031,7 @@ def polish():
 
         # Step 1: GPT-based full CV content extraction
         try:
-            extracted = extract_full_cv_content(f, text_norm)
+            extracted = extract_full_cv_content(text_norm)
             formatted = format_to_hamilton_style(extracted)
             data = {"hamilton_formatted_text": formatted}
         except Exception as e:
@@ -9120,6 +9120,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

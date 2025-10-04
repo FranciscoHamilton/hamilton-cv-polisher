@@ -3422,7 +3422,14 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     p.paragraph_format.space_after = Pt(8)
                     for run in p.runs:
                         run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-        
+
+        # Finish & return when GPT-formatted text is present
+         _ensure_primary_header_spacer(doc)
+        out = Path("/tmp/polished_cv.docx")
+        doc.save(str(out))
+        _zip_scrub_header_labels(out)
+        return out
+
     # Profile-based labels (optional, per-org)
     labels = {
         "summary": "EXECUTIVE SUMMARY",
@@ -3480,7 +3487,6 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     _tone_runs(p, size=11, bold=False)
 
     # --- PROFESSIONAL QUALIFICATIONS (Certifications + Education, unified, spaced, sorted) ---
-    import re  # keep here (file has no 'import re' earlier)
 
     quals = [q for q in (cv.get("certifications") or []) if q]
     edu = cv.get("education") or []
@@ -3621,7 +3627,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     _ensure_primary_header_spacer(doc)
 
-    out = PROJECT_DIR / "polished_cv.docx"
+    out = Path("/tmp/polished_cv.docx")
     doc.save(str(out))
     _zip_scrub_header_labels(out)
     return out
@@ -9315,6 +9321,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

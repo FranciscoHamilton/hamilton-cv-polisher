@@ -2955,7 +2955,11 @@ You are a CV structuring assistant for recruiters. Extract ONLY what exists in t
 
 Rules:
 - Do NOT invent or embellish content.
-- Preserve wording verbatim where possible.
+- Preserve wording verbatim where possible (normalise whitespace only).
+- For each role in "experience", capture BOTH:
+  - "raw_text": all non-bullet prose that describes the role/company/context (intro lines, scope blurbs, paragraphs). Keep original order. Do NOT duplicate bullet lines here.
+  - "bullets": each bullet-point responsibility/achievement as a separate string (strip leading symbols like •, -, –).
+- Never omit prose just because bullets exist; use both "raw_text" and "bullets" when both are present.
 - Use "currently_employed": true when the role is ongoing; leave "end_date" empty in that case.
 """
 
@@ -3507,16 +3511,18 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 meta_p.paragraph_format.space_after = Pt(6)
                 _tone_runs(meta_p, size=11, bold=False)
 
+            if role.get("raw_text"):
+                rp = doc.add_paragraph(role["raw_text"])
+                rp.paragraph_format.space_after = Pt(0)
+                _tone_runs(rp, size=11, bold=False)
+
             if role.get("bullets"):
                 for b in role["bullets"]:
                     bp = doc.add_paragraph(b, style="List Bullet")
                     bp.paragraph_format.space_before = Pt(0)
                     bp.paragraph_format.space_after = Pt(0)
                     _tone_runs(bp, size=11, bold=False)
-            elif role.get("raw_text"):
-                rp = doc.add_paragraph(role["raw_text"])
-                rp.paragraph_format.space_after = Pt(0)
-                _tone_runs(rp, size=11, bold=False)
+
 
     skills = cv.get("skills") or []
     if skills:
@@ -8824,4 +8830,5 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 

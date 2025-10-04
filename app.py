@@ -9012,6 +9012,107 @@ def director_logout():
     session.pop("director", None)
     return redirect(url_for("app_page"))
 
+# ---- Hamilton format enforcement ----
+HAMILTON_HEADINGS = [
+    "EXECUTIVE SUMMARY",
+    "PERSONAL INFORMATION",
+    "PROFESSIONAL QUALIFICATIONS",
+    "PROFESSIONAL SKILLS",
+    "PROFESSIONAL EXPERIENCE",
+    "REFERENCES",
+]
+
+# Map alternate/stray headings to their Hamilton target
+HEADING_ALIASES = {
+    r"\bSUMMARY\b": "EXECUTIVE SUMMARY",
+    r"\bPERSONAL PROFILE\b": "EXECUTIVE SUMMARY",
+    r"\bPERSONAL DETAILS\b": "PERSONAL INFORMATION",
+    r"\bCONTACT\b": "PERSONAL INFORMATION",
+    r"\bEDUCATION\b": "PROFESSIONAL QUALIFICATIONS",
+    r"\bCERTIFICATIONS?\b": "PROFESSIONAL QUALIFICATIONS",
+    r"\bQUALIFICATIONS?\b": "PROFESSIONAL QUALIFICATIONS",
+    r"\bCORE SKILLS\b": "PROFESSIONAL SKILLS",
+    r"\bOTHER SKILLS\b": "PROFESSIONAL SKILLS",
+    r"\bTECHNICAL SKILLS\b": "PROFESSIONAL SKILLS",
+    r"\bSKILLS\b": "PROFESSIONAL SKILLS",
+    r"\bEXPERIENCE\b": "PROFESSIONAL EXPERIENCE",
+    r"\bWORK EXPERIENCE\b": "PROFESSIONAL EXPERIENCE",
+    r"\bREFERENCES?\b": "REFERENCES",
+}
+HEADING_RE = re.compile(r"^\s*(?:\-|\*|#{1,3}\s*)?([A-Z][A-Z \/\-&]+)\s*$", re.MULTILINE)
+
+def _canonical_heading(h: str) -> str:
+    h_up = re.sub(r"\s+", " ", h.strip().upper())
+    for pat, target in HEADING_ALIASES.items():
+        if re.search(pat, h_up, re.IGNORECASE):
+            return target
+    for std in HAMILTON_HEADINGS:
+        if h_up == std:
+            return std
+    # Unknown headings go to Qualifications to keep content
+    return "PROFESSIONAL QUALIFICATIONS"
+
+def enforce_hamilton_order(full_text: str) -> dict:
+    """
+    Parse a GPT-formatted text into Hamilton sections, fold aliases, keep 100% of content.
+    """
+    sections = {}
+    matches = list(HEADING_RE.finditer(full_text or ""))
+    if not matches:
+        sections = {h: "" for h in HAMILTON_HEADINGS}
+        sections["EXECUTIVE SUMMARY"] = (full_text or "").strip()
+        if not sections["REFERENCES"].strip():
+            sections["REFERENCES"] = "References available on request."
+        return sections
+
+    for i, m in enumerate(matches):
+        heading = _canonical_heading(m.group(1))
+        start = m.end()
+        end = matches[i+1].start() if i + 1 < len(matches) else len(full_text)
+        body = full_text[start:end].strip()
+        sections.setdefault(heading, "")
+        sections[heading] += ("\n\n" + body if sections[heading] else body)
+
+    for h in HAMILTON_HEADINGS:
+        sections.setdefault(h, "")
+
+    if not sections["REFERENCES"].strip():
+        sections["REFERENCES"] = "References available on request."
+    return sections
+
+def rebuild_hamilton_text(sections: dict) -> str:
+    out = []
+    for h in HAMILTON_HEADINGS:
+        out.append(h)
+        out.append("")
+        body = (sections.get(h) or "").rstrip()
+        if body:
+            out.append(body)
+        out.append("\n")
+    return "\n".join(out).strip()
+
+# ---- Skills helpers ----
+def _normalize_to_bullets(text: str) -> list:
+    lines = [re.sub(r"^[\-\*\u2022]\s*", "", l).strip()
+             for l in re.split(r"[\r\n]+", text or "")]
+    out = []
+    for l in lines:
+        if not l:
+            continue
+        parts = re.split(r"\s*[|,;]\s*", l)
+        out.extend([p for p in parts if p])
+    seen = set()
+    dedup = []
+    for s in out:
+        k = s.lower()
+        if k not in seen:
+            seen.add(k)
+            dedup.append(s)
+    return dedup
+
+def _render_bullets(items: list) -> str:
+    return "\n".join(f"- {i}" for i in items)
+
 # ---------- App polishing + API (org-aware credits) ----------
 @app.post("/polish")
 def polish():
@@ -9033,7 +9134,57 @@ def polish():
         try:
             extracted = extract_full_cv_content(text_norm)
             formatted = format_to_hamilton_style(extracted)
-            data = {"hamilton_formatted_text": formatted}
+            # 1) Force Hamilton headings/order & fold strays (Education -> Qualifications, etc.)
+            sections = enforce_hamilton_order(formatted)
+
+            # 2) Professional Skills must come from the client's configured list, then append extras
+            try:
+                # Try to resolve client/org; adapt this to however you pass the client (query, header, template, etc.)
+                client_slug = (request.args.get("client") or "hamilton").lower()
+
+                # You likely have this in your platform code; adjust the import/name as needed.
+                # Fallback safely to empty list if not available.
+                try:
+                    from platform_config import get_client_skills  # your existing function
+                    client_skills = get_client_skills(client_slug) or []
+                except Exception:
+                    client_skills = []
+
+                cand_skills = _normalize_to_bullets(sections.get("PROFESSIONAL SKILLS", ""))
+
+                # Intersect in the order of the client's configured list
+                cand_set = {c.lower() for c in cand_skills}
+                matched = [s for s in client_skills if s.lower() in cand_set]
+
+                # Extra skills from CV not on the client's list
+                client_lc = [s.lower() for s in client_skills]
+                extras = [c for c in cand_skills if c.lower() not in client_lc]
+
+                lines = []
+                if matched:
+                    lines.append(_render_bullets(matched))
+                elif client_skills:
+                    # If no overlap, still show the client's configured list
+                    lines.append(_render_bullets(client_skills))
+
+                if extras:
+                    if lines:
+                        lines.append("")
+                    lines.append("Additional Skills (from CV):")
+                    lines.append(_render_bullets(extras))
+
+                # If nothing at all, keep original text (to ensure 100% preservation)
+                new_skills_text = "\n".join(lines).strip() if lines else sections.get("PROFESSIONAL SKILLS", "")
+                sections["PROFESSIONAL SKILLS"] = new_skills_text
+            except Exception:
+                # On any failure, do not lose content
+                pass
+
+            # 3) Rebuild one Hamilton-formatted block for the builder
+            hamilton_text = rebuild_hamilton_text(sections)
+
+            # Replace data payload to drive the builder via the Hamilton text path
+            data = {"hamilton_formatted_text": hamilton_text}
         except Exception as e:
             print("GPT formatting failed:", e)
             return make_response(("Polish failed during GPT formatting: " + str(e)), 400)
@@ -9112,6 +9263,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

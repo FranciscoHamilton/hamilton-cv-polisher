@@ -3447,14 +3447,6 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     spacer = doc.add_paragraph(); spacer.paragraph_format.space_after = Pt(6)
 
-    if "hamilton_formatted_text" in cv:
-        # New GPT-based formatting
-        formatted = cv["hamilton_formatted_text"]
-        for paragraph in formatted.split("\n\n"):
-            doc.add_paragraph(paragraph)
-        output_path = Path("/tmp/polished_cv.docx")
-        doc.save(output_path)
-        return output_path
     name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER; name_p.paragraph_format.space_after = Pt(2)
     name_r = name_p.add_run(full_name)
     name_r.font.name="Calibri"; name_r.font.size=Pt(18); name_r.bold=True; name_r.font.color.rgb=SOFT_BLACK
@@ -9323,6 +9315,7 @@ def polish():
         import traceback
         print("Polish failed:", e, traceback.format_exc())
         return make_response(("Polish failed: " + str(e)), 500)
+
 
 
 

@@ -9023,7 +9023,6 @@ def sanitize_roles(data: dict) -> dict:
 
             kept_raw_lines = filtered
             # 4c) Trim any trailing "next role header" glued onto a bullet/line
-            # e.g., "... Calculating statutory valuations ... Customer Solutions - Old Mutual Wealth, United Kingdom July 2015 - September 2015"
             header_tail_re = re.compile(
                 r"\b([A-Z][\w&.,'’()\-\/\s]{2,})"                              # company/team name
                 r"(?:[,|]\s*[A-Za-z .'\-\/]+)?\s+"                             # optional location part
@@ -9334,6 +9333,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

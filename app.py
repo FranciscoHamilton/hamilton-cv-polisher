@@ -3532,10 +3532,12 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     # Certifications: normalise to text (dicts → "Title | Issuer (Date)"), then year-detect
     def _cert_line(q):
-        if isinstance(q, str):
-            return q.strip()
         if isinstance(q, dict):
-            # best-guess common keys; ignore empties; join with pipes
+            # NEW: prefer verbatim if provided by the extractor
+            verbatim = (q.get("raw") or q.get("line") or q.get("text") or "").strip()
+            if verbatim:
+                return verbatim
+            # Fallback to the existing composed form
             parts = []
             for k in ("name", "title", "cert", "certificate"):
                 v = q.get(k)
@@ -3561,14 +3563,20 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     # Education: single line "Degree | Institution (dates)"; no bullets, uniform spacing
     for ed in edu:
-        deg = (ed.get("degree") or "").strip()
-        inst = (ed.get("institution") or "").strip()
-        sd = (ed.get("start_date") or "").strip()
-        ee = (ed.get("end_date") or "").strip()
-        dates = f"{sd} – {ee}".strip(" –")
-        date_part = f" ({dates})" if dates else ""
-        title = " | ".join([s for s in [deg, inst] if s]).strip()
-        line = (title + date_part) if title else (dates or "Education")
+        # NEW: prefer verbatim if provided by the extractor
+        verbatim = (ed.get("raw") or ed.get("line") or ed.get("text") or "").strip()
+        if verbatim:
+            line = verbatim
+        else:
+            deg = (ed.get("degree") or "").strip()
+            inst = (ed.get("institution") or "").strip()
+            sd = (ed.get("start_date") or "").strip()
+            ee = (ed.get("end_date") or "").strip()
+            dates = f"{sd} – {ee}".strip(" –")
+            date_part = f" ({dates})" if dates else ""
+            title = " | ".join([s for s in [deg, inst] if s]).strip()
+            line = (title + date_part) if title else (dates or "Education")
+
         items.append((_year_from_edu(ed), line, True))  # bold education line
 
     # Sort newest first; unknown years (-1) go last
@@ -9017,14 +9025,23 @@ def sanitize_roles(data: dict) -> dict:
             # 4c) Trim any trailing "next role header" glued onto a bullet/line
                 # e.g., "... Calculating statutory valuations ... Customer Solutions - Old Mutual Wealth, United Kingdom July 2015 - September 2015"
                 header_tail_re = re.compile(
-                    r"\b([A-Z][\w&.,'’()\-\s]{2,})(?:,\s*[A-Za-z .'\-]+)?\s+"
-                    r"(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
-                    r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}\s*[-–]\s*"
-                    r"(Present|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
-                    r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*\d{0,4}\b",
+                    r"\b([A-Z][\w&.,'’()\-\/\s]{2,})"                              # company/team name
+                    r"(?:[,|]\s*[A-Za-z .'\-\/]+)?\s+"                             # optional location part
+                    r"("                                                           # begin date-range variants
+                      r"(?:"
+                        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
+                        r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}\s*[-–—]\s*"
+                        r"(?:Present|Current|"
+                        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
+                        r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}|\d{4})"
+                      r")"
+                      r"|"
+                      r"(?:\d{1,2}[\/\-]\d{4}\s*[-–—]\s*(?:Present|Current|\d{1,2}[\/\-]\d{4}))"   # 07/2015-09/2015
+                      r"|"
+                      r"(?:\d{4}\s*[-–—]\s*(?:Present|Current|\d{4}))"                              # 2018-2020, 2018-Present
+                    r")\b",
                     re.IGNORECASE,
                 )
-
                 fixed = []
                 for ln in kept_raw_lines:
                     m = header_tail_re.search(ln or "")
@@ -9317,6 +9334,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

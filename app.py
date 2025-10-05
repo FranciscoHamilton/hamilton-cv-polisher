@@ -8778,8 +8778,25 @@ def backfill_role_overviews_from_lossless(data: dict, lossless: dict) -> dict:
                 continue
             has_bullets = bool(role.get("bullets"))
             has_overview = bool((role.get("raw_text") or "").strip())
-            if not has_bullets or has_overview:
-                continue  # only backfill when bullets exist and raw_text is empty
+            # 0) Backfill role prose into raw_text if extractor put it elsewhere
+            rt = (role.get("raw_text") or "").strip()
+            prose_fields = []
+            for k in ("overview", "description", "summary", "details", "notes"):
+                v = role.get(k)
+                if isinstance(v, str) and v.strip():
+                    prose_fields.append(v.strip())
+
+            if not rt and prose_fields:
+                # If raw_text was empty, use the combined prose verbatim
+                role["raw_text"] = "\n".join(prose_fields)
+            elif prose_fields:
+                # If both exist, append prose that isn't already in raw_text
+                add = []
+                for block in prose_fields:
+                    for ln in block.splitlines():
+                        if ln.strip():
+                            add.append(ln)
+                role["raw_text"] = (rt + "\n" + "\n".join(add)).strip()
 
             title = (role.get("job_title") or "").strip()
             company = (role.get("company") or "").strip()
@@ -9053,6 +9070,16 @@ def sanitize_roles(data: dict) -> dict:
                         continue
                 fixed.append(ln)
             kept_raw_lines = fixed
+
+            # 4d) De-duplicate raw_text lines (case/space-insensitive), preserving order
+            seen = set()
+            deduped = []
+            for ln in kept_raw_lines:
+                key = re.sub(r"\s+", " ", (ln or "").strip().lower())
+                if key and key not in seen:
+                    seen.add(key)
+                    deduped.append(ln)
+            kept_raw_lines = deduped
 
             # 5) Write back
             new_raw = "\n".join([ln for ln in kept_raw_lines if ln.strip()]).strip()
@@ -9333,6 +9360,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

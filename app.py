@@ -3032,9 +3032,10 @@ def organize_prepass(cv_text: str) -> str:
 
         out = _strip_code_fences(out or "").strip()
         # Sanity check: ensure our headers are present; otherwise fall back to original.
-        if "## Professional Experience" in out and "## Education" in out:
+        if ("## Professional Summary" in out) and ("## Professional Qualifications" in out) and ("## Professional Experience" in out):
             return out
         return cv_text
+
     except Exception as e:
         print("organize_prepass failed, using original text:", e)
         return cv_text
@@ -9151,23 +9152,21 @@ def polish():
             sec = None
 
         # 3) Main extraction prefers normalized text
-        try:
-                    base = organize_prepass(text_norm)
+        base = organize_prepass(text_norm)
 
-                    # Fallback if the organized text seems to be missing content
-                    cov = _token_coverage(text_norm, base)
-                    min_cov = float(os.getenv("ORGANIZE_MIN_COVERAGE", "0.98"))
-                    print(f"[organize_prepass] coverage={cov:.3f} (min={min_cov})")
-                    if cov < min_cov:
-                        base = text_norm  # revert to original normalized text
+        # Fallback if the organized text seems to be missing content
+        cov = _token_coverage(text_norm, base)
+        min_cov = float(os.getenv("ORGANIZE_MIN_COVERAGE", "0.98"))
+        print(f"[organize_prepass] coverage={cov:.3f} (min={min_cov})")
+        if cov < min_cov:
+            base = text_norm  # revert to original normalized text
 
-                    if sec:
-                        combined = base + "\n\n---\nCANONICAL OUTLINE (verbatim lines for recall):\n" + render_lossless_for_extractor(sec)
-                    else:
-                        combined = base
+        if sec:
+            combined = base + "\n\n---\nCANONICAL OUTLINE (verbatim lines for recall):\n" + render_lossless_for_extractor(sec)
+        else:
+            combined = base
 
-                    data = ai_or_heuristic_structuring(combined)
-
+        data = ai_or_heuristic_structuring(combined)
 
         # 4) Union-merge: add anything the sectionizer found that the extractor missed
         try:
@@ -9261,6 +9260,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

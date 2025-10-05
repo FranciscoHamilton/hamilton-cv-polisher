@@ -2071,13 +2071,13 @@ if (skillForm){
             // Show banner + lock inputs
             over.style.display = 'flex';
             if (btn) { btn.dataset.orig = btn.textContent; btn.textContent = 'Polishing…'; btn.disabled = true; }
-            if (file) file.disabled = true;
+            // IMPORTANT: do NOT disable the file input here – let the browser send it
 
-            // Safety: if something stalls, auto-unlock after 60s
             setTimeout(function () {
+              // safety unlock
               over.style.display = 'none';
               if (btn) { btn.disabled = false; if (btn.dataset.orig) btn.textContent = btn.dataset.orig; }
-              if (file) file.disabled = false;
+              // no need to re-enable the file input because we never disabled it
             }, 60000);
           });
 
@@ -9469,6 +9469,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

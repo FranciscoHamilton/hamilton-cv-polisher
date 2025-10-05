@@ -9023,37 +9023,37 @@ def sanitize_roles(data: dict) -> dict:
 
             kept_raw_lines = filtered
             # 4c) Trim any trailing "next role header" glued onto a bullet/line
-                # e.g., "... Calculating statutory valuations ... Customer Solutions - Old Mutual Wealth, United Kingdom July 2015 - September 2015"
-                header_tail_re = re.compile(
-                    r"\b([A-Z][\w&.,'’()\-\/\s]{2,})"                              # company/team name
-                    r"(?:[,|]\s*[A-Za-z .'\-\/]+)?\s+"                             # optional location part
-                    r"("                                                           # begin date-range variants
-                      r"(?:"
-                        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
-                        r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}\s*[-–—]\s*"
-                        r"(?:Present|Current|"
-                        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
-                        r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}|\d{4})"
-                      r")"
-                      r"|"
-                      r"(?:\d{1,2}[\/\-]\d{4}\s*[-–—]\s*(?:Present|Current|\d{1,2}[\/\-]\d{4}))"   # 07/2015-09/2015
-                      r"|"
-                      r"(?:\d{4}\s*[-–—]\s*(?:Present|Current|\d{4}))"                              # 2018-2020, 2018-Present
-                    r")\b",
-                    re.IGNORECASE,
-                )
-                fixed = []
-                for ln in kept_raw_lines:
-                    m = header_tail_re.search(ln or "")
-                    # Only trim if the header tail starts AFTER some meaningful text (avoids nuking true headers)
-                    if m and m.start() > 10:
-                        ln = (ln[:m.start()] or "").rstrip(" -–|,")
-                        changed = True
-                        if not ln:
-                            # if the whole line was just the glued header, drop it
-                            continue
-                    fixed.append(ln)
-                kept_raw_lines = fixed
+            # e.g., "... Calculating statutory valuations ... Customer Solutions - Old Mutual Wealth, United Kingdom July 2015 - September 2015"
+            header_tail_re = re.compile(
+                r"\b([A-Z][\w&.,'’()\-\/\s]{2,})"                              # company/team name
+                r"(?:[,|]\s*[A-Za-z .'\-\/]+)?\s+"                             # optional location part
+                r"("                                                           # begin date-range variants
+                  r"(?:"
+                    r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
+                    r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}\s*[-–—]\s*"
+                    r"(?:Present|Current|"
+                    r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
+                    r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{2,4}|\d{4})"
+                  r")"
+                  r"|"
+                  r"(?:\d{1,2}[\/\-]\d{4}\s*[-–—]\s*(?:Present|Current|\d{1,2}[\/\-]\d{4}))"   # 07/2015-09/2015
+                    r"|"
+                  r"(?:\d{4}\s*[-–—]\s*(?:Present|Current|\d{4}))"                              # 2018-2020, 2018-Present
+                r")\b",
+                re.IGNORECASE,
+            )
+            fixed = []
+            for ln in kept_raw_lines:
+                m = header_tail_re.search(ln or "")
+                # Only trim if the header tail starts AFTER some meaningful text (avoids nuking true headers)
+                if m and m.start() > 10:
+                    ln = (ln[:m.start()] or "").rstrip(" -–|,")
+                    changed = True
+                    if not ln:
+                        # if the whole line was just the glued header, drop it
+                        continue
+                fixed.append(ln)
+            kept_raw_lines = fixed
 
             # 5) Write back
             new_raw = "\n".join([ln for ln in kept_raw_lines if ln.strip()]).strip()
@@ -9334,6 +9334,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

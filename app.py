@@ -3484,9 +3484,14 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     links = [s for s in (pi.get("links") or []) if s]
     if links: _add_center_line(doc, " | ".join(links), size=11, bold=False, space_after=6)
 
-    if cv.get("summary"):
-        _add_section_heading(doc, labels["summary"])
-        p = doc.add_paragraph(cv["summary"]); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
+    # --- EXECUTIVE SUMMARY ---
+    _add_section_heading(doc, labels["summary"])
+    summary_text = (cv.get("summary") or "").strip()
+    if summary_text:
+        p = doc.add_paragraph(summary_text)
+        p.paragraph_format.space_after = Pt(8)
+        _tone_runs(p, size=11, bold=False)
+        
     # --- PERSONAL INFORMATION ---
     pi = cv.get("personal_info") or {}
     nat = (pi.get("nationality") or "").strip()
@@ -3569,6 +3574,16 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     # Sort newest first; unknown years (-1) go last
     items.sort(key=lambda t: t[0], reverse=True)
 
+    # De-duplicate identical lines (case/space-insensitive), keep first occurrence verbatim
+    seen = set()
+    deduped = []
+    for yr, line, is_bold in items:
+        key = re.sub(r'\s+', ' ', (line or '').strip().lower())
+        if key not in seen:
+            seen.add(key)
+            deduped.append((yr, line, is_bold))
+    items = deduped
+
     # Render: one paragraph per item, same spacing, no bullets
     for _, line, is_bold in items:
         p = doc.add_paragraph()
@@ -3609,9 +3624,14 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 _tone_runs(meta_p, size=11, bold=False)
 
             if role.get("raw_text"):
-                rp = doc.add_paragraph(role["raw_text"])
-                rp.paragraph_format.space_after = Pt(0)
-                _tone_runs(rp, size=11, bold=False)
+                rt = (role["raw_text"] or "").strip()
+                # Drop if raw_text is just the header meta (date or date | location)
+                def _norm(s: str) -> str:
+                    return re.sub(r"\s+", " ", (s or "").replace("–", "-")).strip().lower()
+                if _norm(rt) and _norm(rt) not in (_norm(dates), _norm(meta)):
+                    rp = doc.add_paragraph(rt)
+                    rp.paragraph_format.space_after = Pt(0)
+                    _tone_runs(rp, size=11, bold=False)
 
             if role.get("bullets"):
                 # Org-configurable cap: overview (raw_text) is NEVER capped
@@ -8964,22 +8984,59 @@ def sanitize_roles(data: dict) -> dict:
                     changed = True
 
             # 4b) Remove date-only or company-only duplicates from raw_text
-            role_dates = (role.get("dates") or "").replace("–","-").strip().lower()
+            sd = (role.get("start_date") or "").strip()
+            ed = (role.get("end_date") or "").strip()
+            if role.get("currently_employed") and not ed:
+                ed = "Present"
+            header_dates = f"{sd} - {ed}".strip(" -")  # normalized with hyphen
+            # prefer role['dates'] if present, else build from start/end
+            role_dates = (role.get("dates") or header_dates).replace("–", "-").strip().lower()
             role_company = (role.get("company") or "").strip().lower()
             role_location = (role.get("location") or "").strip().lower()
+
             filtered = []
             for ln in kept_raw_lines:
-                ln_norm = re.sub(r'\s+', ' ', ln.replace("–","-")).strip().lower()
+                ln_norm = re.sub(r"\s+", " ", ln.replace("–", "-")).strip().lower()
+
                 # drop standalone date line (with or without location)
                 if ln_norm == role_dates or (role_location and ln_norm == f"{role_dates} | {role_location}"):
                     changed = True
                     continue
+
                 # drop exact company or "company, location" or "company | location"
-                if ln_norm == role_company or (role_location and (ln_norm == f"{role_company}, {role_location}" or ln_norm == f"{role_company} | {role_location}")):
+                if ln_norm == role_company:
                     changed = True
                     continue
+                if role_location and (ln_norm == f"{role_company}, {role_location}" or ln_norm == f"{role_company} | {role_location}"):
+                    changed = True
+                    continue
+
                 filtered.append(ln)
+
             kept_raw_lines = filtered
+            # 4c) Trim any trailing "next role header" glued onto a bullet/line
+                # e.g., "... Calculating statutory valuations ... Customer Solutions - Old Mutual Wealth, United Kingdom July 2015 - September 2015"
+                header_tail_re = re.compile(
+                    r"\b([A-Z][\w&.,'’()\-\s]{2,})(?:,\s*[A-Za-z .'\-]+)?\s+"
+                    r"(Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
+                    r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}\s*[-–]\s*"
+                    r"(Present|Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|"
+                    r"Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s*\d{0,4}\b",
+                    re.IGNORECASE,
+                )
+
+                fixed = []
+                for ln in kept_raw_lines:
+                    m = header_tail_re.search(ln or "")
+                    # Only trim if the header tail starts AFTER some meaningful text (avoids nuking true headers)
+                    if m and m.start() > 10:
+                        ln = (ln[:m.start()] or "").rstrip(" -–|,")
+                        changed = True
+                        if not ln:
+                            # if the whole line was just the glued header, drop it
+                            continue
+                    fixed.append(ln)
+                kept_raw_lines = fixed
 
             # 5) Write back
             new_raw = "\n".join([ln for ln in kept_raw_lines if ln.strip()]).strip()
@@ -9260,6 +9317,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

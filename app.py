@@ -9110,6 +9110,24 @@ def sanitize_roles(data: dict) -> dict:
                     deduped.append(ln)
             kept_raw_lines = deduped
 
+            # 4e) Bullet-stitch paragraph filter:
+            # If any raw_text line is essentially identical to a bullet (after normalisation),
+            # drop it from raw_text so we don't get "body text" repeated as bullets.
+            bullet_norms = { re.sub(r"\s+", " ", (b or "").strip()).lower() for b in bullets }
+            filtered_again = []
+            for ln in kept_raw_lines:
+                ln_norm = re.sub(r"\s+", " ", (ln or "").strip()).lower()
+                # raw line equals an existing bullet? drop it
+                if ln_norm in bullet_norms:
+                    changed = True
+                    continue
+                # raw line *looks* like a bullet that somehow survived earlier moves? drop it
+                if re.match(r'^\s*[•\u2022\-\u2013\*]\s+', ln or ""):
+                    changed = True
+                    continue
+                filtered_again.append(ln)
+            kept_raw_lines = filtered_again
+            
             # 5) Write back
             new_raw = "\n".join([ln for ln in kept_raw_lines if ln.strip()]).strip()
             role["raw_text"] = new_raw
@@ -9389,6 +9407,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

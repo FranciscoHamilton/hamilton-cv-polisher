@@ -6,8 +6,6 @@ from flask import Flask, request, send_file, render_template_string, abort, json
 from flask import session, redirect, url_for  # <-- ADDED earlier
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import HTTPException
-from gpt_formatter import extract_full_cv_content, format_to_hamilton_style
-from text_utils import extract_text_from_any
 def is_admin() -> bool:
     """Return True if the logged-in session user matches APP_ADMIN_USER."""
     try:
@@ -2964,6 +2962,95 @@ Rules:
 - Never omit prose just because bullets exist; use both "raw_text" and "bullets" when both are present.
 - Use "currently_employed": true when the role is ongoing; leave "end_date" empty in that case.
 """
+# ---------- Pre-pass: organize raw CV text (no rewriting) ----------
+# This reorganizes messy CV text into clean sections *without changing wording*.
+ORGANIZE_MODEL = os.getenv("OPENAI_ORGANIZE_MODEL", os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
+
+ORGANIZE_SYSTEM_PROMPT = """You are reorganizing a resume/CV.
+Output MUST be pure Markdown with these exact H2 headers and in this order:
+
+## Name and Contact
+## Professional Summary
+## Professional Qualifications
+## Professional Experience
+## Skills
+## Additional Information
+
+Rules:
+- Do NOT rephrase, summarize, or invent content. Preserve the original wording verbatim (you may normalize whitespace only).
+- Keep bullets, paragraphs, dates, employer names, job titles exactly as they appear.
+- Place any Education, Certifications, Licenses, Courses, Exams, Professional Memberships, and Qualifications content UNDER '## Professional Qualifications' (do not create separate 'Education' or 'Certifications' headers).
+- If you are unsure where some text belongs, put it under '## Additional Information'.
+- Do not add commentary or explanations. Output ONLY the organized CV text under those headers.
+"""
+
+def _strip_code_fences(s: str) -> str:
+    s = s.strip()
+    if s.startswith("```"):
+        s = s.strip("`")
+        # remove a leading language token like "markdown" or "json"
+        nl = s.find("\n")
+        if nl != -1:
+            first = s[:nl].strip().lower()
+            if first in ("markdown", "md", "text", "txt", "json"):
+                s = s[nl+1:].strip()
+    return s
+
+def organize_prepass(cv_text: str) -> str:
+    """
+    Returns a reorganized version of cv_text grouped into Hamilton-friendly sections.
+    If the OpenAI API key is missing or anything fails, returns cv_text unchanged.
+    """
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if not api_key:
+        return cv_text
+
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+        # Try the "chatCompletions" variant first (older SDK compatibility), then the modern one.
+        try:
+            resp = client.chatCompletions.create(
+                model=ORGANIZE_MODEL,
+                messages=[
+                    {"role": "system", "content": ORGANIZE_SYSTEM_PROMPT},
+                    {"role": "user", "content": cv_text},
+                ],
+                temperature=0,
+            )
+            out = resp.choices[0].message.content
+        except Exception:
+            resp = client.chat.completions.create(
+                model=ORGANIZE_MODEL,
+                messages=[
+                    {"role": "system", "content": ORGANIZE_SYSTEM_PROMPT},
+                    {"role": "user", "content": cv_text},
+                ],
+                temperature=0,
+            )
+            out = resp.choices[0].message.content
+
+        out = _strip_code_fences(out or "").strip()
+        # Sanity check: ensure our headers are present; otherwise fall back to original.
+        if "## Professional Experience" in out and "## Education" in out:
+            return out
+        return cv_text
+    except Exception as e:
+        print("organize_prepass failed, using original text:", e)
+        return cv_text
+# ---------- /Pre-pass ----------
+import re  # if already imported at top, you can remove this line
+
+def _token_coverage(original_text: str, organized_text: str) -> float:
+    """
+    Rough coverage metric: what fraction of unique word tokens from original_text
+    also appear in organized_text. If it's < 0.98, we treat the pre-pass as risky.
+    """
+    orig = set(re.findall(r"\w+", (original_text or "").lower()))
+    orgd = set(re.findall(r"\w+", (organized_text or "").lower()))
+    if not orig:
+        return 1.0
+    return len(orig & orgd) / len(orig)
 
 def ai_or_heuristic_structuring(cv_text: str) -> dict:
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
@@ -3325,185 +3412,6 @@ def _ensure_primary_header_spacer(doc: Docx):
     except Exception:
         pass
 
-def render_hamilton_from_text(doc, formatted):
-    """
-    Render a GPT-formatted CV into the exact Hamilton layout & styling:
-    - Centered name (bold), then Tel|Email, then Residence|Address|Location
-    - EXECUTIVE SUMMARY (heading shows even if empty)
-    - PERSONAL INFORMATION (prints 'Nationality: … | Marital Status: …' only)
-    - PROFESSIONAL QUALIFICATIONS (paragraphs, no bullets)
-    - PROFESSIONAL EXPERIENCE (role/company/location/dates as first line, duties as bullets)
-    - PROFESSIONAL SKILLS (bar-separated)
-    - REFERENCES ('Full references are available on request.')
-    """
-    # 1) Canonicalize into sections (keep 100% of content)
-    try:
-        sections = enforce_hamilton_order(formatted)
-    except Exception:
-        sections = {}
-        heads = [
-            "EXECUTIVE SUMMARY",
-            "PERSONAL INFORMATION",
-            "PROFESSIONAL QUALIFICATIONS",
-            "PROFESSIONAL SKILLS",
-            "PROFESSIONAL EXPERIENCE",
-            "REFERENCES",
-        ]
-        cur = None; buf = []
-        for line in (formatted or "").splitlines():
-            line_up = (line or "").strip().upper()
-            if line_up in heads:
-                if cur is not None:
-                    sections[cur] = "\n".join(buf).strip()
-                cur = line_up; buf = []
-            else:
-                buf.append(line)
-        if cur is not None:
-            sections[cur] = "\n".join(buf).strip()
-        for h in heads:
-            sections.setdefault(h, "")
-
-    # 2) Top banner (Name + contacts)
-    import re
-    pi_raw = (sections.get("PERSONAL INFORMATION") or "")
-    m_name = re.search(r'(?im)^\s*(?:name|full\s*name)\s*[:\-]\s*(.+)$', pi_raw)
-    full_name = (m_name.group(1).strip() if m_name else "").strip() or "Candidate"
-
-    m_email = re.search(r'(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}', pi_raw, re.I)
-    email = (m_email.group(0).strip() if m_email else "")
-    m_phone = re.search(r'(?im)(?:phone|tel(?:ephone)?|mobile)\s*[:\-]?\s*([+()\d][\d\s()+\-]{6,})', pi_raw)
-    phone = (m_phone.group(1).strip() if m_phone else "")
-    m_loc = re.search(r'(?im)^\s*location\s*[:\-]\s*(.+)$', pi_raw)
-    location = (m_loc.group(1).strip() if m_loc else "")
-    res_m = re.search(r'(?im)^\s*residence\s*[:\-]\s*(.+)$', pi_raw)
-    addr_m = re.search(r'(?im)^\s*address\s*[:\-]\s*(.+)$', pi_raw)
-    residence = (res_m.group(1).strip() if res_m else "")
-    address = (addr_m.group(1).strip() if addr_m else "")
-
-    name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    name_p.paragraph_format.space_after = Pt(2)
-    name_r = name_p.add_run(full_name)
-    name_r.font.name = "Calibri"; name_r.font.size = Pt(18); name_r.bold = True; name_r.font.color.rgb = SOFT_BLACK
-
-    _add_center_line(doc, f"Tel: {phone} | Email: {email}", size=11, bold=False, space_after=0)
-    _add_center_line(doc, f"Residence: {residence} | Address: {address} | Location: {location}", size=11, bold=False, space_after=6)
-
-    # 3) Nat/Mar for PI
-    nat_m = re.search(r'(?im)^\s*nationality\s*[:\-]\s*(.+)$', pi_raw)
-    mar_m = re.search(r'(?im)^\s*marital\s*status\s*[:\-]\s*(.+)$', pi_raw)
-    nat = (nat_m.group(1).strip() if nat_m else "")
-    mar = (mar_m.group(1).strip() if mar_m else "")
-
-    # 4) Render sections in the exact order (Skills AFTER Experience)
-    ORDER = [
-        "EXECUTIVE SUMMARY",
-        "PERSONAL INFORMATION",
-        "PROFESSIONAL QUALIFICATIONS",
-        "PROFESSIONAL EXPERIENCE",
-        "PROFESSIONAL SKILLS",
-        "REFERENCES",
-    ]
-
-    def _strip_md(s: str) -> str:
-        s = re.sub(r'(?m)^\s*#{1,6}\s*', '', s)
-        s = re.sub(r'\*\*(.+?)\*\*', r'\1', s)
-        s = re.sub(r'\*(.+?)\*', r'\1', s)
-        s = re.sub(r'(?m)^\s*(?:--+|—+)\s*$', '', s)
-        return s
-
-    def _skills_bar(text: str) -> str:
-        # Convert any bullets/commas/pipes/newlines to a single bar-separated line
-        parts = []
-        for l in (text or "").splitlines():
-            l = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip()
-            if not l: continue
-            parts.extend([p.strip() for p in re.split(r'\s*[|,;]\s*', l) if p.strip()])
-        # dedupe, preserve order
-        seen=set(); clean=[]
-        for p in parts:
-            k=p.lower()
-            if k not in seen:
-                seen.add(k); clean.append(p)
-        return " | ".join(clean)
-
-    for heading in ORDER:
-        _add_section_heading(doc, heading)
-        body = (sections.get(heading) or "").strip()
-
-        if heading == "PERSONAL INFORMATION":
-            line = f"Nationality: {nat} | Marital Status: {mar}"
-            p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8)
-            for run in p.runs:
-                run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-            continue
-
-        if heading == "EXECUTIVE SUMMARY":
-            # show heading even if empty; only add body if present
-            if not body:
-                continue
-
-        if heading == "REFERENCES":
-            ref_text = "Full references are available on request."
-            p = doc.add_paragraph(ref_text); p.paragraph_format.space_after = Pt(8)
-            for run in p.runs:
-                run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-            continue
-
-        if heading == "PROFESSIONAL SKILLS":
-            bar = _skills_bar(body)
-            p = doc.add_paragraph(bar); p.paragraph_format.space_after = Pt(8)
-            for run in p.runs:
-                run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-            continue
-
-        if heading == "PROFESSIONAL QUALIFICATIONS":
-            # paragraphs only
-            for line in [l for l in (body or "").splitlines() if l.strip()]:
-                txt = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', line).strip()
-                if not txt: continue
-                p = doc.add_paragraph(txt)
-                p.paragraph_format.space_after = Pt(8)
-                for run in p.runs:
-                    run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-            continue
-
-        if not body:
-            continue
-
-        # EXPERIENCE + generic sections: split blocks, clean md, bullets vs paragraphs
-        blocks = re.split(r"\n\s*\n", body)
-        for block in blocks:
-            blk = _strip_md((block or "").strip())
-            if not blk:
-                continue
-
-            lines = [l.strip() for l in blk.splitlines() if l.strip()]
-            marker_rx = re.compile(r'^\s*(?:[-•o]|\*)\s+')
-            markers = sum(1 for l in lines if marker_rx.match(l))
-            listy = markers >= max(2, int(0.6 * len(lines)))
-
-            # In EXPERIENCE, try to treat the first line as a header (role/company/location/dates)
-            if heading == "PROFESSIONAL EXPERIENCE" and lines:
-                first = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', lines[0]).strip()
-                if re.search(r'\b(\d{4}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|Present)\b', first, re.I):
-                    p = doc.add_paragraph(first); p.paragraph_format.space_after = Pt(4)
-                    for run in p.runs:
-                        run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-                    lines = lines[1:]
-                    listy = True  # remaining lines become bullets if any
-
-            if listy and lines:
-                for l in lines:
-                    text = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip()
-                    if not text: continue
-                    p = doc.add_paragraph(); r = p.add_run(f"• {text}")
-                    r.font.name = "Calibri"; r.font.size = Pt(11); r.font.color.rgb = SOFT_BLACK
-                    p.paragraph_format.space_after = Pt(2)
-            else:
-                p = doc.add_paragraph(blk); p.paragraph_format.space_after = Pt(8)
-                for run in p.runs:
-                    run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-
 # ---------- Compose CV ----------
 def get_org_pref(cv: dict, key: str, default=None):
     try:
@@ -3532,190 +3440,6 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         doc = Docx()
 
     _remove_all_body_content(doc)
-    
-     # GPT-formatted path: render with Hamilton styles
-    if "hamilton_formatted_text" in cv:
-        formatted = cv["hamilton_formatted_text"]
-
-        # Render with strict Hamilton rules (Skills after Experience), styled
-        render_hamilton_from_text(doc, formatted)
-
-        # Finish & return
-        _ensure_primary_header_spacer(doc)
-        out = Path("/tmp/polished_cv.docx")
-        doc.save(str(out))
-        _zip_scrub_header_labels(out)
-        return out
-
-        # If our section-enforcer is available, fold/normalize first
-        try:
-            sections = enforce_hamilton_order(formatted)
-        except Exception:
-            # Fallback: naive split using our six headings in order
-            sections = {}
-            heads = [
-                "EXECUTIVE SUMMARY",
-                "PERSONAL INFORMATION",
-                "PROFESSIONAL QUALIFICATIONS",
-                "PROFESSIONAL SKILLS",
-                "PROFESSIONAL EXPERIENCE",
-                "REFERENCES",
-            ]
-            cur = None; buf = []
-            for line in (formatted or "").splitlines():
-                line_up = (line or "").strip().upper()
-                if line_up in heads:
-                    if cur is not None:
-                        sections[cur] = "\n".join(buf).strip()
-                    cur = line_up; buf = []
-                else:
-                    buf.append(line)
-            if cur is not None:
-                sections[cur] = "\n".join(buf).strip()
-            for h in heads:
-                sections.setdefault(h, "")
-
-        # --- Centered name / contact banner (from PERSONAL INFORMATION) ---
-        pi_raw = (sections.get("PERSONAL INFORMATION") or "")
-
-        # Full name
-        m_name = re.search(r'(?im)^\s*(?:name|full\s*name)\s*[:\-]\s*(.+)$', pi_raw)
-        full_name = (m_name.group(1).strip() if m_name else "").strip() or "Candidate"
-
-        # Email
-        m_email = re.search(r'(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}', pi_raw, re.I)
-        email = (m_email.group(0).strip() if m_email else "")
-
-        # Phone
-        m_phone = re.search(r'(?im)(?:phone|tel(?:ephone)?|mobile)\s*[:\-]?\s*([+()\d][\d\s()+\-]{6,})', pi_raw)
-        phone = (m_phone.group(1).strip() if m_phone else "")
-
-        # Location
-        m_loc = re.search(r'(?im)^\s*location\s*[:\-]\s*(.+)$', pi_raw)
-        location = (m_loc.group(1).strip() if m_loc else "")
-
-        # Render name (Calibri 18 bold, centered)
-        name_p = doc.add_paragraph()
-        name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        name_p.paragraph_format.space_after = Pt(2)
-        name_r = name_p.add_run(full_name or "Candidate")
-        name_r.font.name = "Calibri"; name_r.font.size = Pt(18); name_r.bold = True; name_r.font.color.rgb = SOFT_BLACK
-
-        # New: always show labels, even if values are blank.
-        # Also include Residence and Address (pulled from PERSONAL INFORMATION if present).
-        res_m = re.search(r'(?im)^\s*(?:residence)\s*[:\-]\s*(.+)$', pi_raw)
-        addr_m = re.search(r'(?im)^\s*(?:address)\s*[:\-]\s*(.+)$', pi_raw)
-        residence = (res_m.group(1).strip() if res_m else "")
-        address   = (addr_m.group(1).strip() if addr_m else "")
-
-        _add_center_line(doc, f"Tel: {phone} | Email: {email}", size=11, bold=False, space_after=0)
-        _add_center_line(doc, f"Residence: {residence} | Address: {address} | Location: {location}", size=11, bold=False, space_after=6)
-
-        # Extract nationality & marital status from PERSONAL INFORMATION
-        nat_m = re.search(r'(?im)^\s*nationality\s*[:\-]\s*(.+)$', pi_raw)
-        mar_m = re.search(r'(?im)^\s*marital\s*status\s*[:\-]\s*(.+)$', pi_raw)
-        nat = (nat_m.group(1).strip() if nat_m else "")
-        mar = (mar_m.group(1).strip() if mar_m else "")
-
-        # Now render each Hamilton section with your styles
-        for heading in [
-            "EXECUTIVE SUMMARY",
-            "PERSONAL INFORMATION",
-            "PROFESSIONAL QUALIFICATIONS",
-            "PROFESSIONAL SKILLS",
-            "PROFESSIONAL EXPERIENCE",
-            "REFERENCES",
-        ]:
-            _add_section_heading(doc, heading)
-            body = (sections.get(heading) or "").strip()
-
-            # PERSONAL INFORMATION prints the line even if body is empty
-            if heading == "PERSONAL INFORMATION":
-                line = f"Nationality: {nat} | Marital Status: {mar}"
-                p = doc.add_paragraph(line)
-                p.paragraph_format.space_after = Pt(8)
-                for run in p.runs:
-                    run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-                # If GPT provided no extra PI text, move on; otherwise let the rest render
-                if not body:
-                    continue
-
-            # For all other sections, skip if empty (keep headings for Exec Summary & PI)
-            if not body and heading not in ("EXECUTIVE SUMMARY", "PERSONAL INFORMATION"):
-                continue
-
-            # Split into blocks by blank line; render bullets vs paragraphs
-            blocks = re.split(r"\n\s*\n", body)
-            for block in blocks:
-                blk = (block or "").strip()
-                blk = re.sub(r'(?m)^\s*#{1,6}\s*', '', blk)          # remove leading ### markdown headings
-                blk = re.sub(r'\*\*(.+?)\*\*', r'\1', blk)           # **bold** -> plain
-                blk = re.sub(r'\*(.+?)\*', r'\1', blk)               # *italic* -> plain
-                blk = re.sub(r'(?m)^\s*(?:--+|—+)\s*$', '', blk)     # drop lines that are just dashes/em-dashes
-                if not blk:
-                    continue
-
-                if heading == "PROFESSIONAL QUALIFICATIONS":
-                    # Force paragraphs: every non-empty line becomes its own paragraph (no bullets)
-                    items = [re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip() for l in blk.splitlines()]
-                    items = [i for i in items if i]
-                    for item in items:
-                        p = doc.add_paragraph(item)
-                        p.paragraph_format.space_after = Pt(8)
-                        for run in p.runs:
-                            run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-                    continue
-
-                # Heuristic: if the block looks like a list, output as bullets
-                lines = [l.strip() for l in blk.splitlines() if l.strip()]
-                marker_rx = re.compile(r'^\s*(?:[-•o]|\*)\s+')
-                markers = sum(1 for l in lines if marker_rx.match(l))
-                listy = markers >= max(2, int(0.6 * len(lines)))
-
-                if listy:
-                    for l in lines:
-                        text = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip()
-                        p = doc.add_paragraph()
-                        r = p.add_run(f"• {text}")
-                        r.font.name = "Calibri"; r.font.size = Pt(11); r.font.color.rgb = SOFT_BLACK
-                        p.paragraph_format.space_after = Pt(2)
-                else:
-                    p = doc.add_paragraph(blk)
-                    p.paragraph_format.space_after = Pt(8)
-                    for run in p.runs:
-                        run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-                continue                
-                
-                # Heuristic: if the block looks like a list, output as bullets
-                lines = [l.strip() for l in blk.splitlines() if l.strip()]
-                marker_rx = re.compile(r'^\s*(?:[-•o]|\*)\s+')
-                markers = sum(1 for l in lines if marker_rx.match(l))
-                listy = markers >= max(2, int(0.6 * len(lines)))
-
-                # Count true bullet markers only: "- ", "• ", "o ", "* " (star+space), not "**…", "###…"
-                marker_rx = re.compile(r'^\s*(?:[-•o]|\*)\s+')
-                markers = sum(1 for l in lines if marker_rx.match(l))
-                listy = markers >= max(2, int(0.6 * len(lines)))
-                if listy:
-                    for l in lines:
-                        text = re.sub(r'^\s*(?:[-•o]|\*)\s+', '', l).strip()
-                        p = doc.add_paragraph()
-                        r = p.add_run(f"• {text}")
-                        r.font.name = "Calibri"; r.font.size = Pt(11); r.font.color.rgb = SOFT_BLACK
-                        p.paragraph_format.space_after = Pt(2)
-                else:
-                    p = doc.add_paragraph(blk)
-                    p.paragraph_format.space_after = Pt(8)
-                    for run in p.runs:
-                        run.font.name = "Calibri"; run.font.size = Pt(11); run.font.color.rgb = SOFT_BLACK
-
-        # Finish & return when GPT-formatted text is present
-        _ensure_primary_header_spacer(doc)
-        out = Path("/tmp/polished_cv.docx")
-        doc.save(str(out))
-        _zip_scrub_header_labels(out)
-        return out
-
     # Profile-based labels (optional, per-org)
     labels = {
         "summary": "EXECUTIVE SUMMARY",
@@ -3740,6 +3464,8 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     spacer = doc.add_paragraph(); spacer.paragraph_format.space_after = Pt(6)
 
+    pi = (cv or {}).get("personal_info") or {}
+    full_name = (pi.get("full_name") or "Candidate").strip()
     name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER; name_p.paragraph_format.space_after = Pt(2)
     name_r = name_p.add_run(full_name)
     name_r.font.name="Calibri"; name_r.font.size=Pt(18); name_r.bold=True; name_r.font.color.rgb=SOFT_BLACK
@@ -3773,6 +3499,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     _tone_runs(p, size=11, bold=False)
 
     # --- PROFESSIONAL QUALIFICATIONS (Certifications + Education, unified, spaced, sorted) ---
+    import re  # keep here (file has no 'import re' earlier)
 
     quals = [q for q in (cv.get("certifications") or []) if q]
     edu = cv.get("education") or []
@@ -3913,7 +3640,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     _ensure_primary_header_spacer(doc)
 
-    out = Path("/tmp/polished_cv.docx")
+    out = PROJECT_DIR / "polished_cv.docx"
     doc.save(str(out))
     _zip_scrub_header_labels(out)
     return out
@@ -9022,9 +8749,8 @@ def backfill_role_overviews_from_lossless(data: dict, lossless: dict) -> dict:
                 continue
             has_bullets = bool(role.get("bullets"))
             has_overview = bool((role.get("raw_text") or "").strip())
-            # If the role already has an overview, skip backfill.
-            if has_overview:
-                continue
+            if not has_bullets or has_overview:
+                continue  # only backfill when bullets exist and raw_text is empty
 
             title = (role.get("job_title") or "").strip()
             company = (role.get("company") or "").strip()
@@ -9356,203 +9082,104 @@ def director_logout():
     session.pop("director", None)
     return redirect(url_for("app_page"))
 
-# ---- Hamilton format enforcement ----
-HAMILTON_HEADINGS = [
-    "EXECUTIVE SUMMARY",
-    "PERSONAL INFORMATION",
-    "PROFESSIONAL QUALIFICATIONS",
-    "PROFESSIONAL SKILLS",
-    "PROFESSIONAL EXPERIENCE",
-    "REFERENCES",
-]
-
-# Map alternate/stray headings to their Hamilton target
-HEADING_ALIASES = {
-    r"\bSUMMARY\b": "EXECUTIVE SUMMARY",
-    r"\bPERSONAL PROFILE\b": "EXECUTIVE SUMMARY",
-    r"\bPERSONAL DETAILS\b": "PERSONAL INFORMATION",
-    r"\bCONTACT\b": "PERSONAL INFORMATION",
-    r"\bEDUCATION\b": "PROFESSIONAL QUALIFICATIONS",
-    r"\bCERTIFICATIONS?\b": "PROFESSIONAL QUALIFICATIONS",
-    r"\bQUALIFICATIONS?\b": "PROFESSIONAL QUALIFICATIONS",
-    r"\bCORE SKILLS\b": "PROFESSIONAL SKILLS",
-    r"\bOTHER SKILLS\b": "PROFESSIONAL SKILLS",
-    r"\bTECHNICAL SKILLS\b": "PROFESSIONAL SKILLS",
-    r"\bSKILLS\b": "PROFESSIONAL SKILLS",
-    r"\bEXPERIENCE\b": "PROFESSIONAL EXPERIENCE",
-    r"\bWORK EXPERIENCE\b": "PROFESSIONAL EXPERIENCE",
-    r"\bREFERENCES?\b": "REFERENCES",
-}
-HEADING_RE = re.compile(r"^\s*(?:\-|\*|#{1,3}\s*)?([A-Z][A-Z \/\-&]+)\s*$", re.MULTILINE)
-
-def _canonical_heading(h: str) -> str:
-    h_up = re.sub(r"\s+", " ", h.strip().upper())
-    for pat, target in HEADING_ALIASES.items():
-        if re.search(pat, h_up, re.IGNORECASE):
-            return target
-    for std in HAMILTON_HEADINGS:
-        if h_up == std:
-            return std
-    # Unknown headings go to Qualifications to keep content
-    return "PROFESSIONAL QUALIFICATIONS"
-
-def enforce_hamilton_order(full_text: str) -> dict:
-    """
-    Parse a GPT-formatted text into Hamilton sections, fold aliases, keep 100% of content.
-    """
-    sections = {}
-    matches = list(HEADING_RE.finditer(full_text or ""))
-    if not matches:
-        sections = {h: "" for h in HAMILTON_HEADINGS}
-        sections["EXECUTIVE SUMMARY"] = (full_text or "").strip()
-        if not sections["REFERENCES"].strip():
-            sections["REFERENCES"] = "References available on request."
-        return sections
-
-    for i, m in enumerate(matches):
-        heading = _canonical_heading(m.group(1))
-        start = m.end()
-        end = matches[i+1].start() if i + 1 < len(matches) else len(full_text)
-        body = full_text[start:end].strip()
-        sections.setdefault(heading, "")
-        sections[heading] += ("\n\n" + body if sections[heading] else body)
-
-    for h in HAMILTON_HEADINGS:
-        sections.setdefault(h, "")
-
-    if not sections["REFERENCES"].strip():
-        sections["REFERENCES"] = "References available on request."
-    return sections
-
-def rebuild_hamilton_text(sections: dict) -> str:
-    out = []
-    for h in HAMILTON_HEADINGS:
-        out.append(h)
-        out.append("")
-        body = (sections.get(h) or "").rstrip()
-        if body:
-            out.append(body)
-        out.append("\n")
-    return "\n".join(out).strip()
-
-# ---- Skills helpers ----
-def _normalize_to_bullets(text: str) -> list:
-    lines = [re.sub(r"^[\-\*\u2022]\s*", "", l).strip()
-             for l in re.split(r"[\r\n]+", text or "")]
-    out = []
-    for l in lines:
-        if not l:
-            continue
-        parts = re.split(r"\s*[|,;]\s*", l)
-        out.extend([p for p in parts if p])
-    seen = set()
-    dedup = []
-    for s in out:
-        k = s.lower()
-        if k not in seen:
-            seen.add(k)
-            dedup.append(s)
-    return dedup
-
-def _render_bullets(items: list) -> str:
-    return "\n".join(f"- {i}" for i in items)
-
 # ---------- App polishing + API (org-aware credits) ----------
 @app.post("/polish")
 def polish():
+    # Always reprocess (no caching)
     f = request.files.get("cv")
     if not f:
         abort(400, "No file uploaded")
 
-    try:
-        # Step 0: Extract raw text from file
-        text = extract_text_from_any(f)
+    with tempfile.TemporaryDirectory() as td:
+        p = Path(td) / f.filename
+        f.save(str(p))
 
-        # Step 0.5: Normalize text
+        text = extract_text_any(p)
+        if not text or len(text.strip()) < 30:
+            abort(400, "Couldn't read enough text. If it's a scanned PDF, please use a DOCX or an OCRed PDF.")
+
+        # --- Pre-check credits (org-aware). Admin bypasses. ---
+        try:
+            uid_check = int(session.get("user_id") or 0)
+        except Exception:
+            uid_check = 0
+
+        try:
+            can_bypass = (session.get("user","").strip().lower() == "admin") or bool(session.get("is_admin"))
+        except Exception:
+            can_bypass = False
+
+        if DB_POOL and uid_check > 0 and not can_bypass:
+            # If the user belongs to an org, check the org pool; otherwise check personal balance.
+            try:
+                org_id = _user_org_id(uid_check)
+            except Exception:
+                org_id = None
+
+            try:
+                if org_id:
+                    bal = org_balance(org_id)
+                    if bal <= 0:
+                        raise PaymentRequired("No credits remaining for your organization. Please top up to continue.")
+                    # Optional per-user monthly cap (only applies if a cap is set)
+                    cap = get_user_monthly_cap(org_id, uid_check)
+                    if cap is not None:
+                        spent = org_user_spent_this_month(org_id, uid_check)
+                        if spent >= cap:
+                            raise PaymentRequired("Your monthly polish limit has been reached. Ask your director to raise your cap.")
+                else:
+                    row = db_query_one("SELECT COALESCE(SUM(delta),0) FROM credits_ledger WHERE user_id=%s", (uid_check,))
+                    bal = int(row[0]) if row else 0
+                    if bal <= 0:
+                        raise PaymentRequired("No credits remaining for this account. Please top up to continue.")
+            except Exception as e:
+                # If balance check fails, don't block polishing; just log
+                print("credits precheck failed:", e)
+
+        
+        # ---- Polishing logic (enhanced, non-destructive) ----
+        # 1) Normalize messy PDF text
         try:
             text_norm = normalize_cv_text(text)
         except Exception:
             text_norm = text
 
-        # Step 1: GPT-based CV extraction
-        try:
-            extracted = extract_full_cv_content(text_norm)
-            formatted = format_to_hamilton_style(extracted)
-            # 1) Force Hamilton headings/order & fold strays (Education -> Qualifications, etc.)
-            sections = enforce_hamilton_order(formatted)
-
-            # 2) Professional Skills must come from the client's configured list, then append extras
-            try:
-                # Try to resolve client/org; adapt this to however you pass the client (query, header, template, etc.)
-                client_slug = (request.args.get("client") or "hamilton").lower()
-
-                # You likely have this in your platform code; adjust the import/name as needed.
-                # Fallback safely to empty list if not available.
-                try:
-                    from platform_config import get_client_skills  # your existing function
-                    client_skills = get_client_skills(client_slug) or []
-                except Exception:
-                    client_skills = []
-
-                cand_skills = _normalize_to_bullets(sections.get("PROFESSIONAL SKILLS", ""))
-
-                # Intersect in the order of the client's configured list
-                cand_set = {c.lower() for c in cand_skills}
-                matched = [s for s in client_skills if s.lower() in cand_set]
-
-                # Extra skills from CV not on the client's list
-                client_lc = [s.lower() for s in client_skills]
-                extras = [c for c in cand_skills if c.lower() not in client_lc]
-
-                # Build bar-separated lines instead of bullets
-                def _bar_join(seq):
-                    return " | ".join([s for s in (seq or []) if s])
-
-                lines = []
-                if matched:
-                    lines.append(_bar_join(matched))
-                elif client_skills:
-                    # no overlap, still show the client's configured list
-                    lines.append(_bar_join(client_skills))
-                else:
-                    # no client config: show candidate skills from CV
-                    lines.append(_bar_join(cand_skills))
-
-                if extras:
-                    extras_line = _bar_join(extras)
-                    if extras_line:
-                        lines.append("")  # spacer
-                        lines.append(f"Additional Skills (from CV): {extras_line}")
-
-                new_skills_text = "\n".join(lines).strip()
-                sections["PROFESSIONAL SKILLS"] = new_skills_text
-            except Exception:
-                # On any failure, do not lose content
-                pass
-
-            # 3) Rebuild one Hamilton-formatted block for the builder
-            hamilton_text = rebuild_hamilton_text(sections)
-
-            # Replace data payload to drive the builder via the Hamilton text path
-            data = {"hamilton_formatted_text": hamilton_text}
-        except Exception as e:
-            print("GPT formatting failed:", e)
-            return make_response(("Polish failed during GPT formatting: " + str(e)), 400)
-
-        # Step 2: Add back your legacy polish logic
-
-        # --- Sectionizer + merging (optional) ---
+        # 2) Lossless re-sectionization (no new wording)
         try:
             sec = lossless_sectionize(text_norm)
         except Exception:
             sec = None
 
-        if sec:
-            data = deep_merge_lossless(data, sec)
-        data = backfill_role_overviews_from_lossless(data, sec)
-        data = sanitize_roles(data)
+        # 3) Main extraction prefers normalized text
+        try:
+                    base = organize_prepass(text_norm)
 
-        # --- Legacy skill extraction ---
+                    # Fallback if the organized text seems to be missing content
+                    cov = _token_coverage(text_norm, base)
+                    min_cov = float(os.getenv("ORGANIZE_MIN_COVERAGE", "0.98"))
+                    print(f"[organize_prepass] coverage={cov:.3f} (min={min_cov})")
+                    if cov < min_cov:
+                        base = text_norm  # revert to original normalized text
+
+                    if sec:
+                        combined = base + "\n\n---\nCANONICAL OUTLINE (verbatim lines for recall):\n" + render_lossless_for_extractor(sec)
+                    else:
+                        combined = base
+
+                    data = ai_or_heuristic_structuring(combined)
+
+
+        # 4) Union-merge: add anything the sectionizer found that the extractor missed
+        try:
+            if sec:
+                data = deep_merge_lossless(data, sec)
+            data = backfill_role_overviews_from_lossless(data, sec)
+            data = sanitize_roles(data)   
+            
+        except Exception:
+            pass
+
+        # 5) Keep legacy skills extraction, then merge (don’t overwrite)
         try:
             legacy_sk = extract_top_skills(text_norm)
             if legacy_sk:
@@ -9567,30 +9194,30 @@ def polish():
         except Exception:
             pass
 
-        # --- Final Hamilton postprocessing ---
+        # 6) Map to Hamilton fields & fix-ups (never drop info)
         try:
             data = postprocess_to_hamilton(data, raw_text=text_norm)
         except Exception:
             pass
+        # ---- /Polishing logic (enhanced) ----
 
-        # Step 3: Handle org-specific templates
-        template_override = None
         try:
-            oid = _current_user_org_id()
-            if oid:
-                row = db_query_one("SELECT template_path FROM orgs WHERE id=%s", (oid,))
-                if row and row[0]:
-                    pth = Path(row[0])
-                    if pth.exists():
-                        template_override = str(pth)
-        except Exception as e:
-            print("Template resolve failed:", e)
+            # Optional per-org DOCX template (falls back to default if none)
+            template_override = None
+            try:
+                oid = _current_user_org_id()
+                if oid:
+                    row = db_query_one("SELECT template_path FROM orgs WHERE id=%s", (oid,))
+                    if row and row[0]:
+                        pth = Path(row[0])
+                        if pth.exists():
+                            template_override = str(pth)
+            except Exception as e:
+                print("template resolve failed:", e)
 
-        # Step 4: Build final DOCX
-        out = build_cv_document(data, template_override=template_override)
+            out = build_cv_document(data, template_override=template_override)
 
-        # Step 5: Track stats / usage (optional)
-        try:
+            # ---- Update legacy JSON stats (for continuity) ----
             candidate_name = (data.get("personal_info") or {}).get("full_name") or f.filename
             now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             STATS["downloads"] = int(STATS.get("downloads", 0)) + 1
@@ -9599,34 +9226,41 @@ def polish():
             STATS.setdefault("history", [])
             STATS["history"].append({"candidate": candidate_name, "filename": f.filename, "ts": now})
             _save_stats()
+
+            # --- Log usage + debit one org credit (best-effort; never blocks) ---
+            try:
+                uid = int(session.get("user_id") or 0)
+                if uid:
+                    log_usage_event(uid, f.filename, candidate_name)
+                    can_bypass = (session.get("user","").strip().lower() == "admin") or bool(session.get("is_admin"))
+                    if not can_bypass:
+                        oid = _current_user_org_id()
+                        if DB_POOL and oid:
+                            db_execute(
+                                "INSERT INTO org_credits_ledger (org_id, delta, reason, created_by) VALUES (%s, -1, %s, %s)",
+                                (oid, 'polish', uid)
+                            )
+            except Exception as e:
+                print("post-polish usage/credit write failed:", e)
+
+            # ---- Optional: decrement trial credits (legacy session) ----
+            try:
+                left = int(session.get("trial_credits", 0))
+                if left > 0:
+                    session["trial_credits"] = max(0, left - 1)
+            except Exception:
+                pass
+
+            # ---- Return the polished file ----
+            resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
+            resp.headers["Cache-Control"] = "no-store"
+            return resp
+
         except Exception as e:
-            print("stats failed:", e)
-
-        # Step 6: Return the DOCX
-        return send_file(
-            str(out),
-            as_attachment=True,
-            download_name="polished_cv.docx"
-        )
-
-    except Exception as e:
-        import traceback
-        print("Polish failed:", e, traceback.format_exc())
-        return make_response(("Polish failed: " + str(e)), 500)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+            # If anything fails above, do NOT 500. Return a readable error for the front-end.
+            import traceback
+            print("polish failed:", e, traceback.format_exc())
+            return make_response(("Polish failed: " + str(e)), 400)
 
 
 

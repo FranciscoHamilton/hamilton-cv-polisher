@@ -2046,6 +2046,49 @@ if (skillForm){
 
           <div style="margin-top:12px"><button id="btn" type="submit">Polish & Download</button></div>
         </form>
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          const form = document.getElementById('upload-form');
+          if (!form) return;
+
+          const btn  = form.querySelector('button[type="submit"]') || document.getElementById('btn');
+          const file = document.getElementById('cv');
+
+          // Create a simple overlay (no CSS file needed)
+          const over = document.createElement('div');
+          over.id = 'busyOverlay';
+          over.textContent = 'Polishing… please wait';
+          over.style.cssText = [
+            'position:fixed','inset:0','display:none',
+            'align-items:center','justify-content:center',
+            'background:rgba(255,255,255,.75)',
+            'font:600 18px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif',
+            'z-index:9999'
+          ].join(';');
+          document.body.appendChild(over);
+
+          form.addEventListener('submit', function () {
+            // Show banner + lock inputs
+            over.style.display = 'flex';
+            if (btn) { btn.dataset.orig = btn.textContent; btn.textContent = 'Polishing…'; btn.disabled = true; }
+            if (file) file.disabled = true;
+
+            // Safety: if something stalls, auto-unlock after 60s
+            setTimeout(function () {
+              over.style.display = 'none';
+              if (btn) { btn.disabled = false; if (btn.dataset.orig) btn.textContent = btn.dataset.orig; }
+              if (file) file.disabled = false;
+            }, 60000);
+          });
+
+          // When browser returns from download (bfcache), ensure UI is reset
+          window.addEventListener('pageshow', function () {
+            over.style.display = 'none';
+            if (btn) { btn.disabled = false; if (btn.dataset.orig) btn.textContent = btn.dataset.orig; }
+            if (file) file.disabled = false;
+          });
+        });
+        </script>
       </div>
       <!-- Convert CV (PDF → Word) -->
       <div class="card" style="margin-top:16px">
@@ -9426,6 +9469,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

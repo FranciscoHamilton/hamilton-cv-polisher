@@ -9510,8 +9510,24 @@ def polish():
                 pass
 
             # ---- Return the polished file ----
-            resp = make_response(send_file(str(out), as_attachment=True, download_name="polished_cv.docx"))
+            # (make sure `from flask import request` is imported at the top of the file)
+            resp = make_response(
+                send_file(str(out), as_attachment=True, download_name="polished_cv.docx")
+            )
             resp.headers["Cache-Control"] = "no-store"
+
+            # echo back the one-time token so the front-end can hide the banner as soon as headers go out
+            token = (request.form.get("downloadToken") or "").strip()
+            if token:
+                resp.set_cookie(
+                    "dlToken",
+                    token,
+                    max_age=120,
+                    secure=True,   # set to False only if testing on http://localhost
+                    samesite="Lax",
+                    path="/",
+                )
+
             return resp
 
         except Exception as e:
@@ -9519,6 +9535,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

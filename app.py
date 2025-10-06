@@ -2028,6 +2028,7 @@ if (skillForm){
       <div class="card">
         <h3>Polish CV</h3>
         <form id="upload-form" method="post" action="/polish" enctype="multipart/form-data" target="dlFrame">
+          <input type="hidden" name="downloadToken" id="downloadToken" value="">
           <label for="cv">Raw CV (PDF / DOCX / TXT)</label><br/>
           <input id="cv" type="file" name="cv" accept=".pdf,.docx,.txt" required />
           <div class="ts" style="margin-top:4px">Header (logo &amp; bar) preserved from Hamilton template.</div>
@@ -2055,6 +2056,7 @@ if (skillForm){
           const btn  = form.querySelector('button[type="submit"]') || document.getElementById('btn');
           const file = document.getElementById('cv');
           const frame = document.getElementById('dlFrame');
+          const tokenEl = document.getElementById('downloadToken');
 
           // Create a simple overlay (no CSS file needed)
           const over = document.createElement('div');
@@ -2073,12 +2075,32 @@ if (skillForm){
             // Show banner + lock inputs
             over.style.display = 'flex';
             if (btn) { btn.dataset.orig = btn.textContent; btn.textContent = 'Polishing…'; btn.disabled = true; }
+            
             // IMPORTANT: do NOT disable the file input here – let the browser send it
+
+            // Generate a one-time token and put it in the hidden input
+            const token = 'dl_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+            if (tokenEl) tokenEl.value = token;
+
+            // Poll for the cookie the server will set as soon as headers are sent
+            var cookieWatch = setInterval(function () {
+              const match = document.cookie.split('; ').find(r => r.startsWith('dlToken='));
+              if (match && match.split('=')[1] === token) {
+                clearInterval(cookieWatch);
+                // Clear banner & unlock immediately when headers arrive (download is starting)
+                over.style.display = 'none';
+                if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
+                // clean the cookie (best-effort; server also sets short max-age)
+                document.cookie = 'dlToken=; Max-Age=0; Path=/; SameSite=Lax';
+              }
+            }, 250);
+
             // Hide banner when the iframe (target="dlFrame") finishes loading the response
           if (frame) {
             const onLoad = function () {
               over.style.display = 'none';
               if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
+              if (typeof cookieWatch !== 'undefined') clearInterval(cookieWatch); 
               frame.removeEventListener('load', onLoad);
             };
             frame.addEventListener('load', onLoad, { once: true });
@@ -6095,12 +6117,31 @@ def pdf2word_convert():
     outname = filename.rsplit(".", 1)[0] + ".docx"
     buf = BytesIO(dl.content)
     buf.seek(0)
-    return send_file(
-        buf,
+    from flask import request, send_file  # (ensure these are imported at top)
+
+    # ... right before returning the file ...
+    token = request.form.get("downloadToken", "")
+
+    resp = send_file(
+        output_path,  # ← keep your existing path variable here
         as_attachment=True,
-        download_name=outname,
+        download_name=dl_name,  # ← keep your existing filename variable here
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        max_age=0,
+        conditional=False,
     )
+    
+    if token:
+        resp.set_cookie(
+            "dlToken",
+            token,
+            max_age=120,   # short-lived
+            secure=True,   # keep True on HTTPS; set False only for local HTTP testing
+            samesite="Lax",
+            path="/",
+        )
+
+    return resp
 
 # Aliases to cover legacy front-ends
 @app.get("/director/api/activate")
@@ -9478,6 +9519,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

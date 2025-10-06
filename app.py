@@ -2027,7 +2027,7 @@ if (skillForm){
     <div class="grid">
       <div class="card">
         <h3>Polish CV</h3>
-        <form id="upload-form" method="post" action="/polish" enctype="multipart/form-data">
+        <form id="upload-form" method="post" action="/polish" enctype="multipart/form-data" target="dlFrame">
           <label for="cv">Raw CV (PDF / DOCX / TXT)</label><br/>
           <input id="cv" type="file" name="cv" accept=".pdf,.docx,.txt" required />
           <div class="ts" style="margin-top:4px">Header (logo &amp; bar) preserved from Hamilton template.</div>
@@ -2046,6 +2046,7 @@ if (skillForm){
 
           <div style="margin-top:12px"><button id="btn" type="submit">Polish & Download</button></div>
         </form>
+        <iframe id="dlFrame" name="dlFrame" style="display:none"></iframe>
         <script>
         document.addEventListener('DOMContentLoaded', function () {
           const form = document.getElementById('upload-form');
@@ -2053,6 +2054,7 @@ if (skillForm){
 
           const btn  = form.querySelector('button[type="submit"]') || document.getElementById('btn');
           const file = document.getElementById('cv');
+          const frame = document.getElementById('dlFrame');
 
           // Create a simple overlay (no CSS file needed)
           const over = document.createElement('div');
@@ -2072,14 +2074,21 @@ if (skillForm){
             over.style.display = 'flex';
             if (btn) { btn.dataset.orig = btn.textContent; btn.textContent = 'Polishing…'; btn.disabled = true; }
             // IMPORTANT: do NOT disable the file input here – let the browser send it
-
-            setTimeout(function () {
-              // safety unlock
+            // Hide banner when the iframe (target="dlFrame") finishes loading the response
+          if (frame) {
+            const onLoad = function () {
               over.style.display = 'none';
-              if (btn) { btn.disabled = false; if (btn.dataset.orig) btn.textContent = btn.dataset.orig; }
-              // no need to re-enable the file input because we never disabled it
-            }, 60000);
-          });
+              if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
+              frame.removeEventListener('load', onLoad);
+            };
+            frame.addEventListener('load', onLoad, { once: true });
+          }
+          // Safety fallback in case something stalls
+          setTimeout(function () {
+            over.style.display = 'none';
+            if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
+          }, 180000); // 3 min
+        });
 
           // When browser returns from download (bfcache), ensure UI is reset
           window.addEventListener('pageshow', function () {
@@ -9469,6 +9478,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

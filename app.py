@@ -3782,7 +3782,11 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     pf.space_after = Pt(2)
                     pf.line_spacing = 1.0
                     _tone_runs(bp, size=11, bold=False)
-    
+
+                # ✅ Add consistent spacing after the last bullet point (same as after dates)
+                if bullets:
+                    bp.paragraph_format.space_after = Pt(8)
+                
     skills = cv.get("skills") or []
     if skills:
         _add_section_heading(doc, labels["skills"])
@@ -9560,6 +9564,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

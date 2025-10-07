@@ -3772,6 +3772,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     bullets = bullets[:max_bullets]
 
                 for b in bullets:
+                    bp = doc.add_paragraph(b, style="List Bullet")
                     bp.paragraph_format.left_indent = Inches(0.25)  # ≈ a tab / ~4 spaces
                     bp.paragraph_format.first_line_indent = Inches(0)
                     bp.paragraph_format.space_before = Pt(0)
@@ -9555,6 +9556,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

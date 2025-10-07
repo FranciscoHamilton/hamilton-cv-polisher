@@ -3557,15 +3557,17 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     tel = (pi.get("phone") or "").strip()
     email = (pi.get("email") or "").strip()
     location = (pi.get("location") or "").strip()
+
+    # Row 1: Location
+    if location:
+        _add_center_line(doc, f"Location: {location}", size=11, bold=False, space_after=0)
+
+    # Row 2: Tel | Email
     bits = []
     if tel: bits.append(f"Tel: {tel}")
     if email: bits.append(f"Email: {email}")
     if bits:
-        _add_center_line(doc, " | ".join(bits), size=11, bold=False, space_after=0)
-    if location:
-        _add_center_line(doc, f"Location: {location}", size=11, bold=False, space_after=6)
-    links = [s for s in (pi.get("links") or []) if s]
-    if links: _add_center_line(doc, " | ".join(links), size=11, bold=False, space_after=6)
+        _add_center_line(doc, " | ".join(bits), size=11, bold=False, space_after=6)
 
     # --- EXECUTIVE SUMMARY ---
     _add_section_heading(doc, labels["summary"])
@@ -3772,8 +3774,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     bullets = bullets[:max_bullets]
 
                 for b in bullets:
-                    bp = doc.add_paragraph(b, style="List Bullet")
-                    bp.paragraph_format.left_indent = Inches(0.25)  # ≈ one tab / ~4 spaces
+                    bp = doc.add_paragraph("    • " + b)  # four spaces, bullet, space, then text
                     bp.paragraph_format.space_before = Pt(0)
                     bp.paragraph_format.space_after = Pt(0)
                     _tone_runs(bp, size=11, bold=False)
@@ -9555,6 +9556,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

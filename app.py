@@ -3016,7 +3016,7 @@ SCHEMA_PROMPT = """
 You are a CV structuring assistant for recruiters. Extract ONLY what exists in the CV and return STRICT JSON:
 
 {
-  "personal_info": {"full_name":"","email":"","phone":"","location":"","links":[]},
+  "personal_info": {"full_name":"","location":"","phone":"","email":"","links":[]},
   "summary":"",
   "experience":[{"job_title":"","company":"","location":"","start_date":"","end_date":"","currently_employed":false,"bullets":[],"raw_text":""}],
   "education":[{"degree":"","institution":"","location":"","start_date":"","end_date":"","bullets":[]}],
@@ -3515,6 +3515,15 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         doc = Docx()
 
     _remove_all_body_content(doc)
+
+    # Force base body font (affects blank lines/paragraph spacing too)
+    try:
+        base = doc.styles['Normal']
+        base.font.name = 'Calibri'
+        base.font.size = Pt(11)
+    except Exception:
+        pass
+
     # Profile-based labels (optional, per-org)
     labels = {
         "summary": "EXECUTIVE SUMMARY",
@@ -3718,19 +3727,30 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 _tone_runs(g, size=11, bold=False)
             first = False
 
-            title_company = " — ".join([x for x in [role.get("job_title",""), role.get("company","")] if x]).strip()
-            p = doc.add_paragraph(); r = p.add_run(title_company or "Role")
-            r.font.name="Calibri"; r.font.size=Pt(11); r.bold=True; r.font.color.rgb=SOFT_BLACK
-            p.paragraph_format.space_after = Pt(0)
+            title = (role.get("job_title") or "").strip()
+            company = (role.get("company") or "").strip()
 
+            # Line 1: Role (bold)
+            p = doc.add_paragraph()
+            r = p.add_run(title or "Role")
+            r.font.name = "Calibri"; r.font.size = Pt(11); r.bold = True; r.font.color.rgb = SOFT_BLACK
+            p.paragraph_format.space_after = Pt(0)
+    
+            # Line 2: Company (normal)
+            if company:
+                cp = doc.add_paragraph()
+                cr = cp.add_run(company)
+                cr.font.name = "Calibri"; cr.font.size = Pt(11); cr.bold = False; cr.font.color.rgb = SOFT_BLACK
+                cp.paragraph_format.space_after = Pt(0)
+
+            # Line 3: Dates only (no location)
             sd = (role.get("start_date") or "").strip()
             edd = (role.get("end_date") or "").strip()
-            if role.get("currently_employed") and not edd: edd = "Present"
+            if role.get("currently_employed") and not edd:
+                edd = "Present"
             dates = f"{sd} – {edd}".strip(" –")
-            loc = (role.get("location") or "").strip()
-            meta = " | ".join([x for x in [dates, loc] if x])
-            if meta:
-                meta_p = doc.add_paragraph(meta)
+            if dates:
+                meta_p = doc.add_paragraph(dates)
                 meta_p.paragraph_format.space_after = Pt(6)
                 _tone_runs(meta_p, size=11, bold=False)
 
@@ -3752,11 +3772,11 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     bullets = bullets[:max_bullets]
 
                 for b in bullets:
-                    bp = doc.add_paragraph(b, style="List Bullet")
+                    bp.paragraph_format.left_indent = Inches(0.25)  # ≈ a tab / ~4 spaces
+                    bp.paragraph_format.first_line_indent = Inches(0)
                     bp.paragraph_format.space_before = Pt(0)
-                    bp.paragraph_format.space_after = Pt(0)
+                    bp.paragraph_format.space_after  = Pt(0)
                     _tone_runs(bp, size=11, bold=False)
-
 
     skills = cv.get("skills") or []
     if skills:
@@ -9535,6 +9555,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

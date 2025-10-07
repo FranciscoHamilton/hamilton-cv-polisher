@@ -3723,11 +3723,9 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         _add_section_heading(doc, labels["experience"])
         first = True
         for role in exp:
-            if not first:
-                g = doc.add_paragraph()
-                g.paragraph_format.space_after = Pt(8)
-                _tone_runs(g, size=11, bold=False)
-            first = False
+            if first:
+                first = False
+            # No spacer paragraph between roles; spacing comes from last bullet (or dates if no bullets)
 
             title = (role.get("job_title") or "").strip()
             company = (role.get("company") or "").strip()
@@ -9564,6 +9562,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

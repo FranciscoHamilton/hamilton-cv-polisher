@@ -3740,7 +3740,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             if company:
                 cp = doc.add_paragraph()
                 cr = cp.add_run(company)
-                cr.font.name = "Calibri"; cr.font.size = Pt(11); cr.bold = False; cr.font.color.rgb = SOFT_BLACK
+                cr.font.name = "Calibri"; cr.font.size = Pt(11); cr.bold = True; cr.font.color.rgb = SOFT_BLACK
                 cp.paragraph_format.space_after = Pt(0)
 
             # Line 3: Dates only (no location)
@@ -3773,12 +3773,11 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
                 for b in bullets:
                     bp = doc.add_paragraph(b, style="List Bullet")
-                    bp.paragraph_format.left_indent = Inches(0.25)  # ≈ a tab / ~4 spaces
-                    bp.paragraph_format.first_line_indent = Inches(0)
+                    bp.paragraph_format.left_indent = Inches(0.25)  # ≈ one tab / ~4 spaces
                     bp.paragraph_format.space_before = Pt(0)
-                    bp.paragraph_format.space_after  = Pt(0)
+                    bp.paragraph_format.space_after = Pt(0)
                     _tone_runs(bp, size=11, bold=False)
-
+    
     skills = cv.get("skills") or []
     if skills:
         _add_section_heading(doc, labels["skills"])
@@ -9556,6 +9555,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

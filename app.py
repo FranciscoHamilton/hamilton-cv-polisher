@@ -3779,7 +3779,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     pf.left_indent = Inches(0.35)        # ≈ 6 spaces to the right
                     pf.first_line_indent = Inches(-0.15)  # keeps wrapped lines aligned neatly
                     pf.space_before = Pt(0)
-                    pf.space_after = Pt(2)
+                    pf.space_after = Pt(6)
                     pf.line_spacing = 1.0
                     _tone_runs(bp, size=11, bold=False)
     
@@ -9560,6 +9560,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

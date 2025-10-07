@@ -3781,7 +3781,6 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     pf.space_before = Pt(0)
                     pf.space_after = Pt(2)
                     pf.line_spacing = 1.0
-                    dp.paragraph_format.space_after = Pt(2)   # subtle professional spacing
                     _tone_runs(bp, size=11, bold=False)
     
     skills = cv.get("skills") or []
@@ -9561,6 +9560,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

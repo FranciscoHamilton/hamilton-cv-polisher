@@ -3776,11 +3776,11 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 for b in bullets:
                     bp = doc.add_paragraph(b.strip(), style="List Bullet")
                     pf = bp.paragraph_format
-                    pf.left_indent = Inches(0.3)          # standard indent
-                    pf.first_line_indent = Inches(-0.3)   # perfect hanging indent
+                    pf.left_indent = Inches(0.25)     # ✅ shifts entire bullet block 4 spaces right
+                    pf.first_line_indent = Inches(-0.15)  # keeps wrapped lines aligned neatly
                     pf.space_before = Pt(0)
-                    pf.space_after = Pt(2)                # slight breathing room between bullets
-                    pf.line_spacing = 1.15                # proportional line spacing (optional)
+                    pf.space_after = Pt(2)
+                    pf.line_spacing = 1.15
                     _tone_runs(bp, size=11, bold=False)
     
     skills = cv.get("skills") or []
@@ -9560,6 +9560,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

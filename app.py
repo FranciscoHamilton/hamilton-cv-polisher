@@ -8715,10 +8715,24 @@ _CANON_SECTIONS = [
 # Map many possible headings to our canonical buckets
 _SECTION_SYNONYMS = {
     "summary":           [r"summary", r"personal profile", r"profile", r"executive summary"],
-    "education":         [r"education", r"academic history", r"qualifications", r"academic qualifications"],
+
+    # Treat ALL education-like content (degrees, certs, courses, trainings, workshops, seminars)
+    # as one canonical bucket so it can be rendered under "PROFESSIONAL QUALIFICATIONS".
+    "education": [
+        r"education", r"academic history", r"qualifications", r"academic qualifications",
+        r"professional qualification(?:s)?", r"professional qualifications?",
+        r"certification(?:s)?", r"certificate(?:s)?",
+        r"course(?:s)?", r"short course(?:s)?",
+        r"training(?:s)?", r"workshop(?:s)?", r"seminar(?:s)?"
+    ],
+
     "skills":            [r"skills", r"technical skills", r"professional skills", r"capabilities", r"capability summary"],
     "experience":        [r"experience", r"employment", r"work history", r"professional experience", r"career history"],
+
+    # Kept as-is (your pipeline can still collect these, but ensure you render from the 'education'
+    # bucket as "PROFESSIONAL QUALIFICATIONS" to avoid duplication).
     "certifications":    [r"certifications?", r"licenses?", r"credentials?", r"certificates?"],
+
     "achievements":      [r"achievements?", r"key achievements?", r"key results?"],
     "projects":          [r"projects?"],
     "languages":         [r"languages?"],
@@ -9562,6 +9576,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

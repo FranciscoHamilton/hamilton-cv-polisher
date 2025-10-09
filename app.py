@@ -7675,9 +7675,60 @@ def owner_console():
     .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
     .k .t{font-size:11px;color:var(--muted);font-weight:700}
     .k .v{font-size:18px;font-weight:900}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:8px;border-bottom:1px solid #f1f5f9;text-align:left;vertical-align:middle}
-    th{background:#f8fafc;font-size:12px;color:#334155;position:sticky;top:0}
+    /* Owner Console tables — larger, cleaner, readable */
+    table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:12px;
+      overflow:hidden; /* clip rounded corners */
+    }
+
+    th,td{
+      padding:10px 12px;                 /* taller rows */
+      border-bottom:1px solid #f1f5f9;
+      text-align:left;
+      vertical-align:middle;
+      font-size:14px;                    /* up from 12–13 for readability */
+    }
+
+    th{
+      background:#f8fafc;
+      font-size:12px;
+      color:#334155;
+      position:sticky;
+      top:0;
+      z-index:1;
+    }
+
+    /* Zebra + hover */
+    tbody tr:nth-child(even) td{ background:#f9fbff; }
+    tbody tr:hover td{ background:#eef6ff; }
+
+    /* Numeric columns right-aligned (Organisations table)
+       1=ID, 5=Plan credits/mo, 6=Balance, 7=Usage (month), 8=Usage (total), 9=Users */
+    thead th:nth-child(1),
+    tbody td:nth-child(1){ width:62px; text-align:center; }
+
+    thead th:nth-child(5),
+    tbody td:nth-child(5),
+    thead th:nth-child(6),
+    tbody td:nth-child(6),
+    thead th:nth-child(7),
+    tbody td:nth-child(7),
+    thead th:nth-child(8),
+    tbody td:nth-child(8),
+    thead th:nth-child(9),
+    tbody td:nth-child(9){ text-align:right; }
+
+    /* Inputs inside table cells a bit taller */
+    table input[type="text"],
+    table input[type="number"]{
+      height:34px;
+    }
+
     input[type="text"],input[type="number"]{width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}
     .row{display:flex;gap:8px}
     .small{font-size:12px;color:var(--muted)}
@@ -9582,6 +9633,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

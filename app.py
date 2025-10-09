@@ -3670,34 +3670,34 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
         items.append((_year_from_edu(ed), line, True))  # bold education line
 
-        # BACKFILL FROM SUMMARY → QUALIFICATIONS (generic, domain-agnostic)
-        exec_sum = (cv.get("summary") or "")
-        if exec_sum:
-            # normalise bullets and blank lines
-            summary_lines = [
+        # BACKFILL FROM SUMMARY → QUALIFICATIONS (disabled on purpose)
+        # We do NOT mine the Professional/Executive Summary for quals.
+        # Qualifications must come only from explicit Qualifications/Certs/Education sections.
+        if False:
+            exec_sum = (cv.get("summary") or "")
+            if exec_sum:
+                summary_lines = [
                     re.sub(r'^[\-\u2022\u2013\*]\s+', '', ln).strip()
                     for ln in exec_sum.splitlines() if ln.strip()
-            ]
-            # broad keywords covering degrees, certs, charterships, vendors, and edu bodies
-            qual_kw_re = re.compile(r"""
-                \b(
-                    bachelor|b\.?sc|ba|
-                    master|m\.?sc|ma|mba|
-                    ph\.?d|doctorate|dphil|
-                    diploma|degree|
-                    certificate|certification|certified|chartered|
-                    acca|aca|cpa|cfa|cima|cia|
-                    pmp|prince ?2|scrum|psm|pspo|itil|
-                    aws|azure|google\s*cloud|gcp|sap|oracle|salesforce|mcsa|mcp|
-                    six\s*sig(ma)?|lean\s*six\s*sig(ma)?|black\s*belt|green\s*belt|
-                    cissp|ceh|comptia|network\+|security\+|isaca|
-                    institute|university|college|academy|school
-                )\b
-            """, re.IGNORECASE | re.VERBOSE)
-
-            for ln in summary_lines:
-                if qual_kw_re.search(ln):
-                    items.append((_extract_year(ln), ln, False))
+                ]
+                qual_kw_re = re.compile(r"""
+                    \b(
+                        bachelor|b\.?sc|ba|
+                        master|m\.?sc|ma|mba|
+                        ph\.?d|doctorate|dphil|
+                        diploma|degree|
+                        certificate|certification|certified|chartered|
+                        acca|aca|cpa|cfa|cima|cia|
+                        pmp|prince ?2|scrum|psm|pspo|itil|
+                        aws|azure|google\s*cloud|gcp|sap|oracle|salesforce|mcsa|mcp|
+                        six\s*sig(ma)?|lean\s*six\s*sig(ma)?|black\s*belt|green\s*belt|
+                        cissp|ceh|comptia|network\+|security\+|isaca|
+                        institute|university|college|academy|school
+                    )\b
+                """, re.IGNORECASE | re.VERBOSE)
+                for ln in summary_lines:
+                    if qual_kw_re.search(ln):
+                        items.append((_extract_year(ln), ln, False))
 
     # Sort newest first; unknown years (-1) go last
     items.sort(key=lambda t: t[0], reverse=True)
@@ -9633,6 +9633,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

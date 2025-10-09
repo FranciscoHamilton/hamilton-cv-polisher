@@ -3580,6 +3580,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     summary_text = (cv.get("summary") or "").strip()
     if summary_text:
         p = doc.add_paragraph(summary_text)
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY 
         p.paragraph_format.space_after = Pt(8)
         _tone_runs(p, size=11, bold=False)
         

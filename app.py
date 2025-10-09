@@ -1238,7 +1238,7 @@ PRICING_HTML = r"""
           <div><span class="n" id="outHours">25.0</span> hours saved / month</div>
           <div><span class="n">£<span id="outMoney">750</span></span> payroll saved / month</div>
         </div>
-        <div class="sub" id="planPick" style="margin-top:8px"></div>
+        <div id="planPick" style="margin-top:8px"></div>
       </div>
     </div>
   </div>
@@ -1279,7 +1279,13 @@ PRICING_HTML = r"""
       if(!cvs){ pickEl.textContent=''; return; }
       const best=options[0].quote;
       const percv=best.percv?` (~£${(Math.round(best.percv*100)/100).toFixed(2)}/CV)`:'';
-      pickEl.innerHTML=`Best option: <strong>${best.name}</strong> — <strong>${fmtGBP(best.cost)}</strong>/mo${percv}<br><span class="sub">${best.detail}</span>`;
+      pickEl.innerHTML =
+      `<span style="display:block;font-size:18px;font-weight:900;letter-spacing:-.01em;color:#0b1220">` +
+      `Best option: ${best.name} — ${fmtGBP(best.cost)}/mo${percv}` +
+      `</span>` +
+      `<span style="display:block;margin-top:4px;font-size:12.5px;color:#64748b;font-weight:600">` +
+      `${best.detail}` +
+      `</span>`;
     }
     document.addEventListener('input', (e)=>{ if(['cvs','minManual','hourRate'].includes(e.target.id)) calc(); });
     document.addEventListener('DOMContentLoaded', calc);
@@ -9576,6 +9582,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

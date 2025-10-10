@@ -3793,6 +3793,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     return re.sub(r"\s+", " ", (s or "").replace("–", "-")).strip().lower()
                 if _norm(rt) and _norm(rt) not in (_norm(dates), _norm(meta)):
                     rp = doc.add_paragraph(rt)
+                    rp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                     rp.paragraph_format.space_after = Pt(0)
                     _tone_runs(rp, size=11, bold=False)
 
@@ -9668,6 +9669,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

@@ -3442,6 +3442,24 @@ def _add_section_heading(doc: Docx, text: str):
     r.font.color.rgb = SOFT_BLACK
     return p
 
+def add_editable_space(doc, lines: int = 1):
+    """
+    Insert real, editable blank paragraph(s) in Calibri 11.
+    We use NBSP so Word keeps the paragraph even if it's blank.
+    """
+    last = None
+    for _ in range(max(1, lines)):
+        p = doc.add_paragraph("\u00A0")  # NBSP keeps an empty paragraph visible/editable
+        pf = p.paragraph_format
+        pf.space_before = Pt(0)
+        pf.space_after = Pt(0)
+        # Normal is already Calibri 11 (set earlier), but be explicit:
+        if p.runs:
+            p.runs[0].font.name = "Calibri"
+            p.runs[0].font.size = Pt(11)
+        last = p
+    return last
+
 def _remove_all_body_content(doc: Docx):
     for t in list(doc.tables):
         t._element.getparent().remove(t._element)
@@ -3577,12 +3595,15 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     # --- EXECUTIVE SUMMARY ---
     _add_section_heading(doc, labels["summary"])
+    add_editable_space(doc)
     summary_text = (cv.get("summary") or "").strip()
     if summary_text:
         p = doc.add_paragraph(summary_text)
-        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY 
-        p.paragraph_format.space_after = Pt(8)
+        # keep your alignment line if present, e.g.:
+        # p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p.paragraph_format.space_after = Pt(0)   # was Pt(8)
         _tone_runs(p, size=11, bold=False)
+        add_editable_space(doc)                  # ← real, editable blank line
         
     # --- PERSONAL INFORMATION ---
     pi = cv.get("personal_info") or {}
@@ -3590,11 +3611,13 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     mar = (pi.get("marital_status") or "").strip()
 
     _add_section_heading(doc, labels.get("personal", "PERSONAL INFORMATION"))
+    add_editable_space(doc)
     
     line = f"Nationality: {nat} |  Marital Status: {mar}"
     p = doc.add_paragraph(line)
-    p.paragraph_format.space_after = Pt(8)
+    p.paragraph_format.space_after = Pt(0)
     _tone_runs(p, size=11, bold=False)
+    add_editable_space(doc)
 
     # --- PROFESSIONAL QUALIFICATIONS (Certifications + Education, unified, spaced, sorted) ---
     import re  # keep here (file has no 'import re' earlier)
@@ -3604,7 +3627,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     if quals or edu:
         _add_section_heading(doc, labels["certifications"])
-
+        add_editable_space(doc)
     def _extract_year(text: str) -> int:
         """Return the last 4-digit year in a string, or -1 if none."""
         if not text:
@@ -3722,7 +3745,8 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         r.bold = is_bold
         r.font.color.rgb = SOFT_BLACK
         p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(8)
+        p.paragraph_format.space_after = Pt(0)
+        add_editable_space(doc)
         _tone_runs(p, size=11, bold=is_bold)
 
     exp = cv.get("experience") or []
@@ -3758,7 +3782,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             dates = f"{sd} – {edd}".strip(" –")
             if dates:
                 meta_p = doc.add_paragraph(dates)
-                meta_p.paragraph_format.space_after = Pt(6)
+                meta_p.paragraph_format.space_after = Pt(0)
                 _tone_runs(meta_p, size=11, bold=False)
 
             if role.get("raw_text"):
@@ -3777,7 +3801,9 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 bullets = list(role.get("bullets") or [])
                 if isinstance(max_bullets, int) and max_bullets >= 0:
                     bullets = bullets[:max_bullets]
-
+                if (role.get("bullets") and not (role.get("raw_text") or "").strip()):
+                    add_editable_space(doc)  # real, editable line between dates and bullets
+    
                 for b in bullets:
                     bp = doc.add_paragraph(b.strip(), style="List Bullet")
                     pf = bp.paragraph_format
@@ -3787,6 +3813,10 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     pf.space_after = Pt(0)
                     pf.line_spacing = 1.0
                     _tone_runs(bp, size=11, bold=False)
+                # after the bullets loop:
+                if bullets:
+                    bp.paragraph_format.space_after = Pt(0)
+                    add_editable_space(doc)  # ← one real, editable blank paragraph after this role
 
                 # ✅ Add consistent spacing after the last bullet point (same as after dates)
                 if bullets:
@@ -3795,14 +3825,19 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     skills = cv.get("skills") or []
     if skills:
         _add_section_heading(doc, labels["skills"])
+        add_editable_space(doc)
         line = " | ".join(skills)
-        p = doc.add_paragraph(line); p.paragraph_format.space_after = Pt(8); _tone_runs(p, size=11, bold=False)
+        p = doc.add_paragraph(line)
+        p.paragraph_format.space_after = Pt(0)   # was Pt(8)
+        _tone_runs(p, size=11, bold=False)
+        add_editable_space(doc)                  # real, editable blank line
         
     # --- References (fixed text) ---
     _add_section_heading(doc, labels["references"])
     p = doc.add_paragraph("Full references are available on request")
     p.paragraph_format.space_after = Pt(0)
     _tone_runs(p, size=11, bold=False)
+    add_editable_space(doc)  # optional: editable blank line at the end
 
     _ensure_primary_header_spacer(doc)
 
@@ -9634,6 +9669,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

@@ -3601,6 +3601,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     summary_text = (cv.get("summary") or "").strip()
     if summary_text:
         p = doc.add_paragraph(summary_text)
+        p.paragraph_format.line_spacing = 1.0
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         # keep your alignment line if present, e.g.:
         # p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
@@ -3618,6 +3619,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     
     line = f"Nationality: {nat} |  Marital Status: {mar}"
     p = doc.add_paragraph(line)
+    p.paragraph_format.line_spacing = 1.0
     p.paragraph_format.space_after = Pt(0)
     _tone_runs(p, size=11, bold=False)
     add_editable_space(doc)
@@ -3742,6 +3744,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     # Render: one paragraph per item, same spacing, no bullets
     for _, line, is_bold in items:
         p = doc.add_paragraph()
+        p.paragraph_format.line_spacing = 1.0
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY    
         r = p.add_run(line)
         r.font.name = "Calibri"
@@ -3787,6 +3790,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             dates = f"{sd} – {edd}".strip(" –")
             if dates:
                 meta_p = doc.add_paragraph(dates)
+                meta_p.paragraph_format.line_spacing = 1.0
                 meta_p.paragraph_format.space_after = Pt(0)
                 _tone_runs(meta_p, size=11, bold=False)
 
@@ -3797,6 +3801,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     return re.sub(r"\s+", " ", (s or "").replace("–", "-")).strip().lower()
                 if _norm(rt) and _norm(rt) not in (_norm(dates), _norm(meta)):
                     rp = doc.add_paragraph(rt)
+                    rp.paragraph_format.line_spacing = 1.0
                     rp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                     rp.paragraph_format.space_after = Pt(0)
                     _tone_runs(rp, size=11, bold=False)
@@ -3837,6 +3842,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         add_editable_space(doc)
         line = " | ".join(skills)
         p = doc.add_paragraph(line)
+        p.paragraph_format.line_spacing = 1.0
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.space_after = Pt(0)   # was Pt(8)
         _tone_runs(p, size=11, bold=False)
@@ -9679,6 +9685,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

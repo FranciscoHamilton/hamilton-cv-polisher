@@ -3751,7 +3751,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         p.paragraph_format.space_before = Pt(0)
         p.paragraph_format.space_after = Pt(0)
         _tone_runs(p, size=11, bold=is_bold)
-        add_editable_space(doc)
+    add_editable_space(doc)
 
     exp = cv.get("experience") or []
     if exp:
@@ -9678,6 +9678,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

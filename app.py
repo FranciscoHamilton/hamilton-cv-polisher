@@ -3435,7 +3435,7 @@ def _add_center_line(doc: Docx, text: str, size=11, bold=False, space_after=0):
 def _add_section_heading(doc: Docx, text: str):
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(12)
-    p.paragraph_format.space_after = Pt(6)
+    p.paragraph_format.space_after = Pt(0)
     r = p.add_run(text.upper().strip())
     r.font.name = "Calibri"; r.font.size = Pt(14)
     r.bold = True
@@ -3570,7 +3570,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     except Exception as e:
         print("profile labels failed:", e)
 
-    spacer = doc.add_paragraph(); spacer.paragraph_format.space_after = Pt(6)
+    spacer = doc.add_paragraph(); spacer.paragraph_format.space_after = Pt(0)
 
     pi = (cv or {}).get("personal_info") or {}
     full_name = (pi.get("full_name") or "Candidate").strip()
@@ -3739,6 +3739,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     # Render: one paragraph per item, same spacing, no bullets
     for _, line, is_bold in items:
         p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY    
         r = p.add_run(line)
         r.font.name = "Calibri"
         r.font.size = Pt(11)
@@ -3825,6 +3826,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         add_editable_space(doc)
         line = " | ".join(skills)
         p = doc.add_paragraph(line)
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.space_after = Pt(0)   # was Pt(8)
         _tone_runs(p, size=11, bold=False)
         add_editable_space(doc)                  # real, editable blank line
@@ -9666,6 +9668,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

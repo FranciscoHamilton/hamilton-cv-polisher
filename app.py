@@ -3756,6 +3756,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     exp = cv.get("experience") or []
     if exp:
         _add_section_heading(doc, labels["experience"])
+        add_editable_space(doc)
         first = True
         for role in exp:
             if first:
@@ -9678,6 +9679,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

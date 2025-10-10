@@ -3601,6 +3601,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     summary_text = (cv.get("summary") or "").strip()
     if summary_text:
         p = doc.add_paragraph(summary_text)
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         # keep your alignment line if present, e.g.:
         # p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.space_after = Pt(0)   # was Pt(8)
@@ -3811,8 +3812,9 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 for b in bullets:
                     bp = doc.add_paragraph(b.strip(), style="List Bullet")
                     pf = bp.paragraph_format
-                    pf.left_indent = Inches(0.35)        # ≈ 6 spaces to the right
-                    pf.first_line_indent = Inches(-0.15)  # keeps wrapped lines aligned neatly
+                    pf.space_before = Pt(0)
+                    pf.space_after  = Pt(0)
+                    pf.line_spacing = 1.0
                     pf.space_before = Pt(0)
                     pf.space_after = Pt(0)
                     pf.line_spacing = 1.0
@@ -9671,6 +9673,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

@@ -3812,17 +3812,22 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 for b in bullets:
                     bp = doc.add_paragraph(b.strip(), style="List Bullet")
                     pf = bp.paragraph_format
+
+                    # Match master template bullet spacing:
+                    pf.left_indent = Inches(0.50)         # text column at 0.50"
+                    pf.first_line_indent = Inches(-0.25)  # bullet at 0.25" → 0.25" gap
+
+                    # Single set of spacing rules (no duplicates)
                     pf.space_before = Pt(0)
                     pf.space_after  = Pt(0)
                     pf.line_spacing = 1.0
-                    pf.space_before = Pt(0)
-                    pf.space_after = Pt(0)
-                    pf.line_spacing = 1.0
+
                     _tone_runs(bp, size=11, bold=False)
+
                 # after the bullets loop:
                 if bullets:
                     bp.paragraph_format.space_after = Pt(0)
-                    add_editable_space(doc)  # ← one real, editable blank paragraph after this role
+    add_editable_space(doc)  # one real, editable blank paragraph after this role
                     
                 
     skills = cv.get("skills") or []
@@ -9673,6 +9678,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

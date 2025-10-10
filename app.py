@@ -3434,7 +3434,7 @@ def _add_center_line(doc: Docx, text: str, size=11, bold=False, space_after=0):
 
 def _add_section_heading(doc: Docx, text: str):
     p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(12)
+    p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(0)
     r = p.add_run(text.upper().strip())
     r.font.name = "Calibri"; r.font.size = Pt(14)
@@ -3574,7 +3574,8 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     pi = (cv or {}).get("personal_info") or {}
     full_name = (pi.get("full_name") or "Candidate").strip()
-    name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER; name_p.paragraph_format.space_after = Pt(2)
+    name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER; name_p.paragraph_format.space_after = Pt(0)
+    add_editable_space(doc)
     name_r = name_p.add_run(full_name)
     name_r.font.name="Calibri"; name_r.font.size=Pt(18); name_r.bold=True; name_r.font.color.rgb=SOFT_BLACK
 
@@ -3591,7 +3592,8 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     if tel: bits.append(f"Tel: {tel}")
     if email: bits.append(f"Email: {email}")
     if bits:
-        _add_center_line(doc, " | ".join(bits), size=11, bold=False, space_after=6)
+        _add_center_line(doc, " | ".join(bits), size=11, bold=False, space_after=0)
+        add_editable_space(doc)
 
     # --- EXECUTIVE SUMMARY ---
     _add_section_heading(doc, labels["summary"])
@@ -9669,6 +9671,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

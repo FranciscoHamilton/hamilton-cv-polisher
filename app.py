@@ -3793,6 +3793,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 meta_p.paragraph_format.line_spacing = 1.0
                 meta_p.paragraph_format.space_after = Pt(0)
                 _tone_runs(meta_p, size=11, bold=False)
+                for r in meta_p.runs: r.italic = True    
 
             if role.get("raw_text"):
                 rt = (role["raw_text"] or "").strip()
@@ -9685,6 +9686,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

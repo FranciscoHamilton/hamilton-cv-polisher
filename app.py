@@ -687,12 +687,12 @@ HOMEPAGE_HTML = r"""
     .hero { position: relative; }
     .hero-sample{
       position:absolute; right:24px; top:34px;
-      width:clamp(140px, 16vw, 240px); aspect-ratio:1/1;
+      width:clamp(220px, 22vw, 380px); aspect-ratio:4/3;
       border-radius:18px; background:var(--card);
       border:1px solid var(--line); box-shadow:var(--shadow);
       overflow:hidden; pointer-events:none;
     }
-    .hero-sample img{ width:100%; height:100%; object-fit:cover; }
+    .hero-sample img{ width:100%; height:100%; object-fit:contain; }
     @media (max-width:900px){ .hero-sample{ display:none; } }
 
   </style>
@@ -9704,6 +9704,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

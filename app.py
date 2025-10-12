@@ -1124,16 +1124,15 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">STARTER</div>
     <div class="qty">100 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£150/mo</span><span class="dot">·</span><span class="price-cv">£1.50 per CV</span></span>
+    <span class="chip"><span class="price-month">£120/mo</span><span class="dot">·</span><span class="price-cv">£1.50 per CV</span></span>
 
     <ul class="feat" style="margin-top:12px">
-      <li><span class="tick">✓</span><span>1 brand template included</span></li>
       <li><span class="tick">✓</span><span>Up to 10 users</span></li>
       <li><span class="tick">✓</span><span>Director dashboard</span></li>
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Email support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.60/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.20/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Starter</a>
@@ -1145,16 +1144,16 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">GROWTH</div>
     <div class="qty">250 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£350/mo</span><span class="dot">·</span><span class="price-cv">£1.40 per CV</span></span>
+    <span class="chip"><span class="price-month">£275/mo</span><span class="dot">·</span><span class="price-cv">£1.40 per CV</span></span>
 
     <ul class="feat" style="margin-top:12px">
-      <li><span class="tick">✓</span><span>2 brand template included</span></li>
       <li><span class="tick">✓</span><span>Up to 20 users</span></li>
       <li><span class="tick">✓</span><span>Director dashboard</span></li>
+      <li><span class="tick">✓</span><span>Free PDF Converter</span></li>
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.50/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.10/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Growth</a>
@@ -1166,16 +1165,16 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">SCALE</div>
     <div class="qty">500 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£650/mo</span><span class="dot">·</span><span class="price-cv">£1.30 per CV</span></span>
+    <span class="chip"><span class="price-month">£500/mo</span><span class="dot">·</span><span class="price-cv">£1.30 per CV</span></span>
 
     <ul class="feat" style="margin-top:12px">
-      <li><span class="tick">✓</span><span>3 brand template included</span></li>
       <li><span class="tick">✓</span><span>Up to 30 users</span></li>
       <li><span class="tick">✓</span><span>Director dashboard</span></li>
+      <li><span class="tick">✓</span><span>Free PDF Converter</span></li>
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.40/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Scale</a>
@@ -1192,17 +1191,17 @@ PRICING_HTML = r"""
             <div class="packs-info">
               <div class="title">Choose your pack</div>
               <ul>
-                <li><strong>100 CVs</strong> — £160 ( £1.60/CV )</li>
-                <li><strong>300 CVs</strong> — £450 ( £1.50/CV )</li>
-                <li><strong>500 CVs</strong> — £700 ( £1.40/CV )</li>
+                <li><strong>100 CVs</strong> — £150 ( £1.50/CV )</li>
+                <li><strong>300 CVs</strong> — £420 ( £1.40/CV )</li>
+                <li><strong>500 CVs</strong> — £650 ( £1.30/CV )</li>
               </ul>
             </div>
 
             <div class="select">
               <select id="packSelect">
-                <option value="100">100 CVs — £160</option>
-                <option value="300">300 CVs — £450</option>
-                <option value="500">500 CVs — £700</option>
+                <option value="100">100 CVs — £150</option>
+                <option value="300">300 CVs — £420</option>
+                <option value="500">500 CVs — £650</option>
               </select>
             </div>
 
@@ -1249,9 +1248,9 @@ PRICING_HTML = r"""
     function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
     const PLANS = [
-      { kind:'Monthly', key:'Starter', baseCredits:100, baseCost:150, baseRate:1.50, overRate:1.60 },
-      { kind:'Monthly', key:'Growth',  baseCredits:300, baseCost:420, baseRate:1.40, overRate:1.50 },
-      { kind:'Monthly', key:'Scale',   baseCredits:500, baseCost:650, baseRate:1.30, overRate:1.40 }
+      { kind:'Monthly', key:'Starter', baseCredits:100, baseCost:120, baseRate:1.20, overRate:1.30 },
+      { kind:'Monthly', key:'Growth',  baseCredits:250, baseCost:275, baseRate:1.10, overRate:1.20 },
+      { kind:'Monthly', key:'Scale',   baseCredits:500, baseCost:500, baseRate:1, overRate:1.10 }
       // Buy Packs are on-demand; not part of the "best monthly plan" picker.
     ];
 
@@ -9686,5 +9685,6 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 

@@ -1124,7 +1124,7 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">STARTER</div>
     <div class="qty">100 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£120/mo</span><span class="dot">·</span><span class="price-cv">£1.50 per CV</span></span>
+    <span class="chip"><span class="price-month">£120/mo</span><span class="dot">·</span><span class="price-cv">£1.20 per CV</span></span>
 
     <ul class="feat" style="margin-top:12px">
       <li><span class="tick">✓</span><span>Up to 10 users</span></li>
@@ -1144,7 +1144,7 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">GROWTH</div>
     <div class="qty">250 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£275/mo</span><span class="dot">·</span><span class="price-cv">£1.40 per CV</span></span>
+    <span class="chip"><span class="price-month">£275/mo</span><span class="dot">·</span><span class="price-cv">£1.10 per CV</span></span>
 
     <ul class="feat" style="margin-top:12px">
       <li><span class="tick">✓</span><span>Up to 20 users</span></li>
@@ -1165,7 +1165,7 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">SCALE</div>
     <div class="qty">500 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£500/mo</span><span class="dot">·</span><span class="price-cv">£1.30 per CV</span></span>
+    <span class="chip"><span class="price-month">£500/mo</span><span class="dot">·</span><span class="price-cv">£1 per CV</span></span>
 
     <ul class="feat" style="margin-top:12px">
       <li><span class="tick">✓</span><span>Up to 30 users</span></li>
@@ -9685,6 +9685,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

@@ -686,8 +686,8 @@ HOMEPAGE_HTML = r"""
 
     .hero { position: relative; }
     .hero-sample{
-      position:absolute; right:24px; top:34px;
-      width:clamp(220px, 22vw, 380px); aspect-ratio:4/3;
+      position:absolute; right:10px; top:28px;
+      width:clamp(260px, 24vw, 440px); aspect-ratio:4/3;
       border-radius:18px; background:var(--card);
       border:1px solid var(--line); box-shadow:var(--shadow);
       overflow:hidden; pointer-events:none;
@@ -9704,6 +9704,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

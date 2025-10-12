@@ -683,18 +683,6 @@ HOMEPAGE_HTML = r"""
       .lead{font-size:16px}
       .grid3,.stepper{grid-template-columns:1fr}
     }
-
-    .hero { position: relative; }
-    .hero-sample{
-      position:absolute; right:10px; top:28px;
-      width:clamp(260px, 24vw, 440px); aspect-ratio:4/3;
-      border-radius:18px; background:var(--card);
-      border:1px solid var(--line); box-shadow:var(--shadow);
-      overflow:hidden; pointer-events:none;
-    }
-    .hero-sample img{ width:100%; height:100%; object-fit:contain; }
-    @media (max-width:900px){ .hero-sample{ display:none; } }
-
   </style>
 </head>
 <body>
@@ -718,12 +706,6 @@ HOMEPAGE_HTML = r"""
         <a class="btn secondary" href="/login">Sign in</a>
       </div>
       <div class="meta">Custom build per client · Keep your look · Fully tailored CVs</div>
-
-   <!-- Example image on the right (doesn't shift layout) -->
-    <figure class="hero-sample" aria-hidden="true">
-      <img src="/static/img/cv-before-after.png" alt="" loading="lazy">
-    </figure>
-   
     </div>
 
     <div class="grid3">
@@ -9704,61 +9686,5 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

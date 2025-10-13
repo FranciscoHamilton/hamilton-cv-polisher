@@ -1191,17 +1191,17 @@ PRICING_HTML = r"""
             <div class="packs-info">
               <div class="title">Choose your pack</div>
               <ul>
-                <li><strong>100 CVs</strong> — £150 ( £1.50/CV )</li>
-                <li><strong>300 CVs</strong> — £420 ( £1.40/CV )</li>
-                <li><strong>500 CVs</strong> — £650 ( £1.30/CV )</li>
+                <li><strong>100 CVs</strong> — £120 ( £1.20/CV )</li>
+                <li><strong>250 CVs</strong> — £275 ( £1.10/CV )</li>
+                <li><strong>500 CVs</strong> — £500 ( £1/CV )</li>
               </ul>
             </div>
 
             <div class="select">
               <select id="packSelect">
                 <option value="100">100 CVs — £150</option>
-                <option value="300">300 CVs — £420</option>
-                <option value="500">500 CVs — £650</option>
+                <option value="300">250 CVs — £275</option>
+                <option value="500">500 CVs — £500</option>
               </select>
             </div>
 
@@ -9685,6 +9685,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

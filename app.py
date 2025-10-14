@@ -3434,7 +3434,7 @@ def _add_center_line(doc: Docx, text: str, size=11, bold=False, space_after=0):
 
 def _add_section_heading(doc: Docx, text: str):
     p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(12)
+    p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(0)
     r = p.add_run(text.upper().strip())
     r.font.name = "Calibri"; r.font.size = Pt(14)
@@ -3574,7 +3574,8 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
 
     pi = (cv or {}).get("personal_info") or {}
     full_name = (pi.get("full_name") or "Candidate").strip()
-    name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER; name_p.paragraph_format.space_after = Pt(2)
+    name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER; name_p.paragraph_format.space_after = Pt(0)
+    add_editable_space(doc)
     name_r = name_p.add_run(full_name)
     name_r.font.name="Calibri"; name_r.font.size=Pt(18); name_r.bold=True; name_r.font.color.rgb=SOFT_BLACK
 
@@ -3591,7 +3592,8 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     if tel: bits.append(f"Tel: {tel}")
     if email: bits.append(f"Email: {email}")
     if bits:
-        _add_center_line(doc, " | ".join(bits), size=11, bold=False, space_after=6)
+        _add_center_line(doc, " | ".join(bits), size=11, bold=False, space_after=0)
+        add_editable_space(doc)
 
     # --- EXECUTIVE SUMMARY ---
     _add_section_heading(doc, labels["summary"])
@@ -3599,6 +3601,8 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     summary_text = (cv.get("summary") or "").strip()
     if summary_text:
         p = doc.add_paragraph(summary_text)
+        p.paragraph_format.line_spacing = 1.0
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         # keep your alignment line if present, e.g.:
         # p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.space_after = Pt(0)   # was Pt(8)
@@ -3615,6 +3619,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     
     line = f"Nationality: {nat} |  Marital Status: {mar}"
     p = doc.add_paragraph(line)
+    p.paragraph_format.line_spacing = 1.0
     p.paragraph_format.space_after = Pt(0)
     _tone_runs(p, size=11, bold=False)
     add_editable_space(doc)
@@ -3739,6 +3744,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     # Render: one paragraph per item, same spacing, no bullets
     for _, line, is_bold in items:
         p = doc.add_paragraph()
+        p.paragraph_format.line_spacing = 1.0
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY    
         r = p.add_run(line)
         r.font.name = "Calibri"
@@ -3748,11 +3754,12 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         p.paragraph_format.space_before = Pt(0)
         p.paragraph_format.space_after = Pt(0)
         _tone_runs(p, size=11, bold=is_bold)
-        add_editable_space(doc)
+    add_editable_space(doc)
 
     exp = cv.get("experience") or []
     if exp:
         _add_section_heading(doc, labels["experience"])
+        add_editable_space(doc)
         first = True
         for role in exp:
             if first:
@@ -3783,8 +3790,10 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
             dates = f"{sd} – {edd}".strip(" –")
             if dates:
                 meta_p = doc.add_paragraph(dates)
+                meta_p.paragraph_format.line_spacing = 1.0
                 meta_p.paragraph_format.space_after = Pt(0)
                 _tone_runs(meta_p, size=11, bold=False)
+                for r in meta_p.runs: r.italic = True    
 
             if role.get("raw_text"):
                 rt = (role["raw_text"] or "").strip()
@@ -3793,39 +3802,48 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     return re.sub(r"\s+", " ", (s or "").replace("–", "-")).strip().lower()
                 if _norm(rt) and _norm(rt) not in (_norm(dates), _norm(meta)):
                     rp = doc.add_paragraph(rt)
+                    rp.paragraph_format.line_spacing = 1.0
+                    rp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                     rp.paragraph_format.space_after = Pt(0)
                     _tone_runs(rp, size=11, bold=False)
 
+            # ---- BULLETS -------------------------------------------------------------
             if role.get("bullets"):
                 # Org-configurable cap: overview (raw_text) is NEVER capped
                 max_bullets = get_org_pref(cv, "max_bullets_per_role", None)
                 bullets = list(role.get("bullets") or [])
                 if isinstance(max_bullets, int) and max_bullets >= 0:
                     bullets = bullets[:max_bullets]
-                if (role.get("bullets") and not (role.get("raw_text") or "").strip()):
-                    add_editable_space(doc)  # real, editable line between dates and bullets
-    
+
+                # If there is no raw_text, add an editable line between dates and bullets
+                if role.get("bullets") and not (role.get("raw_text") or "").strip():
+                    add_editable_space(doc)
+
                 for b in bullets:
                     bp = doc.add_paragraph(b.strip(), style="List Bullet")
                     pf = bp.paragraph_format
-                    pf.left_indent = Inches(0.35)        # ≈ 6 spaces to the right
-                    pf.first_line_indent = Inches(-0.15)  # keeps wrapped lines aligned neatly
+                    # Match master bullet spacing
+                    pf.left_indent = Inches(0.50)         # text column at 0.50"
+                    pf.first_line_indent = Inches(-0.25)  # bullet at 0.25" → 0.25" gap
                     pf.space_before = Pt(0)
-                    pf.space_after = Pt(0)
+                    pf.space_after  = Pt(0)
                     pf.line_spacing = 1.0
                     _tone_runs(bp, size=11, bold=False)
-                # after the bullets loop:
+
+                # After the bullets loop, no extra spacing; we add one spacer per role below
                 if bullets:
                     bp.paragraph_format.space_after = Pt(0)
-                    add_editable_space(doc)  # ← one real, editable blank paragraph after this role
-                    
-                
+
+            # === ONE editable blank line between roles (always) ===
+            add_editable_space(doc)
+
     skills = cv.get("skills") or []
     if skills:
         _add_section_heading(doc, labels["skills"])
         add_editable_space(doc)
         line = " | ".join(skills)
         p = doc.add_paragraph(line)
+        p.paragraph_format.line_spacing = 1.0
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.space_after = Pt(0)   # was Pt(8)
         _tone_runs(p, size=11, bold=False)
@@ -9668,46 +9686,5 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 

@@ -3722,9 +3722,8 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 _tone_runs(meta_p, size=11, bold=False)
                 for r in meta_p.runs: r.italic = True    
 
-            # around app.py:3725 (just before the offending line)
-            meta = (data or {}).get('meta', '')  # ensure it always exists
-            # if some code expects a dict too, keep both safe views:
+            # ensure 'meta' always exists (string) and keep a dict view for older code
+            meta = (data or {}).get('meta', '')  
             meta_dict = (data or {}).get('meta') or {}
 
             if role.get("raw_text"):
@@ -9618,6 +9617,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

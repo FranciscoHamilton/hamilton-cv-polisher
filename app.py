@@ -2033,7 +2033,8 @@ if (skillForm){
     <div class="grid">
       <div class="card">
         <h3>Polish CV</h3>
-        <form id="upload-form" method="post" action="/polish" enctype="multipart/form-data">
+        <form id="upload-form" method="post" action="/polish" enctype="multipart/form-data" target="dlFrame">
+          <input type="hidden" name="downloadToken" id="downloadToken" value="">
           <label for="cv">Raw CV (PDF / DOCX / TXT)</label><br/>
           <input id="cv" type="file" name="cv" accept=".pdf,.docx,.txt" required />
           <div class="ts" style="margin-top:4px">Header (logo &amp; bar) preserved from Hamilton template.</div>
@@ -2052,7 +2053,79 @@ if (skillForm){
 
           <div style="margin-top:12px"><button id="btn" type="submit">Polish & Download</button></div>
         </form>
-        
+        <iframe id="dlFrame" name="dlFrame" style="display:none"></iframe>
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          const form = document.getElementById('upload-form');
+          if (!form) return;
+
+          const btn  = form.querySelector('button[type="submit"]') || document.getElementById('btn');
+          const file = document.getElementById('cv');
+          const frame = document.getElementById('dlFrame');
+          const tokenEl = document.getElementById('downloadToken');
+
+          // Create a simple overlay (no CSS file needed)
+          const over = document.createElement('div');
+          over.id = 'busyOverlay';
+          over.textContent = 'Polishing… please wait';
+          over.style.cssText = [
+            'position:fixed','inset:0','display:none',
+            'align-items:center','justify-content:center',
+            'background:rgba(255,255,255,.75)',
+            'font:600 18px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif',
+            'z-index:9999'
+          ].join(';');
+          document.body.appendChild(over);
+
+          form.addEventListener('submit', function () {
+            // Show banner + lock inputs
+            over.style.display = 'flex';
+            if (btn) { btn.dataset.orig = btn.textContent; btn.textContent = 'Polishing…'; btn.disabled = true; }
+            
+            // IMPORTANT: do NOT disable the file input here – let the browser send it
+
+            // Generate a one-time token and put it in the hidden input
+            const token = 'dl_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+            if (tokenEl) tokenEl.value = token;
+
+            // Poll for the cookie the server will set as soon as headers are sent
+            var cookieWatch = setInterval(function () {
+              const match = document.cookie.split('; ').find(r => r.startsWith('dlToken='));
+              if (match && match.split('=')[1] === token) {
+                clearInterval(cookieWatch);
+                // Clear banner & unlock immediately when headers arrive (download is starting)
+                over.style.display = 'none';
+                if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
+                // clean the cookie (best-effort; server also sets short max-age)
+                document.cookie = 'dlToken=; Max-Age=0; Path=/; SameSite=Lax';
+              }
+            }, 250);
+
+            // Hide banner when the iframe (target="dlFrame") finishes loading the response
+          if (frame) {
+            const onLoad = function () {
+              over.style.display = 'none';
+              if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
+              if (typeof cookieWatch !== 'undefined') clearInterval(cookieWatch); 
+              frame.removeEventListener('load', onLoad);
+            };
+            frame.addEventListener('load', onLoad, { once: true });
+          }
+          // Safety fallback in case something stalls
+          setTimeout(function () {
+            over.style.display = 'none';
+            if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
+          }, 180000); // 3 min
+        });
+
+          // When browser returns from download (bfcache), ensure UI is reset
+          window.addEventListener('pageshow', function () {
+            over.style.display = 'none';
+            if (btn) { btn.disabled = false; if (btn.dataset.orig) btn.textContent = btn.dataset.orig; }
+            if (file) file.disabled = false;
+          });
+        });
+        </script>
       </div>
       <!-- Convert CV (PDF → Word) -->
       <div class="card" style="margin-top:16px">
@@ -3720,6 +3793,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 meta_p.paragraph_format.line_spacing = 1.0
                 meta_p.paragraph_format.space_after = Pt(0)
                 _tone_runs(meta_p, size=11, bold=False)
+                for r in meta_p.runs: r.italic = True    
 
             if role.get("raw_text"):
                 rt = (role["raw_text"] or "").strip()
@@ -3733,36 +3807,36 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     rp.paragraph_format.space_after = Pt(0)
                     _tone_runs(rp, size=11, bold=False)
 
+            # ---- BULLETS -------------------------------------------------------------
             if role.get("bullets"):
                 # Org-configurable cap: overview (raw_text) is NEVER capped
                 max_bullets = get_org_pref(cv, "max_bullets_per_role", None)
                 bullets = list(role.get("bullets") or [])
                 if isinstance(max_bullets, int) and max_bullets >= 0:
                     bullets = bullets[:max_bullets]
-                if (role.get("bullets") and not (role.get("raw_text") or "").strip()):
-                    add_editable_space(doc)  # real, editable line between dates and bullets
-    
+
+                # If there is no raw_text, add an editable line between dates and bullets
+                if role.get("bullets") and not (role.get("raw_text") or "").strip():
+                    add_editable_space(doc)
+
                 for b in bullets:
                     bp = doc.add_paragraph(b.strip(), style="List Bullet")
                     pf = bp.paragraph_format
-
-                    # Match master template bullet spacing:
+                    # Match master bullet spacing
                     pf.left_indent = Inches(0.50)         # text column at 0.50"
                     pf.first_line_indent = Inches(-0.25)  # bullet at 0.25" → 0.25" gap
-
-                    # Single set of spacing rules (no duplicates)
                     pf.space_before = Pt(0)
                     pf.space_after  = Pt(0)
                     pf.line_spacing = 1.0
-
                     _tone_runs(bp, size=11, bold=False)
 
-                # after the bullets loop:
+                # After the bullets loop, no extra spacing; we add one spacer per role below
                 if bullets:
                     bp.paragraph_format.space_after = Pt(0)
-    add_editable_space(doc)  # one real, editable blank paragraph after this role
-                    
-                
+
+            # === ONE editable blank line between roles (always) ===
+            add_editable_space(doc)
+
     skills = cv.get("skills") or []
     if skills:
         _add_section_heading(doc, labels["skills"])
@@ -9587,31 +9661,20 @@ def polish():
                 pass
 
             # ---- Return the polished file ----
-            try:
-                # Flask ≥ 2.0
-                resp = make_response(
-                    send_file(str(out), as_attachment=True, download_name="polished_cv.docx")
-                )
-            except TypeError:
-                # Flask < 2.0
-                resp = make_response(
-                    send_file(str(out), as_attachment=True, attachment_filename="polished_cv.docx")
-                )
-
+            # (make sure `from flask import request` is imported at the top of the file)
+            resp = make_response(
+                send_file(str(out), as_attachment=True, download_name="polished_cv.docx")
+            )
             resp.headers["Cache-Control"] = "no-store"
 
-            # Echo the one-time token so the front-end can unlock immediately
+            # echo back the one-time token so the front-end can hide the banner as soon as headers go out
             token = (request.form.get("downloadToken") or "").strip()
-
-            # If you’re testing on http://localhost, secure cookies won’t set.
-            # Make the cookie 'secure' only when on HTTPS:
-            is_https = request.is_secure or request.headers.get("X-Forwarded-Proto", "").lower() == "https"
             if token:
                 resp.set_cookie(
                     "dlToken",
                     token,
                     max_age=120,
-                    secure=is_https,   # was True (breaks on localhost)
+                    secure=True,   # set to False only if testing on http://localhost
                     samesite="Lax",
                     path="/",
                 )
@@ -9623,10 +9686,5 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
-
-
-
-
-
 
 

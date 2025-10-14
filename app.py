@@ -2052,7 +2052,6 @@ if (skillForm){
 
           <div style="margin-top:12px"><button id="btn" type="submit">Polish & Download</button></div>
         </form>
-        <iframe id="dlFrame" name="dlFrame" style="display:none"></iframe>
         
       </div>
       <!-- Convert CV (PDF → Word) -->
@@ -6129,24 +6128,13 @@ def pdf2word_convert():
     token = request.form.get("downloadToken", "")
 
     resp = send_file(
-        output_path,  # ← keep your existing path variable here
+        buf,
         as_attachment=True,
-        download_name=dl_name,  # ← keep your existing filename variable here
+        download_name=outname,
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         max_age=0,
         conditional=False,
     )
-    
-    if token:
-        resp.set_cookie(
-            "dlToken",
-            token,
-            max_age=120,   # short-lived
-            secure=True,   # keep True on HTTPS; set False only for local HTTP testing
-            samesite="Lax",
-            path="/",
-        )
-
     return resp
 
 # Aliases to cover legacy front-ends
@@ -9586,19 +9574,6 @@ def polish():
                 send_file(str(out), as_attachment=True, download_name="polished_cv.docx")
             )
             resp.headers["Cache-Control"] = "no-store"
-
-            # echo back the one-time token so the front-end can hide the banner as soon as headers go out
-            token = (request.form.get("downloadToken") or "").strip()
-            if token:
-                resp.set_cookie(
-                    "dlToken",
-                    token,
-                    max_age=120,
-                    secure=True,   # set to False only if testing on http://localhost
-                    samesite="Lax",
-                    path="/",
-                )
-
             return resp
 
         except Exception as e:
@@ -9606,5 +9581,6 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 

@@ -1124,15 +1124,16 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">STARTER</div>
     <div class="qty">100 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£120/mo</span><span class="dot">·</span><span class="price-cv">£1.20 per CV</span></span>
+    <span class="chip"><span class="price-month">£150/mo</span><span class="dot">·</span><span class="price-cv">£1.50 per CV</span></span>
 
     <ul class="feat" style="margin-top:12px">
+      <li><span class="tick">✓</span><span>1 brand template included</span></li>
       <li><span class="tick">✓</span><span>Up to 10 users</span></li>
       <li><span class="tick">✓</span><span>Director dashboard</span></li>
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Email support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.20/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.60/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Starter</a>
@@ -1144,16 +1145,16 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">GROWTH</div>
     <div class="qty">250 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£275/mo</span><span class="dot">·</span><span class="price-cv">£1.10 per CV</span></span>
+    <span class="chip"><span class="price-month">£350/mo</span><span class="dot">·</span><span class="price-cv">£1.40 per CV</span></span>
 
     <ul class="feat" style="margin-top:12px">
+      <li><span class="tick">✓</span><span>2 brand template included</span></li>
       <li><span class="tick">✓</span><span>Up to 20 users</span></li>
       <li><span class="tick">✓</span><span>Director dashboard</span></li>
-      <li><span class="tick">✓</span><span>Free PDF Converter</span></li>
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1.10/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.50/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Growth</a>
@@ -1165,16 +1166,16 @@ PRICING_HTML = r"""
   <div class="inner">
     <div class="name">SCALE</div>
     <div class="qty">500 polished CVs <span class="per">/ mo</span></div>
-    <span class="chip"><span class="price-month">£500/mo</span><span class="dot">·</span><span class="price-cv">£1 per CV</span></span>
+    <span class="chip"><span class="price-month">£650/mo</span><span class="dot">·</span><span class="price-cv">£1.30 per CV</span></span>
 
     <ul class="feat" style="margin-top:12px">
+      <li><span class="tick">✓</span><span>3 brand template included</span></li>
       <li><span class="tick">✓</span><span>Up to 30 users</span></li>
       <li><span class="tick">✓</span><span>Director dashboard</span></li>
-      <li><span class="tick">✓</span><span>Free PDF Converter</span></li>
       <li><span class="tick">✓</span><span>CSV export (usage, credits, history)</span></li>
       <li><span class="tick">✓</span><span>Supported files: PDF / DOCX / TXT</span></li>
       <li><span class="tick">✓</span><span>Priority support</span></li>
-      <li><span class="tick">✓</span><span>Overage: <strong>£1/CV</strong></span></li>
+      <li><span class="tick">✓</span><span>Overage: <strong>£1.40/CV</strong></span></li>
     </ul>
 
     <a class="btn primary" href="/start">Choose Scale</a>
@@ -1191,17 +1192,17 @@ PRICING_HTML = r"""
             <div class="packs-info">
               <div class="title">Choose your pack</div>
               <ul>
-                <li><strong>100 CVs</strong> — £120 ( £1.20/CV )</li>
-                <li><strong>250 CVs</strong> — £275 ( £1.10/CV )</li>
-                <li><strong>500 CVs</strong> — £500 ( £1/CV )</li>
+                <li><strong>100 CVs</strong> — £160 ( £1.60/CV )</li>
+                <li><strong>300 CVs</strong> — £450 ( £1.50/CV )</li>
+                <li><strong>500 CVs</strong> — £700 ( £1.40/CV )</li>
               </ul>
             </div>
 
             <div class="select">
               <select id="packSelect">
-                <option value="100">100 CVs — £150</option>
-                <option value="300">250 CVs — £275</option>
-                <option value="500">500 CVs — £500</option>
+                <option value="100">100 CVs — £160</option>
+                <option value="300">300 CVs — £450</option>
+                <option value="500">500 CVs — £700</option>
               </select>
             </div>
 
@@ -1248,9 +1249,9 @@ PRICING_HTML = r"""
     function fmtGBP(n){ return '£' + new Intl.NumberFormat('en-GB',{maximumFractionDigits:0}).format(Math.round(n)); }
 
     const PLANS = [
-      { kind:'Monthly', key:'Starter', baseCredits:100, baseCost:120, baseRate:1.20, overRate:1.30 },
-      { kind:'Monthly', key:'Growth',  baseCredits:250, baseCost:275, baseRate:1.10, overRate:1.20 },
-      { kind:'Monthly', key:'Scale',   baseCredits:500, baseCost:500, baseRate:1, overRate:1.10 }
+      { kind:'Monthly', key:'Starter', baseCredits:100, baseCost:150, baseRate:1.50, overRate:1.60 },
+      { kind:'Monthly', key:'Growth',  baseCredits:300, baseCost:420, baseRate:1.40, overRate:1.50 },
+      { kind:'Monthly', key:'Scale',   baseCredits:500, baseCost:650, baseRate:1.30, overRate:1.40 }
       // Buy Packs are on-demand; not part of the "best monthly plan" picker.
     ];
 
@@ -3792,7 +3793,6 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 meta_p.paragraph_format.line_spacing = 1.0
                 meta_p.paragraph_format.space_after = Pt(0)
                 _tone_runs(meta_p, size=11, bold=False)
-                for r in meta_p.runs: r.italic = True    
 
             if role.get("raw_text"):
                 rt = (role["raw_text"] or "").strip()
@@ -3806,36 +3806,36 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     rp.paragraph_format.space_after = Pt(0)
                     _tone_runs(rp, size=11, bold=False)
 
-            # ---- BULLETS -------------------------------------------------------------
             if role.get("bullets"):
                 # Org-configurable cap: overview (raw_text) is NEVER capped
                 max_bullets = get_org_pref(cv, "max_bullets_per_role", None)
                 bullets = list(role.get("bullets") or [])
                 if isinstance(max_bullets, int) and max_bullets >= 0:
                     bullets = bullets[:max_bullets]
-
-                # If there is no raw_text, add an editable line between dates and bullets
-                if role.get("bullets") and not (role.get("raw_text") or "").strip():
-                    add_editable_space(doc)
-
+                if (role.get("bullets") and not (role.get("raw_text") or "").strip()):
+                    add_editable_space(doc)  # real, editable line between dates and bullets
+    
                 for b in bullets:
                     bp = doc.add_paragraph(b.strip(), style="List Bullet")
                     pf = bp.paragraph_format
-                    # Match master bullet spacing
+
+                    # Match master template bullet spacing:
                     pf.left_indent = Inches(0.50)         # text column at 0.50"
                     pf.first_line_indent = Inches(-0.25)  # bullet at 0.25" → 0.25" gap
+
+                    # Single set of spacing rules (no duplicates)
                     pf.space_before = Pt(0)
                     pf.space_after  = Pt(0)
                     pf.line_spacing = 1.0
+
                     _tone_runs(bp, size=11, bold=False)
 
-                # After the bullets loop, no extra spacing; we add one spacer per role below
+                # after the bullets loop:
                 if bullets:
                     bp.paragraph_format.space_after = Pt(0)
-
-            # === ONE editable blank line between roles (always) ===
-            add_editable_space(doc)
-
+    add_editable_space(doc)  # one real, editable blank paragraph after this role
+                    
+                
     skills = cv.get("skills") or []
     if skills:
         _add_section_heading(doc, labels["skills"])
@@ -9685,7 +9685,6 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
-
 
 
 

@@ -2033,8 +2033,7 @@ if (skillForm){
     <div class="grid">
       <div class="card">
         <h3>Polish CV</h3>
-        <form id="upload-form" method="post" action="/polish" enctype="multipart/form-data" target="dlFrame">
-          <input type="hidden" name="downloadToken" id="downloadToken" value="">
+        <form id="upload-form" method="post" action="/polish" enctype="multipart/form-data">
           <label for="cv">Raw CV (PDF / DOCX / TXT)</label><br/>
           <input id="cv" type="file" name="cv" accept=".pdf,.docx,.txt" required />
           <div class="ts" style="margin-top:4px">Header (logo &amp; bar) preserved from Hamilton template.</div>
@@ -2053,79 +2052,7 @@ if (skillForm){
 
           <div style="margin-top:12px"><button id="btn" type="submit">Polish & Download</button></div>
         </form>
-        <iframe id="dlFrame" name="dlFrame" style="display:none"></iframe>
-        <script>
-        document.addEventListener('DOMContentLoaded', function () {
-          const form = document.getElementById('upload-form');
-          if (!form) return;
-
-          const btn  = form.querySelector('button[type="submit"]') || document.getElementById('btn');
-          const file = document.getElementById('cv');
-          const frame = document.getElementById('dlFrame');
-          const tokenEl = document.getElementById('downloadToken');
-
-          // Create a simple overlay (no CSS file needed)
-          const over = document.createElement('div');
-          over.id = 'busyOverlay';
-          over.textContent = 'Polishing… please wait';
-          over.style.cssText = [
-            'position:fixed','inset:0','display:none',
-            'align-items:center','justify-content:center',
-            'background:rgba(255,255,255,.75)',
-            'font:600 18px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif',
-            'z-index:9999'
-          ].join(';');
-          document.body.appendChild(over);
-
-          form.addEventListener('submit', function () {
-            // Show banner + lock inputs
-            over.style.display = 'flex';
-            if (btn) { btn.dataset.orig = btn.textContent; btn.textContent = 'Polishing…'; btn.disabled = true; }
-            
-            // IMPORTANT: do NOT disable the file input here – let the browser send it
-
-            // Generate a one-time token and put it in the hidden input
-            const token = 'dl_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
-            if (tokenEl) tokenEl.value = token;
-
-            // Poll for the cookie the server will set as soon as headers are sent
-            var cookieWatch = setInterval(function () {
-              const match = document.cookie.split('; ').find(r => r.startsWith('dlToken='));
-              if (match && match.split('=')[1] === token) {
-                clearInterval(cookieWatch);
-                // Clear banner & unlock immediately when headers arrive (download is starting)
-                over.style.display = 'none';
-                if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
-                // clean the cookie (best-effort; server also sets short max-age)
-                document.cookie = 'dlToken=; Max-Age=0; Path=/; SameSite=Lax';
-              }
-            }, 250);
-
-            // Hide banner when the iframe (target="dlFrame") finishes loading the response
-          if (frame) {
-            const onLoad = function () {
-              over.style.display = 'none';
-              if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
-              if (typeof cookieWatch !== 'undefined') clearInterval(cookieWatch); 
-              frame.removeEventListener('load', onLoad);
-            };
-            frame.addEventListener('load', onLoad, { once: true });
-          }
-          // Safety fallback in case something stalls
-          setTimeout(function () {
-            over.style.display = 'none';
-            if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
-          }, 180000); // 3 min
-        });
-
-          // When browser returns from download (bfcache), ensure UI is reset
-          window.addEventListener('pageshow', function () {
-            over.style.display = 'none';
-            if (btn) { btn.disabled = false; if (btn.dataset.orig) btn.textContent = btn.dataset.orig; }
-            if (file) file.disabled = false;
-          });
-        });
-        </script>
+        
       </div>
       <!-- Convert CV (PDF → Word) -->
       <div class="card" style="margin-top:16px">
@@ -9696,6 +9623,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

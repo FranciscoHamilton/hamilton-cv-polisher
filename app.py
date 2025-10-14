@@ -3723,8 +3723,8 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 for r in meta_p.runs: r.italic = True    
 
             # ensure 'meta' always exists (string) and keep a dict view for older code
-            meta = (data or {}).get('meta', '')  
-            meta_dict = (data or {}).get('meta') or {}
+            loc = (role.get("location") or "").strip()
+            meta = f"{dates} | {loc}".strip(" |")
 
             if role.get("raw_text"):
                 rt = (role["raw_text"] or "").strip()
@@ -9617,6 +9617,7 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
 
 
 

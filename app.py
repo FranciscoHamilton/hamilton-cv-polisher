@@ -2033,7 +2033,8 @@ if (skillForm){
     <div class="grid">
       <div class="card">
         <h3>Polish CV</h3>
-        <form id="upload-form" method="post" action="/polish" enctype="multipart/form-data">
+        <form id="upload-form" method="post" action="/polish" enctype="multipart/form-data" target="dlFrame">
+          <input type="hidden" name="downloadToken" id="downloadToken" value="">
           <label for="cv">Raw CV (PDF / DOCX / TXT)</label><br/>
           <input id="cv" type="file" name="cv" accept=".pdf,.docx,.txt" required />
           <div class="ts" style="margin-top:4px">Header (logo &amp; bar) preserved from Hamilton template.</div>
@@ -2052,7 +2053,79 @@ if (skillForm){
 
           <div style="margin-top:12px"><button id="btn" type="submit">Polish & Download</button></div>
         </form>
-        
+        <iframe id="dlFrame" name="dlFrame" style="display:none"></iframe>
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+          const form = document.getElementById('upload-form');
+          if (!form) return;
+
+          const btn  = form.querySelector('button[type="submit"]') || document.getElementById('btn');
+          const file = document.getElementById('cv');
+          const frame = document.getElementById('dlFrame');
+          const tokenEl = document.getElementById('downloadToken');
+
+          // Create a simple overlay (no CSS file needed)
+          const over = document.createElement('div');
+          over.id = 'busyOverlay';
+          over.textContent = 'Polishing… please wait';
+          over.style.cssText = [
+            'position:fixed','inset:0','display:none',
+            'align-items:center','justify-content:center',
+            'background:rgba(255,255,255,.75)',
+            'font:600 18px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif',
+            'z-index:9999'
+          ].join(';');
+          document.body.appendChild(over);
+
+          form.addEventListener('submit', function () {
+            // Show banner + lock inputs
+            over.style.display = 'flex';
+            if (btn) { btn.dataset.orig = btn.textContent; btn.textContent = 'Polishing…'; btn.disabled = true; }
+            
+            // IMPORTANT: do NOT disable the file input here – let the browser send it
+
+            // Generate a one-time token and put it in the hidden input
+            const token = 'dl_' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+            if (tokenEl) tokenEl.value = token;
+
+            // Poll for the cookie the server will set as soon as headers are sent
+            var cookieWatch = setInterval(function () {
+              const match = document.cookie.split('; ').find(r => r.startsWith('dlToken='));
+              if (match && match.split('=')[1] === token) {
+                clearInterval(cookieWatch);
+                // Clear banner & unlock immediately when headers arrive (download is starting)
+                over.style.display = 'none';
+                if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
+                // clean the cookie (best-effort; server also sets short max-age)
+                document.cookie = 'dlToken=; Max-Age=0; Path=/; SameSite=Lax';
+              }
+            }, 250);
+
+            // Hide banner when the iframe (target="dlFrame") finishes loading the response
+          if (frame) {
+            const onLoad = function () {
+              over.style.display = 'none';
+              if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
+              if (typeof cookieWatch !== 'undefined') clearInterval(cookieWatch); 
+              frame.removeEventListener('load', onLoad);
+            };
+            frame.addEventListener('load', onLoad, { once: true });
+          }
+          // Safety fallback in case something stalls
+          setTimeout(function () {
+            over.style.display = 'none';
+            if (btn) { btn.disabled = false; btn.textContent = btn.dataset.orig || 'Polish & Download'; }
+          }, 180000); // 3 min
+        });
+
+          // When browser returns from download (bfcache), ensure UI is reset
+          window.addEventListener('pageshow', function () {
+            over.style.display = 'none';
+            if (btn) { btn.disabled = false; if (btn.dataset.orig) btn.textContent = btn.dataset.orig; }
+            if (file) file.disabled = false;
+          });
+        });
+        </script>
       </div>
       <!-- Convert CV (PDF → Word) -->
       <div class="card" style="margin-top:16px">
@@ -3361,8 +3434,8 @@ def _add_center_line(doc: Docx, text: str, size=11, bold=False, space_after=0):
 
 def _add_section_heading(doc: Docx, text: str):
     p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(0)
-    p.paragraph_format.space_after = Pt(0)
+    p.paragraph_format.space_before = Pt(12)
+    p.paragraph_format.space_after = Pt(6)
     r = p.add_run(text.upper().strip())
     r.font.name = "Calibri"; r.font.size = Pt(14)
     r.bold = True
@@ -3497,12 +3570,11 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     except Exception as e:
         print("profile labels failed:", e)
 
-    spacer = doc.add_paragraph(); spacer.paragraph_format.space_after = Pt(0)
+    spacer = doc.add_paragraph(); spacer.paragraph_format.space_after = Pt(6)
 
     pi = (cv or {}).get("personal_info") or {}
     full_name = (pi.get("full_name") or "Candidate").strip()
-    name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER; name_p.paragraph_format.space_after = Pt(0)
-    add_editable_space(doc)
+    name_p = doc.add_paragraph(); name_p.alignment = WD_ALIGN_PARAGRAPH.CENTER; name_p.paragraph_format.space_after = Pt(2)
     name_r = name_p.add_run(full_name)
     name_r.font.name="Calibri"; name_r.font.size=Pt(18); name_r.bold=True; name_r.font.color.rgb=SOFT_BLACK
 
@@ -3519,8 +3591,7 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     if tel: bits.append(f"Tel: {tel}")
     if email: bits.append(f"Email: {email}")
     if bits:
-        _add_center_line(doc, " | ".join(bits), size=11, bold=False, space_after=0)
-        add_editable_space(doc)
+        _add_center_line(doc, " | ".join(bits), size=11, bold=False, space_after=6)
 
     # --- EXECUTIVE SUMMARY ---
     _add_section_heading(doc, labels["summary"])
@@ -3528,7 +3599,6 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     summary_text = (cv.get("summary") or "").strip()
     if summary_text:
         p = doc.add_paragraph(summary_text)
-        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         # keep your alignment line if present, e.g.:
         # p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.space_after = Pt(0)   # was Pt(8)
@@ -3669,7 +3739,6 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
     # Render: one paragraph per item, same spacing, no bullets
     for _, line, is_bold in items:
         p = doc.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY    
         r = p.add_run(line)
         r.font.name = "Calibri"
         r.font.size = Pt(11)
@@ -3678,7 +3747,8 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         p.paragraph_format.space_before = Pt(0)
         p.paragraph_format.space_after = Pt(0)
         _tone_runs(p, size=11, bold=is_bold)
-    add_editable_space(doc)
+        
+   add_editable_space(doc)
 
     exp = cv.get("experience") or []
     if exp:
@@ -3723,7 +3793,6 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                     return re.sub(r"\s+", " ", (s or "").replace("–", "-")).strip().lower()
                 if _norm(rt) and _norm(rt) not in (_norm(dates), _norm(meta)):
                     rp = doc.add_paragraph(rt)
-                    rp.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                     rp.paragraph_format.space_after = Pt(0)
                     _tone_runs(rp, size=11, bold=False)
 
@@ -3739,23 +3808,20 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
                 for b in bullets:
                     bp = doc.add_paragraph(b.strip(), style="List Bullet")
                     pf = bp.paragraph_format
-
-                    # Match master template bullet spacing:
-                    pf.left_indent = Inches(0.50)         # text column at 0.50"
-                    pf.first_line_indent = Inches(-0.25)  # bullet at 0.25" → 0.25" gap
-
-                    # Single set of spacing rules (no duplicates)
+                    pf.left_indent = Inches(0.35)        # ≈ 6 spaces to the right
+                    pf.first_line_indent = Inches(-0.15)  # keeps wrapped lines aligned neatly
                     pf.space_before = Pt(0)
-                    pf.space_after  = Pt(0)
+                    pf.space_after = Pt(0)
                     pf.line_spacing = 1.0
-
                     _tone_runs(bp, size=11, bold=False)
-
                 # after the bullets loop:
                 if bullets:
                     bp.paragraph_format.space_after = Pt(0)
-    add_editable_space(doc)  # one real, editable blank paragraph after this role
-                    
+                    add_editable_space(doc)  # ← one real, editable blank paragraph after this role
+
+                # ✅ Add consistent spacing after the last bullet point (same as after dates)
+                if bullets:
+                    bp.paragraph_format.space_after = Pt(0)
                 
     skills = cv.get("skills") or []
     if skills:
@@ -3763,7 +3829,6 @@ def build_cv_document(cv: dict, template_override: str | None = None) -> Path:
         add_editable_space(doc)
         line = " | ".join(skills)
         p = doc.add_paragraph(line)
-        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.space_after = Pt(0)   # was Pt(8)
         _tone_runs(p, size=11, bold=False)
         add_editable_space(doc)                  # real, editable blank line
@@ -6128,13 +6193,24 @@ def pdf2word_convert():
     token = request.form.get("downloadToken", "")
 
     resp = send_file(
-        buf,
+        output_path,  # ← keep your existing path variable here
         as_attachment=True,
-        download_name=outname,
+        download_name=dl_name,  # ← keep your existing filename variable here
         mimetype="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         max_age=0,
         conditional=False,
     )
+    
+    if token:
+        resp.set_cookie(
+            "dlToken",
+            token,
+            max_age=120,   # short-lived
+            secure=True,   # keep True on HTTPS; set False only for local HTTP testing
+            samesite="Lax",
+            path="/",
+        )
+
     return resp
 
 # Aliases to cover legacy front-ends
@@ -9574,6 +9650,19 @@ def polish():
                 send_file(str(out), as_attachment=True, download_name="polished_cv.docx")
             )
             resp.headers["Cache-Control"] = "no-store"
+
+            # echo back the one-time token so the front-end can hide the banner as soon as headers go out
+            token = (request.form.get("downloadToken") or "").strip()
+            if token:
+                resp.set_cookie(
+                    "dlToken",
+                    token,
+                    max_age=120,
+                    secure=True,   # set to False only if testing on http://localhost
+                    samesite="Lax",
+                    path="/",
+                )
+
             return resp
 
         except Exception as e:
@@ -9581,6 +9670,43 @@ def polish():
             import traceback
             print("polish failed:", e, traceback.format_exc())
             return make_response(("Polish failed: " + str(e)), 400)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
